@@ -30,7 +30,7 @@ namespace TrionControlPanel.API.Classes
         }
 
         // Asynchronously gets a list of files from the specified file path.
-        public static async Task<ConcurrentBag<FileList>> GetFilesAsync(string filePath)
+        public static async Task<ConcurrentBag<FileList>> GetFilesAsync(string filePath,bool install)
         {
             Console.WriteLine($"Loading all files from {filePath}");
             var filePaths = Directory.GetFiles(filePath, "*", SearchOption.AllDirectories);
@@ -51,18 +51,37 @@ namespace TrionControlPanel.API.Classes
                     await semaphore.WaitAsync(); // Limit concurrency
                     try
                     {
-                        foreach (var file in batch)
+                        if (install)
                         {
-                            var fileInfo = new FileInfo(file);
-                            var fileData = new FileList
+                            foreach (var file in batch)
                             {
-                                Name = fileInfo.Name,
-                                Size = fileInfo.Length / 1_000_000.0, // Size in MB
-                                Hash = await EncryptManager.GetMd5HashFromFileAsync(file), // Async hash calculation
-                                Path = fileInfo.DirectoryName?.Replace(@"\", "/") // Optional: Normalize path
-                            };
-                            fileList.Add(fileData);
+                                var fileInfo = new FileInfo(file);
+                                var fileData = new FileList
+                                {
+                                    Name = fileInfo.Name,
+                                    Size = fileInfo.Length / 1_000_000.0, // Size in MB
+                                    
+                                    Path = fileInfo.DirectoryName?.Replace(@"\", "/") // Optional: Normalize path
+                                };
+                                fileList.Add(fileData);
+                            }
                         }
+                        else
+                        {
+                            foreach (var file in batch)
+                            {
+                                var fileInfo = new FileInfo(file);
+                                var fileData = new FileList
+                                {
+                                    Name = fileInfo.Name,
+                                    Size = fileInfo.Length / 1_000_000.0, // Size in MB
+                                    Hash = await EncryptManager.GetMd5HashFromFileAsync(file), // Async hash calculation
+                                    Path = fileInfo.DirectoryName?.Replace(@"\", "/") // Optional: Normalize path
+                                };
+                                fileList.Add(fileData);
+                            }
+                       }
+
                     }
                     catch (Exception ex)
                     {

@@ -9,7 +9,7 @@
         }
         public async Task<bool> GetKeyVerified (string SupporterKey)
         {
-            return await _accessManager.LoadDataType<bool, dynamic>(SqlQueryManager.SELECT_SUPPORT_KEY, new { Key = SupporterKey });
+            return await _accessManager.LoadSingleOrDefaultAsync<bool, dynamic>(SqlQueryManager.SELECT_SUPPORT_KEY, new { Key = SupporterKey });
 
         }
     }

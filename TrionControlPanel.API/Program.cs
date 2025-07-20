@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.HttpOverrides;
-using TrionControlPanel.API.Classes;
 using TrionControlPanel.API.Classes.Database;
 using MudBlazor.Services;
 using TrionControlPanel.API.Components;
@@ -29,7 +28,7 @@ namespace TrionControlPanel.API
             builder.Services.AddSingleton<DatabaseManager>();
             builder.Services.AddSingleton<AccessManager>();
             builder.Services.AddSingleton<SqlQueryManager>();
-            builder.Services.AddSingleton<Network>();
+
 
             var app = builder.Build();
 

@@ -15,6 +15,7 @@ using System.Diagnostics;
 using static TrionControlPanel.Desktop.Extensions.Notification.AlertBox;
 using TrionControlPanel.Desktop.Extensions.Notification;
 using TrionControlPanel.Desktop;
+using TrionControlPanel.Desktop.Extensions.Classes.Network;
 
 namespace TrionControlPanelDesktop
 {
@@ -610,23 +611,21 @@ namespace TrionControlPanelDesktop
                 await Task.Delay(1000);
                 FormData.Infos.Install.Database = true;
                 // Run file and server tasks concurrently on background threads
-                var serverFilesDatabaseTask = Task.Run(() => NetworkManager.GetServerFiles(Links.APIRequests.GetServerFiles("database", _settings.SupporterKey), serverFilesProgress));
-                var localFilesDatabaseTask = Task.Run(() => FileManager.ProcessFilesAsync(Links.Install.Database, localFilesProgress));
-                // Wait for both tasks to complete before continuing
-                await Task.WhenAll(serverFilesDatabaseTask, localFilesDatabaseTask);
+                var serverFilesDatabaseTask = Task.Run(() => NetworkManager.GetServerFiles(Links.APIRequests.GetInstallFiles("database", _settings.SupporterKey), serverFilesProgress));
                 // Now both tasks are complete, retrieve their results
                 var ServerFilesDatabase = await serverFilesDatabaseTask;
-                var LocalFilesDatabase = await localFilesDatabaseTask;
-                // Compare files and get missing ones
-                var (missingFilesDatabase, filesToDeleteDatabase) = await FileManager.CompareFiles(ServerFilesDatabase, LocalFilesDatabase, "/database", filesToBeDeletedProgress, filesToBeDownloadedProgress);
-                PBARTotalDownload.Maximum = missingFilesDatabase.Count;
+
+                 PBARTotalDownload.Maximum = ServerFilesDatabase.Count;
                 // **Download missing files one-by-one**
-                foreach (var file in missingFilesDatabase)
+                foreach (var file in ServerFilesDatabase)
                 {
                     LBLFileName.Text = string.Format(CultureInfo.InvariantCulture, _translator.Translate("LBLFileName"), $"{file.Name}");
-                    LBLFileSize.Text = string.Format(CultureInfo.InvariantCulture, _translator.Translate("LBLFileSize"), $"{file.Size} MB");
+                    LBLFileSize.Text = string.Format(CultureInfo.InvariantCulture, _translator.Translate("LBLFileSize"), $"{file.Size:0.##} MB");
 
-                    await FileManager.DownloadFileAsync(file, "/database", _cancellationToken, downloadProgress, null, downloadSpeedProgress);
+                    await FileManager.DownloadFileAsync(file, "/database","database", _settings.SupporterKey, _cancellationToken, downloadProgress, null, downloadSpeedProgress);
+
+                    await FileManager.UnzipFileAsync(file, "/database", _cancellationToken, downloadProgress, null, downloadSpeedProgress);
+
                     PBARTotalDownload.Value++;
                 }
 
@@ -981,7 +980,23 @@ namespace TrionControlPanelDesktop
                 switch (_settings.SelectedSPP)
                 {
                     case SPP.Classic:
-                        await InstallExpansionAsync("Classic", "/classic", _settings.ClassicInstalled, v => FormData.Infos.Install.Classic = v, Links.Install.Classic);
+                        if (!FormData.Infos.Install.Classic)
+                        {
+                            if (FormData.UI.Version.Online.Classic.Contains("N/A"))
+                            {
+                                AlertBox.Show(_translator.Translate("AlerBoxEmulatroNotFound"), NotificationType.Info, _settings);
+                                FormData.UI.Form.InstallingEmulator = false;
+                                return;
+                            }
+                            await InstallExpansionAsync("Classic", "/classic", _settings.ClassicInstalled, v => FormData.Infos.Install.Classic = v, Links.Install.Classic);
+                        }
+                        else
+                        {
+                            AlertBox.Show(_translator.Translate("AlerBoxEmulatroInstalled"), NotificationType.Info, _settings);
+                            FormData.UI.Form.InstallingEmulator = false;
+                            return;
+                        }
+
                         break;
 
                     case SPP.TheBurningCrusade:
@@ -1017,9 +1032,6 @@ namespace TrionControlPanelDesktop
         /// </summary>
         private async Task InstallExpansionAsync(string expansionName, string folderPath, bool isInstalled, Action<bool> setInstallStatus, string InstalationLocation)
         {
-
-
-
             DLCardRemoweFiles.Visible = true;
             Update();
 
@@ -1046,32 +1058,31 @@ namespace TrionControlPanelDesktop
             var downloadProgress = new Progress<double>(message => PBarCurrentDownlaod.Value = (int)message);
 
             // Run file and server tasks concurrently
-            var serverFilesTask = Task.Run(() => NetworkManager.GetServerFiles(Links.APIRequests.GetServerFiles(expansionName.ToLower(), _settings.SupporterKey), serverFilesProgress));
-            var localFilesTask = Task.Run(() => FileManager.ProcessFilesAsync(InstalationLocation, localFilesProgress));
+            var url = Links.APIRequests.GetInstallFiles(expansionName.ToLower(), _settings.SupporterKey);
 
-            await Task.WhenAll(serverFilesTask, localFilesTask);
+            var serverFilesTask = Task.Run(() => NetworkManager.GetServerFiles(url, serverFilesProgress));
+            var localFilesTask = Task.Run(() => FileManager.ProcessFilesAsync(InstalationLocation, localFilesProgress));
 
             // Retrieve results
             var serverFiles = await serverFilesTask;
-            var localFiles = await localFilesTask;
 
-            // Compare files and get missing ones
-            var (missingFiles, filesToDelete) = await FileManager.CompareFiles(serverFiles, localFiles, folderPath, filesToBeDeletedProgress, filesToBeDownloadedProgress);
-
-            PBARTotalDownload.Maximum = missingFiles.Count;
+            PBARTotalDownload.Maximum = serverFiles.Count;
 
             // **Download missing files one-by-one**
-            foreach (var file in missingFiles)
+            foreach (var file in serverFiles)
             {
                 LBLFileName.Text = string.Format(CultureInfo.InvariantCulture, _translator.Translate("LBLFileName"), $"{file.Name}");
-                LBLFileSize.Text = string.Format(CultureInfo.InvariantCulture, _translator.Translate("LBLFileSize"), $"{file.Size} MB");
+                LBLFileSize.Text = string.Format(CultureInfo.InvariantCulture, _translator.Translate("LBLFileSize"), $"{file.Size:0.##} MB");
 
-                await FileManager.DownloadFileAsync(file, folderPath, _cancellationToken, downloadProgress, null, downloadSpeedProgress);
+                await FileManager.DownloadFileAsync(file, folderPath, expansionName, _settings.SupporterKey, _cancellationToken, downloadProgress, null, downloadSpeedProgress);
+               
+                await FileManager.UnzipFileAsync(file, folderPath, _cancellationToken, downloadProgress, null, downloadSpeedProgress);
 
                 PBARTotalDownload.Value++;
+                File.Delete($"{folderPath}/{file}");
             }
 
-            await FileManager.DeleteFiles(filesToDelete);
+
 
             // Installation Finished!
             InstallFinished();
@@ -1153,7 +1164,7 @@ namespace TrionControlPanelDesktop
             var downloadProgress = new Progress<double>(message => PBarCurrentDownlaod.Value = (int)message);
 
             // Run file and server tasks concurrently
-            var serverFilesTask = Task.Run(() => NetworkManager.GetServerFiles(Links.APIRequests.GetServerFiles(expansionName.ToLower(), _settings.SupporterKey), serverFilesProgress));
+            var serverFilesTask = Task.Run(() => NetworkManager.GetServerFiles(Links.APIRequests.GetReapirFiles(expansionName.ToLower(), _settings.SupporterKey), serverFilesProgress));
             var localFilesTask = Task.Run(() => FileManager.ProcessFilesAsync(Links.Install.WotLK, localFilesProgress));
 
             await Task.WhenAll(serverFilesTask, localFilesTask);
@@ -1171,7 +1182,7 @@ namespace TrionControlPanelDesktop
             foreach (var file in missingFiles)
             {
                 LBLFileName.Text = string.Format(CultureInfo.InvariantCulture, _translator.Translate("LBLFileName"), $"{file.Name}");
-                LBLFileSize.Text = string.Format(CultureInfo.InvariantCulture, _translator.Translate("LBLFileSize"), $"{file.Size} MB");
+                LBLFileSize.Text = string.Format(CultureInfo.InvariantCulture, _translator.Translate("LBLFileSize"), $"{file.Size:0.##} MB");
 
                 //await FileManager.DownloadFileAsync(file, folderPath, _cancellationToken, downloadProgress, null, downloadSpeedProgress);
 
@@ -1838,7 +1849,7 @@ namespace TrionControlPanelDesktop
                 _settings.DBExeLoc = FileManager.GetExecutableLocation($@"{Database}\bin", "mysqld");
                 _settings.DBExeName = "mysqld";
                 Settings.CreateMySQLConfigFile(Directory.GetCurrentDirectory(), Database);
-                string SQLLocation = $@"{Database}\extra\initDatabase.sql";
+                string SQLLocation = $@"{Database}\extra\initSTDDatabase.sql";
                 await Task.Delay(1000);
                 var initID = await AppExecuteMenager.ApplicationStart(_settings.DBExeLoc, _settings.DBWorkingDir, "initialize MySQL", true, $"--initialize-insecure --init-file=\"{SQLLocation}\" --console");
                 INITSpinner.Visible = true;

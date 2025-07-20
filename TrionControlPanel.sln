@@ -5,8 +5,6 @@ VisualStudioVersion = 17.5.33424.131
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TrionLibrary", "TrionLibrary\TrionLibrary.csproj", "{4DCEB99D-006C-4343-B708-D3C72B7D11BF}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TrionDiscordBot", "TrionDiscordBot\TrionDiscordBot.csproj", "{68FBCEFA-3B05-4CF2-851F-7797B0D508C9}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TrionControlPanel.Desktop", "TrionControlPanel.Desktop\TrionControlPanel.Desktop.csproj", "{0B2EDB3E-28F2-4FE0-AB20-603217B1FE80}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TrionWorker", "TrionWorker\TrionWorker.csproj", "{F8532926-479A-4016-9987-E854512180CA}"
@@ -37,14 +35,6 @@ Global
 		{4DCEB99D-006C-4343-B708-D3C72B7D11BF}.Release|Any CPU.Build.0 = Release|Any CPU
 		{4DCEB99D-006C-4343-B708-D3C72B7D11BF}.Release|x64.ActiveCfg = Release|Any CPU
 		{4DCEB99D-006C-4343-B708-D3C72B7D11BF}.Release|x64.Build.0 = Release|Any CPU
-		{68FBCEFA-3B05-4CF2-851F-7797B0D508C9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{68FBCEFA-3B05-4CF2-851F-7797B0D508C9}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{68FBCEFA-3B05-4CF2-851F-7797B0D508C9}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{68FBCEFA-3B05-4CF2-851F-7797B0D508C9}.Debug|x64.Build.0 = Debug|Any CPU
-		{68FBCEFA-3B05-4CF2-851F-7797B0D508C9}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{68FBCEFA-3B05-4CF2-851F-7797B0D508C9}.Release|Any CPU.Build.0 = Release|Any CPU
-		{68FBCEFA-3B05-4CF2-851F-7797B0D508C9}.Release|x64.ActiveCfg = Release|Any CPU
-		{68FBCEFA-3B05-4CF2-851F-7797B0D508C9}.Release|x64.Build.0 = Release|Any CPU
 		{0B2EDB3E-28F2-4FE0-AB20-603217B1FE80}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{0B2EDB3E-28F2-4FE0-AB20-603217B1FE80}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0B2EDB3E-28F2-4FE0-AB20-603217B1FE80}.Debug|x64.ActiveCfg = Debug|Any CPU
