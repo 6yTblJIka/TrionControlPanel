@@ -16,9 +16,20 @@ namespace TrionControlPanel.Desktop.Extensions.Classes.Network
         // Sets the API server URL based on the availability of the main and backup hosts.
         public static async Task GetAPIServer()
         {
-            if (await IsWebsiteOnlineAsync($"{Links.MainHost}/Trion/Ping")) { Links.APIServer = Links.MainHost; }
-            if (await IsWebsiteOnlineAsync($"{Links.BackupHost}/Trion/Ping")) { Links.APIServer = Links.BackupHost; }
-            else { Links.APIServer = Links.BackupHost; }
+            var main = await IsWebsiteOnlineAsync($"{Links.MainHost}/Trion/Ping");
+            if (main)
+            {
+                Links.APIServer = Links.MainHost;
+                return;
+            }
+            var backup = await IsWebsiteOnlineAsync($"{Links.BackupHost}/Trion/Ping");
+            if (backup)
+            {
+                Links.APIServer = Links.BackupHost;
+                return;
+            }
+
+             Links.APIServer = null!; 
         }
 
         // Checks if the input string is a valid domain name.

@@ -34,12 +34,12 @@ namespace TrionControlPanelDesktop
         {
             components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
-            DataGridViewCellStyle dataGridViewCellStyle1 = new DataGridViewCellStyle();
-            DataGridViewCellStyle dataGridViewCellStyle2 = new DataGridViewCellStyle();
-            DataGridViewCellStyle dataGridViewCellStyle4 = new DataGridViewCellStyle();
-            DataGridViewCellStyle dataGridViewCellStyle5 = new DataGridViewCellStyle();
-            DataGridViewCellStyle dataGridViewCellStyle6 = new DataGridViewCellStyle();
-            DataGridViewCellStyle dataGridViewCellStyle3 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle7 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle8 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle10 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle11 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle12 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle9 = new DataGridViewCellStyle();
             TimerWacher = new System.Windows.Forms.Timer(components);
             NIcon = new NotifyIcon(components);
             CMSNotify = new ContextMenuStrip(components);
@@ -352,7 +352,7 @@ namespace TrionControlPanelDesktop
             materialCard24 = new MaterialSkin.Controls.MaterialCard();
             pictureBox2 = new PictureBox();
             LBLServerFiles = new MaterialSkin.Controls.MaterialLabel();
-            materialCard23 = new MaterialSkin.Controls.MaterialCard();
+            CardLocalFiles = new MaterialSkin.Controls.MaterialCard();
             pictureBox1 = new PictureBox();
             LBLLocalFiles = new MaterialSkin.Controls.MaterialLabel();
             materialCard12 = new MaterialSkin.Controls.MaterialCard();
@@ -473,7 +473,7 @@ namespace TrionControlPanelDesktop
             ((System.ComponentModel.ISupportInitialize)pictureBox3).BeginInit();
             materialCard24.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBox2).BeginInit();
-            materialCard23.SuspendLayout();
+            CardLocalFiles.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             SuspendLayout();
             // 
@@ -3199,6 +3199,7 @@ namespace TrionControlPanelDesktop
             BTNAccountCreate.Type = MaterialSkin.Controls.MaterialButton.MaterialButtonType.Contained;
             BTNAccountCreate.UseAccentColor = false;
             BTNAccountCreate.UseVisualStyleBackColor = true;
+            BTNAccountCreate.Click += BTNAccountCreate_Click;
             // 
             // TXTBoxCreateUserEmail
             // 
@@ -3249,7 +3250,7 @@ namespace TrionControlPanelDesktop
             TXTBoxCreateUserPassword.MaxLength = 32767;
             TXTBoxCreateUserPassword.MouseState = MaterialSkin.MouseState.OUT;
             TXTBoxCreateUserPassword.Name = "TXTBoxCreateUserPassword";
-            TXTBoxCreateUserPassword.PasswordChar = '\0';
+            TXTBoxCreateUserPassword.PasswordChar = '*';
             TXTBoxCreateUserPassword.PrefixSuffixText = null;
             TXTBoxCreateUserPassword.ReadOnly = false;
             TXTBoxCreateUserPassword.RightToLeft = RightToLeft.No;
@@ -5056,6 +5057,7 @@ namespace TrionControlPanelDesktop
             BTNFixDatabase.Type = MaterialSkin.Controls.MaterialButton.MaterialButtonType.Contained;
             BTNFixDatabase.UseAccentColor = false;
             BTNFixDatabase.UseVisualStyleBackColor = true;
+            BTNFixDatabase.Click += BTNFixDatabase_Click;
             // 
             // BTNLoadBackup
             // 
@@ -5205,6 +5207,7 @@ namespace TrionControlPanelDesktop
             TGLCustomDB.TabIndex = 17;
             TGLCustomDB.Text = "custom";
             TGLCustomDB.UseVisualStyleBackColor = true;
+            TGLCustomDB.CheckedChanged += TGLCustomDB_CheckedChanged;
             // 
             // TGLMopDB
             // 
@@ -5220,6 +5223,7 @@ namespace TrionControlPanelDesktop
             TGLMopDB.TabIndex = 16;
             TGLMopDB.Text = "mop";
             TGLMopDB.UseVisualStyleBackColor = true;
+            TGLMopDB.CheckedChanged += TGLMopDB_CheckedChanged;
             // 
             // TGLCataDB
             // 
@@ -5235,6 +5239,7 @@ namespace TrionControlPanelDesktop
             TGLCataDB.TabIndex = 15;
             TGLCataDB.Text = "cata";
             TGLCataDB.UseVisualStyleBackColor = true;
+            TGLCataDB.CheckedChanged += TGLCataDB_CheckedChanged;
             // 
             // TGLWotlkDB
             // 
@@ -5250,6 +5255,7 @@ namespace TrionControlPanelDesktop
             TGLWotlkDB.TabIndex = 14;
             TGLWotlkDB.Text = "wotlk";
             TGLWotlkDB.UseVisualStyleBackColor = true;
+            TGLWotlkDB.CheckedChanged += TGLWotlkDB_CheckedChanged;
             // 
             // TGLTbcDB
             // 
@@ -5265,6 +5271,7 @@ namespace TrionControlPanelDesktop
             TGLTbcDB.TabIndex = 13;
             TGLTbcDB.Text = "tbc";
             TGLTbcDB.UseVisualStyleBackColor = true;
+            TGLTbcDB.CheckedChanged += TGLTbcDB_CheckedChanged;
             // 
             // TGLClassicDB
             // 
@@ -5281,6 +5288,7 @@ namespace TrionControlPanelDesktop
             TGLClassicDB.TabIndex = 12;
             TGLClassicDB.Text = "classic";
             TGLClassicDB.UseVisualStyleBackColor = true;
+            TGLClassicDB.CheckedChanged += TGLClassicDB_CheckedChanged;
             // 
             // LBLCardPreconfiguredDBInfo
             // 
@@ -5747,34 +5755,34 @@ namespace TrionControlPanelDesktop
             DGVNotifications.AllowUserToDeleteRows = false;
             DGVNotifications.AllowUserToResizeColumns = false;
             DGVNotifications.AllowUserToResizeRows = false;
-            dataGridViewCellStyle1.BackColor = Color.FromArgb(28, 33, 40);
-            dataGridViewCellStyle1.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
-            dataGridViewCellStyle1.ForeColor = Color.White;
-            dataGridViewCellStyle1.SelectionBackColor = Color.FromArgb(28, 33, 40);
-            dataGridViewCellStyle1.SelectionForeColor = Color.White;
-            DGVNotifications.AlternatingRowsDefaultCellStyle = dataGridViewCellStyle1;
+            dataGridViewCellStyle7.BackColor = Color.FromArgb(28, 33, 40);
+            dataGridViewCellStyle7.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
+            dataGridViewCellStyle7.ForeColor = Color.White;
+            dataGridViewCellStyle7.SelectionBackColor = Color.FromArgb(28, 33, 40);
+            dataGridViewCellStyle7.SelectionForeColor = Color.White;
+            DGVNotifications.AlternatingRowsDefaultCellStyle = dataGridViewCellStyle7;
             DGVNotifications.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             DGVNotifications.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
             DGVNotifications.BackgroundColor = Color.FromArgb(34, 39, 46);
             DGVNotifications.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.Single;
-            dataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleCenter;
-            dataGridViewCellStyle2.BackColor = Color.FromArgb(28, 33, 40);
-            dataGridViewCellStyle2.Font = new Font("Segoe UI Semibold", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            dataGridViewCellStyle2.ForeColor = Color.White;
-            dataGridViewCellStyle2.SelectionBackColor = Color.FromArgb(28, 33, 40);
-            dataGridViewCellStyle2.SelectionForeColor = Color.White;
-            dataGridViewCellStyle2.WrapMode = DataGridViewTriState.True;
-            DGVNotifications.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle2;
+            dataGridViewCellStyle8.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            dataGridViewCellStyle8.BackColor = Color.FromArgb(28, 33, 40);
+            dataGridViewCellStyle8.Font = new Font("Segoe UI Semibold", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            dataGridViewCellStyle8.ForeColor = Color.White;
+            dataGridViewCellStyle8.SelectionBackColor = Color.FromArgb(28, 33, 40);
+            dataGridViewCellStyle8.SelectionForeColor = Color.White;
+            dataGridViewCellStyle8.WrapMode = DataGridViewTriState.True;
+            DGVNotifications.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle8;
             DGVNotifications.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             DGVNotifications.Columns.AddRange(new DataGridViewColumn[] { ID, Message, Time });
-            dataGridViewCellStyle4.Alignment = DataGridViewContentAlignment.MiddleCenter;
-            dataGridViewCellStyle4.BackColor = Color.FromArgb(28, 33, 40);
-            dataGridViewCellStyle4.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
-            dataGridViewCellStyle4.ForeColor = Color.White;
-            dataGridViewCellStyle4.SelectionBackColor = Color.FromArgb(28, 33, 40);
-            dataGridViewCellStyle4.SelectionForeColor = Color.White;
-            dataGridViewCellStyle4.WrapMode = DataGridViewTriState.False;
-            DGVNotifications.DefaultCellStyle = dataGridViewCellStyle4;
+            dataGridViewCellStyle10.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            dataGridViewCellStyle10.BackColor = Color.FromArgb(28, 33, 40);
+            dataGridViewCellStyle10.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
+            dataGridViewCellStyle10.ForeColor = Color.White;
+            dataGridViewCellStyle10.SelectionBackColor = Color.FromArgb(28, 33, 40);
+            dataGridViewCellStyle10.SelectionForeColor = Color.White;
+            dataGridViewCellStyle10.WrapMode = DataGridViewTriState.False;
+            DGVNotifications.DefaultCellStyle = dataGridViewCellStyle10;
             DGVNotifications.Dock = DockStyle.Fill;
             DGVNotifications.EnableHeadersVisualStyles = false;
             DGVNotifications.GridColor = Color.Black;
@@ -5783,24 +5791,24 @@ namespace TrionControlPanelDesktop
             DGVNotifications.ReadOnly = true;
             DGVNotifications.RightToLeft = RightToLeft.No;
             DGVNotifications.RowHeadersBorderStyle = DataGridViewHeaderBorderStyle.Single;
-            dataGridViewCellStyle5.Alignment = DataGridViewContentAlignment.MiddleCenter;
-            dataGridViewCellStyle5.BackColor = Color.FromArgb(28, 33, 40);
-            dataGridViewCellStyle5.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
-            dataGridViewCellStyle5.ForeColor = Color.White;
-            dataGridViewCellStyle5.SelectionBackColor = Color.FromArgb(28, 33, 40);
-            dataGridViewCellStyle5.SelectionForeColor = Color.White;
-            dataGridViewCellStyle5.WrapMode = DataGridViewTriState.True;
-            DGVNotifications.RowHeadersDefaultCellStyle = dataGridViewCellStyle5;
+            dataGridViewCellStyle11.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            dataGridViewCellStyle11.BackColor = Color.FromArgb(28, 33, 40);
+            dataGridViewCellStyle11.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
+            dataGridViewCellStyle11.ForeColor = Color.White;
+            dataGridViewCellStyle11.SelectionBackColor = Color.FromArgb(28, 33, 40);
+            dataGridViewCellStyle11.SelectionForeColor = Color.White;
+            dataGridViewCellStyle11.WrapMode = DataGridViewTriState.True;
+            DGVNotifications.RowHeadersDefaultCellStyle = dataGridViewCellStyle11;
             DGVNotifications.RowHeadersVisible = false;
             DGVNotifications.RowHeadersWidth = 50;
-            dataGridViewCellStyle6.Alignment = DataGridViewContentAlignment.MiddleCenter;
-            dataGridViewCellStyle6.BackColor = Color.FromArgb(28, 33, 40);
-            dataGridViewCellStyle6.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
-            dataGridViewCellStyle6.ForeColor = Color.White;
-            dataGridViewCellStyle6.SelectionBackColor = Color.FromArgb(28, 33, 40);
-            dataGridViewCellStyle6.SelectionForeColor = Color.White;
-            dataGridViewCellStyle6.WrapMode = DataGridViewTriState.True;
-            DGVNotifications.RowsDefaultCellStyle = dataGridViewCellStyle6;
+            dataGridViewCellStyle12.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            dataGridViewCellStyle12.BackColor = Color.FromArgb(28, 33, 40);
+            dataGridViewCellStyle12.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
+            dataGridViewCellStyle12.ForeColor = Color.White;
+            dataGridViewCellStyle12.SelectionBackColor = Color.FromArgb(28, 33, 40);
+            dataGridViewCellStyle12.SelectionForeColor = Color.White;
+            dataGridViewCellStyle12.WrapMode = DataGridViewTriState.True;
+            DGVNotifications.RowsDefaultCellStyle = dataGridViewCellStyle12;
             DGVNotifications.RowTemplate.DefaultCellStyle.Font = new Font("Segoe UI Semibold", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 0);
             DGVNotifications.RowTemplate.ReadOnly = true;
             DGVNotifications.RowTemplate.Resizable = DataGridViewTriState.True;
@@ -5813,13 +5821,13 @@ namespace TrionControlPanelDesktop
             // 
             // ID
             // 
-            dataGridViewCellStyle3.Alignment = DataGridViewContentAlignment.MiddleCenter;
-            dataGridViewCellStyle3.BackColor = Color.FromArgb(28, 33, 40);
-            dataGridViewCellStyle3.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
-            dataGridViewCellStyle3.ForeColor = Color.White;
-            dataGridViewCellStyle3.SelectionBackColor = Color.FromArgb(28, 33, 40);
-            dataGridViewCellStyle3.SelectionForeColor = Color.White;
-            ID.DefaultCellStyle = dataGridViewCellStyle3;
+            dataGridViewCellStyle9.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            dataGridViewCellStyle9.BackColor = Color.FromArgb(28, 33, 40);
+            dataGridViewCellStyle9.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
+            dataGridViewCellStyle9.ForeColor = Color.White;
+            dataGridViewCellStyle9.SelectionBackColor = Color.FromArgb(28, 33, 40);
+            dataGridViewCellStyle9.SelectionForeColor = Color.White;
+            ID.DefaultCellStyle = dataGridViewCellStyle9;
             ID.HeaderText = "ID";
             ID.MinimumWidth = 6;
             ID.Name = "ID";
@@ -5900,7 +5908,7 @@ namespace TrionControlPanelDesktop
             materialCard21.Controls.Add(DLCardRemoweFiles);
             materialCard21.Controls.Add(materialCard25);
             materialCard21.Controls.Add(materialCard24);
-            materialCard21.Controls.Add(materialCard23);
+            materialCard21.Controls.Add(CardLocalFiles);
             materialCard21.Depth = 0;
             materialCard21.ForeColor = Color.FromArgb(222, 0, 0, 0);
             materialCard21.Location = new Point(27, 97);
@@ -6107,7 +6115,6 @@ namespace TrionControlPanelDesktop
             INITSpinner.Style = MetroFramework.MetroColorStyle.Blue;
             INITSpinner.StyleManager = null;
             INITSpinner.TabIndex = 22;
-            INITSpinner.Text = "metroProgressSpinner1";
             INITSpinner.Theme = MetroFramework.MetroThemeStyle.Dark;
             INITSpinner.Value = 90;
             INITSpinner.Visible = false;
@@ -6211,20 +6218,20 @@ namespace TrionControlPanelDesktop
             LBLServerFiles.TabIndex = 0;
             LBLServerFiles.Text = "Server Files:";
             // 
-            // materialCard23
+            // CardLocalFiles
             // 
-            materialCard23.BackColor = Color.FromArgb(255, 255, 255);
-            materialCard23.Controls.Add(pictureBox1);
-            materialCard23.Controls.Add(LBLLocalFiles);
-            materialCard23.Depth = 0;
-            materialCard23.ForeColor = Color.FromArgb(222, 0, 0, 0);
-            materialCard23.Location = new Point(21, 18);
-            materialCard23.Margin = new Padding(14);
-            materialCard23.MouseState = MaterialSkin.MouseState.HOVER;
-            materialCard23.Name = "materialCard23";
-            materialCard23.Padding = new Padding(14);
-            materialCard23.Size = new Size(325, 40);
-            materialCard23.TabIndex = 14;
+            CardLocalFiles.BackColor = Color.FromArgb(255, 255, 255);
+            CardLocalFiles.Controls.Add(pictureBox1);
+            CardLocalFiles.Controls.Add(LBLLocalFiles);
+            CardLocalFiles.Depth = 0;
+            CardLocalFiles.ForeColor = Color.FromArgb(222, 0, 0, 0);
+            CardLocalFiles.Location = new Point(21, 18);
+            CardLocalFiles.Margin = new Padding(14);
+            CardLocalFiles.MouseState = MaterialSkin.MouseState.HOVER;
+            CardLocalFiles.Name = "CardLocalFiles";
+            CardLocalFiles.Padding = new Padding(14);
+            CardLocalFiles.Size = new Size(325, 40);
+            CardLocalFiles.TabIndex = 14;
             // 
             // pictureBox1
             // 
@@ -6470,8 +6477,8 @@ namespace TrionControlPanelDesktop
             materialCard24.ResumeLayout(false);
             materialCard24.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBox2).EndInit();
-            materialCard23.ResumeLayout(false);
-            materialCard23.PerformLayout();
+            CardLocalFiles.ResumeLayout(false);
+            CardLocalFiles.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).EndInit();
             ResumeLayout(false);
         }
@@ -6790,7 +6797,7 @@ namespace TrionControlPanelDesktop
         private MaterialSkin.Controls.MaterialCard materialCard24;
         private PictureBox pictureBox2;
         private MaterialSkin.Controls.MaterialLabel LBLServerFiles;
-        private MaterialSkin.Controls.MaterialCard materialCard23;
+        private MaterialSkin.Controls.MaterialCard CardLocalFiles;
         private PictureBox pictureBox1;
         private MaterialSkin.Controls.MaterialLabel LBLLocalFiles;
         private MaterialSkin.Controls.MaterialCard materialCard12;

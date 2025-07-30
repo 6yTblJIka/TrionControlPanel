@@ -17,7 +17,7 @@ namespace TrionControlPanel.API.Classes.Database
 
         public AccessManager(IConfiguration configuration)
         {
-            _connectionString = configuration.GetConnectionString("default")
+            _connectionString = configuration.GetConnectionString("Default")
                 ?? throw new InvalidOperationException("Default connection string is not configured.");
         }
 

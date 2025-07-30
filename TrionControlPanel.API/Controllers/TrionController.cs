@@ -15,8 +15,6 @@ namespace TrionControlPanel.API.api
         private readonly IMemoryCache _cache;
         private readonly DatabaseManager _databaseManager;
 
-
-
         public TrionController(IMemoryCache cache, IConfiguration configuration, DatabaseManager databaseManager, IWebHostEnvironment env)
         {
             _cache = cache;
@@ -75,6 +73,38 @@ namespace TrionControlPanel.API.api
             {
                 TrionLogger.Log($"Error: {ex.Message}");
                 return StatusCode(500, $"Error: {ex.Message}");
+            }
+        }
+        [HttpPost("SendSupporterKey")]
+        public async Task<IActionResult> SendSupporterKey([FromBody] SupporterKey supKey, [FromHeader] string? APIKey)
+        {
+            TrionLogger.Log($"Suporter Key Request with Api key {APIKey}!");
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            var configuredApiKey = _configuration["APIKey"];
+            if (string.IsNullOrEmpty(configuredApiKey) || configuredApiKey != APIKey)
+            {
+                return Unauthorized(new { message = "Invalid or missing API Key." });
+            }
+            TrionLogger.Log($"Veryfy Supporter key {supKey.Key}!");
+            try
+            {
+                var keyExists = await _databaseManager.GetKeyVerified(supKey.Key);
+                if (keyExists)
+                {
+                    return Conflict(new { message = "This Supporter Key already exists." });
+                }
+                TrionLogger.Log($"Insert Supporter key {supKey.Key}!");
+                await _databaseManager.InsertSupporterKey(supKey.Key, supKey.UID);
+                return CreatedAtAction(nameof(SendSupporterKey), new { key = supKey.Key },
+                    new { message = "Supporter Key created successfully." });
+            }
+            catch (Exception ex)
+            {
+                TrionLogger.Log($"Error in SendSupporterKey: {ex.ToString()}");
+                return StatusCode(500, new { message = "An internal server error occurred." });
             }
         }
 
@@ -162,7 +192,7 @@ namespace TrionControlPanel.API.api
         /// </summary>
         private string? GetRepackLocation(string emulator, bool isEarlyAccess, string operationType)
         {
-            string accessLevel = isEarlyAccess ? "EarlyAccessKey" : "Default";
+            string accessLevel = isEarlyAccess ? "EarlyAccess" : "Default";
             string configKey = $"{emulator.ToLower()}SPP:{accessLevel}:{operationType}";
 
             // A special case for "database" and "trion" which don't follow the "SPP" suffix pattern

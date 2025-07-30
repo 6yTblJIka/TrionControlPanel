@@ -8,23 +8,36 @@ namespace TrionControlPanel.API.Classes
     public static class FileManager
     {
         // Gets the version from the specified file location.
-        public static string GetVersion(string Location)
+        public static string GetVersion(string location)
         {
+            // First, check if the provided path from the config is empty.
+            if (string.IsNullOrEmpty(location))
+            {
+                // This is not an error, it's just not configured.
+                return "N/A";
+            }
+
+            // A special case you already had.
+            if (location == "N/A")
+            {
+                return "N/A";
+            }
+
             try
             {
-                if (!string.IsNullOrEmpty(Location))
-                {
-                    if (Location == "N/A")
-                    {
-                        return "N/A";
-                    }
-                    return File.ReadAllText(Location);
-                }
+                // If the path exists in config, try to read it.
+                return File.ReadAllText(location);
+            }
+            catch (FileNotFoundException)
+            {
+                // Log a more specific error!
+                TrionLogger.Log($"Configuration Error: The version file was not found at the specified path: {location}", "ERROR");
                 return "N/A";
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error getting version from {Location}: {ex.Message}");
+                // Catch other potential errors like permission issues.
+                TrionLogger.Log($"Error getting version from file '{location}': {ex.Message}", "ERROR");
                 return "N/A";
             }
         }

@@ -1,12 +1,11 @@
 ﻿using TrionControlPanel.Desktop.Extensions.Modules;
-using static Mysqlx.Expect.Open.Types.Condition.Types;
-using static TrionControlPanelDesktop.Extensions.Modules.Links;
+
 
 namespace TrionControlPanelDesktop.Extensions.Modules
 {
     public class Links
     {
-        public static string MainHost { get => "https://api.aclab.tech"; }
+        public static string MainHost { get => "https://api.flying-phoenix.dev"; }
         public static string BackupHost { get => "http://localhost:5000"; }
         public static string APIServer { get; set; }
         public static string WebServer { get => "https://flying-phoenix.dev/"; }

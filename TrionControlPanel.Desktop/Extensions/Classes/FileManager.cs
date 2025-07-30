@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.IO;
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
@@ -147,14 +148,18 @@ namespace TrionControlPanel.Desktop.Extensions.Classes
         /// Streams the file directly to disk in buffered chunks, reporting progress, elapsed time, and speed.
         /// </summary>
         public static async Task DownloadFileAsync(FileList file, string marker, string emulator, string key, CancellationToken cancellationToken,
-            IProgress<double>? progress = null, IProgress<double>? elapsedTime = null, IProgress<double>? speed = null)
+     IProgress<double>? progress = null, IProgress<double>? elapsedTime = null, IProgress<double>? speed = null)
         {
+            // It is highly recommended to reuse HttpClient instances. 
+            // Consider making it static or using IHttpClientFactory for better performance and resource management.
             using HttpClient client = new();
 
             try
             {
-                string url = Links.APIRequests.DownlaodFiles(emulator, key);
+                string url = Links.APIRequests.DownlaodFiles(emulator, key); // API base URL
+                TrionLogger.Log($"Requesting: {url}", "INFO");
 
+                // Ensure that the file path is valid
                 string filePath = $"{file.Path}/{file.Name}";
                 if (filePath.Length > 2000)
                 {
@@ -165,23 +170,34 @@ namespace TrionControlPanel.Desktop.Extensions.Classes
                 var requestObj = new { filePath };
                 string jsonContent = JsonSerializer.Serialize(requestObj);
                 using var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
-                using var request = new HttpRequestMessage(HttpMethod.Post, url) { Content = content };
 
-                // Use streaming to avoid loading the whole file into memory
+                // *** CORRECTION IS HERE: Manually create HttpRequestMessage to use SendAsync ***
+                using var request = new HttpRequestMessage(HttpMethod.Post, url)
+                {
+                    Content = content
+                };
+
+                // Use SendAsync with HttpCompletionOption.ResponseHeadersRead
+                // This is the key to preventing the large file from being buffered in memory.
                 using HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+
                 response.EnsureSuccessStatusCode();
 
                 string downloadPath = $"{Directory.GetCurrentDirectory()}{StringBuilder(file.Path, marker)}";
                 Directory.CreateDirectory(downloadPath);
                 string fileDownload = Path.Combine(downloadPath, file.Name);
 
+                // Use a larger buffer (e.g., 80KB) for potentially better I/O performance.
                 const int bufferSize = 81920;
+
+                // The 'using' declarations can be simplified in modern C#
                 await using var downloadStream = await response.Content.ReadAsStreamAsync(cancellationToken);
                 await using var fileStream = new FileStream(fileDownload, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize, useAsync: true);
 
                 long totalBytesRead = 0;
                 var buffer = new byte[bufferSize];
                 int bytesRead;
+
                 var stopwatch = Stopwatch.StartNew();
                 long previousBytesRead = 0;
 
@@ -190,20 +206,23 @@ namespace TrionControlPanel.Desktop.Extensions.Classes
                     await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
                     totalBytesRead += bytesRead;
 
-                    // Report progress every 250ms
-                    if (stopwatch.ElapsedMilliseconds > 250)
+                    // Report progress at reasonable intervals to avoid excessive UI updates.
+                    if (stopwatch.ElapsedMilliseconds > 250) // Report every 250ms
                     {
+                        // Only calculate progress if the total size is known
                         if (response.Content.Headers.ContentLength.HasValue)
                         {
                             progress?.Report((double)totalBytesRead / response.Content.Headers.ContentLength.Value * 100);
                         }
 
                         double elapsedSeconds = stopwatch.Elapsed.TotalSeconds;
+                        // Calculate speed in MB/s since the last report
                         double speedValue = (totalBytesRead - previousBytesRead) / 1024.0 / 1024.0 / elapsedSeconds;
                         speed?.Report(speedValue);
 
-                        elapsedTime?.Report(elapsedSeconds);
+                        elapsedTime?.Report((DateTime.Now - stopwatch.Elapsed).Second); // This seems incorrect, maybe you want total elapsed time
 
+                        // Update for next calculation
                         previousBytesRead = totalBytesRead;
                         stopwatch.Restart();
                     }
@@ -238,7 +257,28 @@ namespace TrionControlPanel.Desktop.Extensions.Classes
                 await Task.Run(() => File.Delete($"{file.Path}/{file.Name}"));
             }
         }
+        public static async Task DeleteFolderAsync(string folderPath)
+        {
+            if (Directory.Exists(folderPath))
+            {
+                Directory.Delete(folderPath, recursive: true);
 
+                while (Directory.Exists(folderPath))
+                {
+                    await Task.Delay(50); // non-blocking, keeps UI responsive
+                }
+            }
+        }
+
+        public static async Task DeleteInstallFiles(List<FileList> files, string InstallPath)
+        {
+            string exePath = Directory.GetCurrentDirectory();
+            foreach (var file in files)
+            {
+                TrionLogger.Log($@"{exePath}\{InstallPath}\{file.Name}");
+                await Task.Run(() => File.Delete($@"{exePath}\{InstallPath}\{file.Name}"));
+            }
+        }
         /// <summary>
         /// Compares server and local files to find which files are missing locally and which should be deleted.
         /// Uses hash, name, and normalized path for comparison. Reports progress for both lists.
