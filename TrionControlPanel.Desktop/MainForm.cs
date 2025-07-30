@@ -295,6 +295,7 @@ namespace TrionControlPanelDesktop
             BTNLogonMoPStart.Text = _translator.Translate("BTNLogonSeparateStart");
             TLTHome.SetToolTip(LBLCardSPPversionInfo, _translator.Translate("LBLCardSPPversionInfo"));
             TLTHome.SetToolTip(LBLCardElulatorsInfo, _translator.Translate("LBLCardElulatorsInfo"));
+            BTNShowSupport.Text = _translator.Translate("BTNShowSupport");
             #endregion
             #region"Downloader"
             LBLDownloadSpeed.Text = _translator.Translate("LBLDownloadSpeedIDLE");
@@ -976,6 +977,15 @@ namespace TrionControlPanelDesktop
         }
         #endregion
         #region "S.P.P.Page"
+
+        private void BTNShowSupport_Click(object sender, EventArgs e)
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = Links.Support,
+                UseShellExecute = true
+            });
+        }
         private async void BTNInstallSPP_Click(object sender, EventArgs e)
         {
             MainFormTabControler.SelectedTab = TabDownloader;
