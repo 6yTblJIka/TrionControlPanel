@@ -1,21 +1,27 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Options;
 using System.IO;
+using Trion.Core.Database;
+using Trion.Core.Monitoring;
+using Trion.Core.WebServer;
 using Trion.Desktop.Infrastructure.Constants;
 using Trion.Desktop.Models;
 using Trion.Desktop.Services;
 
 namespace Trion.Desktop.ViewModels;
 
-public enum SettingsTab { Trion, Custom, Database }
+public enum SettingsTab { Trion, Custom, Database, WebServer }
 
 public partial class SettingsViewModel : ObservableObject, IDisposable
 {
-    private readonly ISettingsService     _settings;
-    private readonly IThemeService        _theme;
-    private readonly ILocalizationService _loc;
-    private readonly IMySqlSetupService   _mysql;
-    private readonly IDatabaseService     _db;
+    private readonly ISettingsService                      _settings;
+    private readonly IThemeService                         _theme;
+    private readonly ILocalizationService                  _loc;
+    private readonly IMySqlSetupService                    _mysql;
+    private readonly INginxPhpSetupService                 _webServer;
+    private readonly IDatabaseService                      _db;
+    private readonly IOptionsMonitor<ProcessMonitorOptions> _processOpts;
 
     [ObservableProperty] private SettingsTab _activeTab = SettingsTab.Trion;
     [ObservableProperty] private string _statusMessage = string.Empty;
@@ -52,6 +58,23 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
         "CMaNGOS / VMaNGOS",
     ];
 
+    // ── Web server settings (Web Server tab) ──────────────────────────────────
+
+    [ObservableProperty] private string _webServerPort      = "80";
+    [ObservableProperty] private bool   _enableHttps;
+    [ObservableProperty] private string _httpsPort          = "443";
+    [ObservableProperty] private string _sslCertPath        = string.Empty;
+    [ObservableProperty] private string _sslKeyPath         = string.Empty;
+    [ObservableProperty] private bool   _webServerAutoStart;
+
+    [ObservableProperty] private bool   _isWebServerInstalled;
+    [ObservableProperty] private bool   _isWebServerRunning;
+    [ObservableProperty] private bool   _isWebServerBusy;
+    [ObservableProperty] private string _webServerStatusMessage = string.Empty;
+    [ObservableProperty] private string _webServerVersionInfo   = string.Empty;
+    [ObservableProperty] private string _webServerInstallPath   = string.Empty;
+    [ObservableProperty] private string _webServerProcessInfo   = string.Empty;
+
     // ── MySQL management (Database tab) ───────────────────────────────────────
 
     [ObservableProperty] private bool   _isMySqlInstalled;
@@ -78,19 +101,25 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
 
     public SettingsViewModel(ISettingsService settings, IThemeService theme,
                              ILocalizationService loc, IMySqlSetupService mysql,
-                             IDatabaseService db)
+                             INginxPhpSetupService webServer, IDatabaseService db,
+                             IOptionsMonitor<ProcessMonitorOptions> processOpts)
     {
-        _settings = settings;
-        _theme    = theme;
-        _loc      = loc;
-        _mysql    = mysql;
-        _db       = db;
+        _settings   = settings;
+        _theme      = theme;
+        _loc        = loc;
+        _mysql      = mysql;
+        _webServer  = webServer;
+        _db         = db;
+        _processOpts = processOpts;
 
-        _mysql.ProgressChanged += OnMySqlProgress;
-        _mysql.StatusChanged   += OnMySqlStatus;
+        _mysql.ProgressChanged     += OnMySqlProgress;
+        _mysql.StatusChanged       += OnMySqlStatus;
+        _webServer.ProgressChanged += OnWebServerProgress;
+        _webServer.StatusChanged   += OnWebServerStatus;
 
         LoadFromSettings();
         RefreshMySqlState();
+        RefreshWebServerState();
     }
 
     private void LoadFromSettings()
@@ -123,10 +152,38 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
         WorldDb    = cfg.WorldDatabase;
         AuthDb     = cfg.AuthDatabase;
         CharDb     = cfg.CharactersDatabase;
+
+        WebServerPort      = cfg.WebServerPort.ToString();
+        EnableHttps        = cfg.EnableHttps;
+        HttpsPort          = cfg.HttpsPort.ToString();
+        SslCertPath        = cfg.SslCertPath;
+        SslKeyPath         = cfg.SslKeyPath;
+        WebServerAutoStart = cfg.WebServerAutoStart;
     }
 
     [RelayCommand]
     private void SwitchTab(SettingsTab tab) => ActiveTab = tab;
+
+    // Re-check live installation state whenever the relevant tab becomes visible.
+    // This picks up manually placed/removed files without requiring an app restart.
+    partial void OnActiveTabChanged(SettingsTab value)
+    {
+        if (value == SettingsTab.WebServer)
+        {
+            RefreshWebServerState();
+            // Sync the AppSettings flag to reality in case files were placed manually
+            var installed = _webServer.IsInstalled;
+            if (_settings.Current.WebServerInstalled != installed)
+            {
+                _settings.Current.WebServerInstalled = installed;
+                _settings.Save();
+            }
+        }
+        else if (value == SettingsTab.Database)
+        {
+            RefreshMySqlState();
+        }
+    }
 
     [RelayCommand]
     private void Save()
@@ -146,6 +203,11 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
         cfg.Language                = SelectedLanguage;
         cfg.MetricsIntervalSeconds  = Math.Clamp(MetricsInterval, 1, 10);
 
+        // Apply the new interval immediately to the live monitoring workers —
+        // they read CurrentValue.RefreshInterval on every loop tick, so this
+        // takes effect without requiring a restart.
+        _processOpts.CurrentValue.RefreshInterval = TimeSpan.FromSeconds(cfg.MetricsIntervalSeconds);
+
         cfg.LaunchCustomCore       = UseCustomServer;
         cfg.SelectedDatabases      = CustomCoreType;
         cfg.CustomWorkingDirectory = CustomEmulatorLocation;
@@ -160,6 +222,15 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
         cfg.WorldDatabase    = WorldDb;
         cfg.AuthDatabase     = AuthDb;
         cfg.CharactersDatabase = CharDb;
+
+        cfg.WebServerPort      = int.TryParse(WebServerPort, out int httpPort)
+                                 ? Math.Clamp(httpPort, 1, 65535) : 80;
+        cfg.EnableHttps        = EnableHttps;
+        cfg.HttpsPort          = int.TryParse(HttpsPort, out int httpsPort)
+                                 ? Math.Clamp(httpsPort, 1, 65535) : 443;
+        cfg.SslCertPath        = SslCertPath;
+        cfg.SslKeyPath         = SslKeyPath;
+        cfg.WebServerAutoStart = WebServerAutoStart;
 
         _settings.Save();
 
@@ -268,11 +339,131 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
         });
     }
 
+    // ── Web server management commands ────────────────────────────────────────
+
+    [RelayCommand(CanExecute = nameof(CanInstallWebServer))]
+    private async Task InstallWebServerAsync()
+    {
+        IsWebServerBusy = true;
+        NotifyWebServerCommandsChanged();
+        try   { await _webServer.RunStartupCheckAsync(); }
+        finally { IsWebServerBusy = false; RefreshWebServerState(); NotifyWebServerCommandsChanged(); }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanWebServerAction))]
+    private async Task RepairWebServerAsync()
+    {
+        IsWebServerBusy = true;
+        NotifyWebServerCommandsChanged();
+        try   { await _webServer.RepairAsync(); }
+        finally { IsWebServerBusy = false; RefreshWebServerState(); NotifyWebServerCommandsChanged(); }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanWebServerAction))]
+    private async Task ReinstallWebServerAsync()
+    {
+        IsWebServerBusy = true;
+        NotifyWebServerCommandsChanged();
+        try   { await _webServer.ReinstallAsync(); }
+        finally { IsWebServerBusy = false; RefreshWebServerState(); NotifyWebServerCommandsChanged(); }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanWebServerUninstall))]
+    private async Task UninstallWebServerAsync()
+    {
+        IsWebServerBusy = true;
+        NotifyWebServerCommandsChanged();
+        try   { await _webServer.UninstallAsync(); }
+        finally { IsWebServerBusy = false; RefreshWebServerState(); NotifyWebServerCommandsChanged(); }
+    }
+
+    [RelayCommand]
+    private void GenerateCert()
+    {
+        _webServer.GenerateSelfSignedCert();
+        SslCertPath = _settings.Current.SslCertPath;
+        SslKeyPath  = _settings.Current.SslKeyPath;
+        StatusMessage = "Self-signed certificate generated.";
+    }
+
+    [RelayCommand]
+    private void BrowseCert()
+    {
+        var dlg = new Microsoft.Win32.OpenFileDialog
+        {
+            Title  = "Select SSL Certificate (PEM)",
+            Filter = "PEM files (*.pem)|*.pem|All files (*.*)|*.*"
+        };
+        if (dlg.ShowDialog() == true)
+            SslCertPath = dlg.FileName;
+    }
+
+    [RelayCommand]
+    private void BrowseKey()
+    {
+        var dlg = new Microsoft.Win32.OpenFileDialog
+        {
+            Title  = "Select SSL Private Key (PEM)",
+            Filter = "PEM files (*.pem)|*.pem|All files (*.*)|*.*"
+        };
+        if (dlg.ShowDialog() == true)
+            SslKeyPath = dlg.FileName;
+    }
+
+    private bool CanInstallWebServer()   => !IsWebServerInstalled && !IsWebServerBusy && !_webServer.IsRunning;
+    private bool CanWebServerAction()    => IsWebServerInstalled  && !IsWebServerBusy && !_webServer.IsRunning;
+    private bool CanWebServerUninstall() => IsWebServerInstalled  && !IsWebServerBusy && !_webServer.IsRunning;
+
+    private void NotifyWebServerCommandsChanged()
+    {
+        InstallWebServerCommand.NotifyCanExecuteChanged();
+        RepairWebServerCommand.NotifyCanExecuteChanged();
+        ReinstallWebServerCommand.NotifyCanExecuteChanged();
+        UninstallWebServerCommand.NotifyCanExecuteChanged();
+    }
+
+    private void RefreshWebServerState()
+    {
+        IsWebServerInstalled  = _webServer.IsInstalled;
+        IsWebServerRunning    = _webServer.IsProcessRunning;
+        WebServerVersionInfo  = $"nginx {ExternalLinks.NginxVersion}  +  PHP {ExternalLinks.PhpVersion}";
+        WebServerInstallPath  = IsWebServerInstalled
+            ? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "webserver")
+            : "Not installed";
+        WebServerProcessInfo  = IsWebServerRunning && _webServer.ProcessId.HasValue
+            ? $"PID {_webServer.ProcessId}  ·  {_webServer.Uptime:hh\\:mm\\:ss}"
+            : "—";
+    }
+
+    private void OnWebServerProgress(string msg)
+    {
+        App.Current?.Dispatcher.InvokeAsync(() =>
+        {
+            WebServerStatusMessage = msg;
+            IsWebServerBusy        = _webServer.IsRunning;
+            NotifyWebServerCommandsChanged();
+        });
+    }
+
+    private void OnWebServerStatus(bool running)
+    {
+        App.Current?.Dispatcher.InvokeAsync(() =>
+        {
+            IsWebServerRunning   = running;
+            WebServerProcessInfo = running && _webServer.ProcessId.HasValue
+                ? $"PID {_webServer.ProcessId}  ·  {_webServer.Uptime:hh\\:mm\\:ss}"
+                : "—";
+            NotifyWebServerCommandsChanged();
+        });
+    }
+
     // ── Dispose ───────────────────────────────────────────────────────────────
 
     public void Dispose()
     {
-        _mysql.ProgressChanged -= OnMySqlProgress;
-        _mysql.StatusChanged   -= OnMySqlStatus;
+        _mysql.ProgressChanged     -= OnMySqlProgress;
+        _mysql.StatusChanged       -= OnMySqlStatus;
+        _webServer.ProgressChanged -= OnWebServerProgress;
+        _webServer.StatusChanged   -= OnWebServerStatus;
     }
 }

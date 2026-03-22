@@ -298,6 +298,7 @@
   "TooltipServerWeb": "Web server — not yet available",
   "TooltipEyeToggle": "Show / hide IP",
   "TooltipRefreshStatus": "Refresh status",
+  "DashboardLoading": "Loading dashboard…",
   "DashboardCaption": "Live overview of your server infrastructure",
   "LBLServerStatus": "SERVER STATUS",
   "LBLMetricCPU": "CPU",

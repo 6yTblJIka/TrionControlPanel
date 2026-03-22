@@ -13,6 +13,7 @@ public partial class EmulatorCardViewModel : ObservableObject
     private readonly IEmulatorInstallerService    _installer;
     private readonly INotificationService         _notifications;
     private readonly string?                      _apiEmulatorName;   // null = Custom (no API)
+    private readonly EmulatorProfile?             _profile;           // null = Custom (user-managed)
     private readonly Func<AppSettings, bool>      _getInstalled;
     private readonly Action<AppSettings, bool>    _setInstalled;
     private readonly Func<AppSettings, bool>      _getEnabled;
@@ -22,15 +23,27 @@ public partial class EmulatorCardViewModel : ObservableObject
     private readonly Func<AppSettings, string>    _getInstallPath;
     private readonly Action<AppSettings, string>  _setInstallPath;
     private readonly Func<AppSettings, string>    _getExePath;
+    private readonly Func<AppSettings, string>    _getWorldExeName;
+    private readonly Action<AppSettings, string>  _setWorldExeName;
+    private readonly Func<AppSettings, string>    _getLogonExeName;
+    private readonly Action<AppSettings, string>  _setLogonExeName;
 
     private CancellationTokenSource? _cts;
 
     // ── Identity ──────────────────────────────────────────────────────────────
 
-    public string Name      { get; }
-    public string ShortName { get; }
+    public string Name        { get; }
+    public string ShortName   { get; }
     public Brush  AccentBrush { get; }
+    public Color  AccentColor => AccentBrush is SolidColorBrush sb ? sb.Color : Colors.Transparent;
     public bool   HasApiInstall => !string.IsNullOrEmpty(_apiEmulatorName);
+
+    /// <summary>
+    /// Set by <see cref="SinglePlayerViewModel"/> after the available-packages API response
+    /// is received. Hides this card when the current account tier has no access.
+    /// Defaults to <c>true</c> so all cards are visible before the API responds.
+    /// </summary>
+    [ObservableProperty] private bool _isAvailable = false;
 
     // ── Installed / enabled / working ─────────────────────────────────────────
 
@@ -83,39 +96,49 @@ public partial class EmulatorCardViewModel : ObservableObject
     // ── Construction ──────────────────────────────────────────────────────────
 
     public EmulatorCardViewModel(
-        ISettingsService           settings,
-        IEmulatorInstallerService  installer,
-        INotificationService       notifications,
-        string                     name,
-        string                     shortName,
-        string?                    apiEmulatorName,
-        Brush                      accentBrush,
-        Func<AppSettings, bool>    getInstalled,
-        Action<AppSettings, bool>  setInstalled,
-        Func<AppSettings, bool>    getEnabled,
-        Action<AppSettings, bool>  setEnabled,
-        Func<AppSettings, string>  getVersion,
-        Action<AppSettings, string>setVersion,
-        Func<AppSettings, string>  getInstallPath,
-        Action<AppSettings, string>setInstallPath,
-        Func<AppSettings, string>  getExePath)
+        ISettingsService            settings,
+        IEmulatorInstallerService   installer,
+        INotificationService        notifications,
+        string                      name,
+        string                      shortName,
+        string?                     apiEmulatorName,
+        Brush                       accentBrush,
+        EmulatorProfile?            profile,
+        Func<AppSettings, bool>     getInstalled,
+        Action<AppSettings, bool>   setInstalled,
+        Func<AppSettings, bool>     getEnabled,
+        Action<AppSettings, bool>   setEnabled,
+        Func<AppSettings, string>   getVersion,
+        Action<AppSettings, string> setVersion,
+        Func<AppSettings, string>   getInstallPath,
+        Action<AppSettings, string> setInstallPath,
+        Func<AppSettings, string>   getExePath,
+        Func<AppSettings, string>   getWorldExeName,
+        Action<AppSettings, string> setWorldExeName,
+        Func<AppSettings, string>   getLogonExeName,
+        Action<AppSettings, string> setLogonExeName)
     {
-        _settings       = settings;
-        _installer      = installer;
-        _notifications  = notifications;
-        Name            = name;
-        ShortName       = shortName;
+        _settings        = settings;
+        _installer       = installer;
+        _notifications   = notifications;
+        Name             = name;
+        ShortName        = shortName;
         _apiEmulatorName = apiEmulatorName;
-        AccentBrush     = accentBrush;
-        _getInstalled   = getInstalled;
-        _setInstalled   = setInstalled;
-        _getEnabled     = getEnabled;
-        _setEnabled     = setEnabled;
-        _getVersion     = getVersion;
-        _setVersion     = setVersion;
-        _getInstallPath = getInstallPath;
-        _setInstallPath = setInstallPath;
-        _getExePath     = getExePath;
+        _profile         = profile;
+        AccentBrush      = accentBrush;
+        _getInstalled    = getInstalled;
+        _setInstalled    = setInstalled;
+        _getEnabled      = getEnabled;
+        _setEnabled      = setEnabled;
+        _getVersion      = getVersion;
+        _setVersion      = setVersion;
+        _getInstallPath  = getInstallPath;
+        _setInstallPath  = setInstallPath;
+        _getExePath      = getExePath;
+        _getWorldExeName = getWorldExeName;
+        _setWorldExeName = setWorldExeName;
+        _getLogonExeName = getLogonExeName;
+        _setLogonExeName = setLogonExeName;
 
         var cfg = settings.Current;
         IsInstalled      = getInstalled(cfg);
@@ -198,7 +221,14 @@ public partial class EmulatorCardViewModel : ObservableObject
     private void ToggleEnabled()
     {
         IsEnabled = !IsEnabled;
-        _setEnabled(_settings.Current, IsEnabled);
+        var cfg = _settings.Current;
+        _setEnabled(cfg, IsEnabled);
+
+        // When enabling, stamp the correct exe names, DB schema, and default DB names
+        // so that the server control page and database editor work without manual setup.
+        if (IsEnabled)
+            ApplyProfileDefaults(cfg);
+
         _settings.Save();
     }
     private bool CanToggleEnabled() => IsInstalled;
@@ -209,6 +239,39 @@ public partial class EmulatorCardViewModel : ObservableObject
         IsEnabled = false;
         _setEnabled(_settings.Current, false);
         _settings.Save();
+    }
+
+    /// <summary>
+    /// Stamps the emulator profile's defaults into <paramref name="cfg"/> when the user
+    /// enables this expansion for the first time (or after a reset).
+    /// Exe names are only written when still blank so existing paths are never clobbered.
+    /// The DB schema is always updated because it must match the active emulator.
+    /// DB names are set only when they hold their factory default value so user
+    /// customisations survive switching between expansions.
+    /// </summary>
+    private void ApplyProfileDefaults(AppSettings cfg)
+    {
+        if (_profile is null) return;
+
+        // Exe names — only set if the user hasn't already configured them
+        if (string.IsNullOrEmpty(_getWorldExeName(cfg)))
+            _setWorldExeName(cfg, _profile.WorldExeName);
+
+        if (string.IsNullOrEmpty(_getLogonExeName(cfg)))
+            _setLogonExeName(cfg, _profile.LogonExeName);
+
+        // DB schema — always update; determines password hashing and query flavour
+        cfg.SelectedDatabases = _profile.DatabaseSchema;
+
+        // DB names — set only when the field is blank (never populated by user)
+        if (string.IsNullOrEmpty(cfg.WorldDatabase))
+            cfg.WorldDatabase = _profile.DefaultWorldDb;
+
+        if (string.IsNullOrEmpty(cfg.AuthDatabase))
+            cfg.AuthDatabase = _profile.DefaultAuthDb;
+
+        if (string.IsNullOrEmpty(cfg.CharactersDatabase))
+            cfg.CharactersDatabase = _profile.DefaultCharactersDb;
     }
 
     // ── Browse install path ───────────────────────────────────────────────────

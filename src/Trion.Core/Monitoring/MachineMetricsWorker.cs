@@ -34,6 +34,10 @@ public sealed class MachineMetricsWorker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Yield immediately so BackgroundService.StartAsync() returns before we do any
+        // work — this ensures PDH counter init runs on the thread pool, not the UI thread.
+        await Task.Yield();
+
         _log.LogInformation("MachineMetricsWorker started.");
 
         while (!stoppingToken.IsCancellationRequested)

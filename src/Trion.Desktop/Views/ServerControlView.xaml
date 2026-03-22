@@ -59,9 +59,9 @@
                        Visibility="{Binding StatusMessage,
                                     Converter={StaticResource NullToVisibility}}" />
 
-            <!-- ── Server cards (3-column) ── -->
+            <!-- ── Server cards (4-column) ── -->
             <TextBlock Text="{Binding Loc[LBLServers]}" Style="{StaticResource SectionLabelStyle}" Margin="0,0,0,10" />
-            <UniformGrid Rows="1" Columns="3">
+            <UniformGrid Rows="1" Columns="4">
 
                 <!-- ── Database ───────────────────────────────────────────── -->
                 <Border Style="{StaticResource ElevatedCardStyle}" Padding="0" Margin="0,0,10,0">
@@ -279,6 +279,84 @@
                                     Command="{Binding ToggleLogonCommand}"
                                     Style="{StaticResource DangerButtonStyle}"
                                     Visibility="{Binding IsLogonRunning, Converter={StaticResource BoolToVisibility}}" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- ── Web Server ──────────────────────────────────────────── -->
+                <Border Style="{StaticResource ElevatedCardStyle}" Padding="0" Margin="10,0,0,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="5" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" CornerRadius="10,0,0,10"
+                                Background="{DynamicResource Accent.Primary}" />
+                        <StackPanel Grid.Column="1" Margin="18,20,20,20">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="12" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Grid Grid.Column="0" Width="36" Height="36">
+                                    <Border CornerRadius="8" Opacity="0.12"
+                                            Background="{DynamicResource Accent.Primary}" />
+                                    <Path Data="{StaticResource Icon.Web}"
+                                          Fill="{DynamicResource Accent.Primary}"
+                                          Width="18" Height="18" Stretch="Uniform" />
+                                </Grid>
+                                <TextBlock Grid.Column="2" Text="Web Server"
+                                           Style="{StaticResource H3Style}" VerticalAlignment="Center" />
+                                <Grid Grid.Column="3" VerticalAlignment="Center">
+                                    <Ellipse Width="18" Height="18"
+                                             Fill="{Binding IsWebServerRunning, Converter={StaticResource StatusToColor}}">
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse">
+                                                <Setter Property="Opacity" Value="0.2" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsWebServerRunning}" Value="True">
+                                                        <DataTrigger.EnterActions>
+                                                            <BeginStoryboard x:Name="WebHaloPulse">
+                                                                <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                                                    <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                                     From="0.15" To="0.65"
+                                                                                     Duration="0:0:0.9" />
+                                                                </Storyboard>
+                                                            </BeginStoryboard>
+                                                        </DataTrigger.EnterActions>
+                                                        <DataTrigger.ExitActions>
+                                                            <RemoveStoryboard BeginStoryboardName="WebHaloPulse" />
+                                                        </DataTrigger.ExitActions>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
+                                    </Ellipse>
+                                    <Ellipse Width="10" Height="10"
+                                             Fill="{Binding IsWebServerRunning, Converter={StaticResource StatusToColor}}" />
+                                </Grid>
+                            </Grid>
+                            <Rectangle Height="14" Fill="Transparent" />
+                            <TextBlock Style="{StaticResource CaptionStyle}">
+                                <TextBlock.Text>
+                                    <Binding Path="IsWebServerRunning" StringFormat="nginx + php-cgi   •   {0}" />
+                                </TextBlock.Text>
+                            </TextBlock>
+                            <Rectangle Height="12" Fill="Transparent" />
+                            <Separator />
+                            <Rectangle Height="14" Fill="Transparent" />
+                            <Button HorizontalAlignment="Stretch"
+                                    Content="{Binding Loc[BtnStop]}"
+                                    Command="{Binding ToggleWebServerCommand}"
+                                    Style="{StaticResource DangerButtonStyle}"
+                                    Visibility="{Binding IsWebServerRunning, Converter={StaticResource BoolToVisibility}}" />
+                            <Button HorizontalAlignment="Stretch"
+                                    Content="{Binding Loc[BtnStart]}"
+                                    Command="{Binding StartWebServerCommand}"
+                                    Style="{StaticResource PrimaryButtonStyle}"
+                                    Visibility="{Binding IsWebServerRunning, Converter={StaticResource InverseBoolToVisibility}}" />
                         </StackPanel>
                     </Grid>
                 </Border>

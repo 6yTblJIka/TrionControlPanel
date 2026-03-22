@@ -34,8 +34,68 @@
             </StackPanel>
         </Border>
 
+        <!-- ══ Loading overlay ═══════════════════════════════════════════════════
+             Covers row 1 while IsLoading = true; collapses once data is ready. -->
+        <Grid Grid.Row="1" Grid.RowSpan="1" Panel.ZIndex="10"
+              Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}"
+              Background="{DynamicResource Background.Primary}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+
+                <!-- Spinner ring -->
+                <Grid Width="64" Height="64" HorizontalAlignment="Center">
+                    <!-- Track -->
+                    <Ellipse Stroke="{DynamicResource Background.Elevated}"
+                             StrokeThickness="5" />
+                    <!-- Animated arc -->
+                    <Ellipse Stroke="{DynamicResource Accent.Primary}"
+                             StrokeThickness="5"
+                             StrokeDashArray="44 160"
+                             RenderTransformOrigin="0.5,0.5">
+                        <Ellipse.RenderTransform>
+                            <RotateTransform x:Name="SpinnerRotate" />
+                        </Ellipse.RenderTransform>
+                        <Ellipse.Triggers>
+                            <EventTrigger RoutedEvent="Loaded">
+                                <BeginStoryboard>
+                                    <Storyboard RepeatBehavior="Forever">
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="SpinnerRotate"
+                                            Storyboard.TargetProperty="Angle"
+                                            From="0" To="360"
+                                            Duration="0:0:1" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </Ellipse.Triggers>
+                    </Ellipse>
+                </Grid>
+
+                <TextBlock Text="{Binding Loc[DashboardLoading]}"
+                           Style="{StaticResource CaptionStyle}"
+                           HorizontalAlignment="Center"
+                           Margin="0,16,0,0" />
+            </StackPanel>
+        </Grid>
+
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="28,24,28,28">
+            <StackPanel.Style>
+                <Style TargetType="StackPanel">
+                    <Setter Property="Opacity" Value="0" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsLoading}" Value="False">
+                            <DataTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.4" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.EnterActions>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </StackPanel.Style>
 
             <!-- ── Page header ── -->
             <Grid Margin="0,0,0,24">
@@ -57,7 +117,7 @@
                        Style="{StaticResource SectionLabelStyle}"
                        Margin="0,0,0,10" />
 
-            <UniformGrid Rows="1" Columns="3">
+            <UniformGrid Rows="1" Columns="4">
                 <controls:ServerStatusCard
                     Title="{Binding Loc[BTNStartDatabaseToolTip]}"
                     IsRunning="{Binding IsDatabaseRunning}"
@@ -65,7 +125,7 @@
                     ProcessId="{Binding DatabasePid}"
                     IconData="{StaticResource Icon.Database}"
                     IconAccent="{DynamicResource Accent.Primary}"
-                    Margin="0,0,10,0" />
+                    Margin="0,0,8,0" />
 
                 <controls:ServerStatusCard
                     Title="{Binding Loc[BTNStartWorldToolTip]}"
@@ -74,7 +134,7 @@
                     ProcessId="{Binding WorldPid}"
                     IconData="{StaticResource Icon.Server}"
                     IconAccent="{DynamicResource Accent.Primary}"
-                    Margin="5,0" />
+                    Margin="0,0,8,0" />
 
                 <controls:ServerStatusCard
                     Title="{Binding Loc[BTNStartLogonToolTip]}"
@@ -83,7 +143,16 @@
                     ProcessId="{Binding LogonPid}"
                     IconData="{StaticResource Icon.Server}"
                     IconAccent="{DynamicResource Accent.Primary}"
-                    Margin="10,0,0,0" />
+                    Margin="0,0,8,0" />
+
+                <controls:ServerStatusCard
+                    Title="Web Server"
+                    IsRunning="{Binding IsWebServerRunning}"
+                    Uptime="{Binding WebServerUptime}"
+                    ProcessId="{Binding WebServerPid}"
+                    IconData="{StaticResource Icon.Web}"
+                    IconAccent="{DynamicResource Accent.Primary}"
+                    Margin="0,0,0,0" />
             </UniformGrid>
 
             <!-- ── Machine Resources ── -->
@@ -103,11 +172,13 @@
                         <Border Grid.Column="0" CornerRadius="10,0,0,10"
                                 Background="{DynamicResource Accent.Primary}" />
                         <StackPanel Grid.Column="1" Margin="16,18,16,18">
+                            <!-- Header row: icon + label on left, percentage on right -->
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="10" />
                                     <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <Grid Grid.Column="0" Width="36" Height="36">
                                     <Border CornerRadius="8" Opacity="0.12"
@@ -118,22 +189,28 @@
                                 </Grid>
                                 <TextBlock Grid.Column="2" Text="{Binding Loc[LBLMetricCPU]}"
                                            Style="{StaticResource H4Style}" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="3"
+                                           Foreground="{DynamicResource Accent.Primary}"
+                                           Style="{StaticResource H4Style}"
+                                           VerticalAlignment="Center">
+                                    <TextBlock.Text>
+                                        <Binding Path="CpuPercent" StringFormat="{}{0:F1}%" />
+                                    </TextBlock.Text>
+                                </TextBlock>
                             </Grid>
                             <Separator Margin="0,12,0,10" />
-                            <TextBlock Style="{StaticResource MetricValueStyle}"
-                                       Foreground="{DynamicResource Accent.Primary}">
-                                <TextBlock.Text>
-                                    <Binding Path="CpuPercent" StringFormat="{}{0:F1}%" />
-                                </TextBlock.Text>
-                            </TextBlock>
-                            <TextBlock Text="{Binding Loc[LBLMetricUsage]}"
-                                       Style="{StaticResource CaptionStyle}" Margin="0,4,0,10" />
-                            <ProgressBar Minimum="0" Maximum="100" Height="6"
-                                         Value="{Binding CpuPercent}"
-                                         Foreground="{DynamicResource Accent.Primary}"
-                                         Background="{DynamicResource Background.Elevated}"
-                                         BorderThickness="0"
-                                         Style="{StaticResource ModernProgressBarStyle}" />
+                            <!-- Sparkline — Y axis pinned to 100 %, ceiling line visible -->
+                            <controls:SparklineChart Values="{Binding CpuHistory}"
+                                                     Stroke="{DynamicResource Accent.Primary}"
+                                                     Fill="{DynamicResource Accent.Subtle}"
+                                                     MaxValue="100"
+                                                     ShowMaxLine="True"
+                                                     Height="48" />
+                            <!-- Core count beneath the chart -->
+                            <TextBlock Text="{Binding CpuCores}"
+                                       Style="{StaticResource CaptionStyle}"
+                                       HorizontalAlignment="Right"
+                                       Margin="0,8,0,0" />
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -148,11 +225,13 @@
                         <Border Grid.Column="0" CornerRadius="10,0,0,10"
                                 Background="{DynamicResource Accent.Primary}" />
                         <StackPanel Grid.Column="1" Margin="16,18,16,18">
+                            <!-- Header row: icon + label on left, percentage on right -->
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="10" />
                                     <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <Grid Grid.Column="0" Width="36" Height="36">
                                     <Border CornerRadius="8" Opacity="0.12"
@@ -163,15 +242,26 @@
                                 </Grid>
                                 <TextBlock Grid.Column="2" Text="{Binding Loc[LBLMetricRAM]}"
                                            Style="{StaticResource H4Style}" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="3"
+                                           Foreground="{DynamicResource Accent.Primary}"
+                                           Style="{StaticResource H4Style}"
+                                           VerticalAlignment="Center">
+                                    <TextBlock.Text>
+                                        <Binding Path="RamPercent" StringFormat="{}{0:F1}%" />
+                                    </TextBlock.Text>
+                                </TextBlock>
                             </Grid>
                             <Separator Margin="0,12,0,10" />
-                            <TextBlock Style="{StaticResource MetricValueStyle}"
-                                       Foreground="{DynamicResource Accent.Primary}">
-                                <TextBlock.Text>
-                                    <Binding Path="RamPercent" StringFormat="{}{0:F1}%" />
-                                </TextBlock.Text>
-                            </TextBlock>
-                            <TextBlock Style="{StaticResource CaptionStyle}" Margin="0,4,0,10">
+                            <!-- Sparkline — Y axis pinned to 100 %, ceiling line visible -->
+                            <controls:SparklineChart Values="{Binding RamHistory}"
+                                                     Stroke="{DynamicResource Accent.Primary}"
+                                                     Fill="{DynamicResource Accent.Subtle}"
+                                                     MaxValue="100"
+                                                     ShowMaxLine="True"
+                                                     Height="48" />
+                            <!-- Used / Total beneath the chart -->
+                            <TextBlock Style="{StaticResource CaptionStyle}" Margin="0,8,0,0"
+                                       HorizontalAlignment="Right">
                                 <TextBlock.Text>
                                     <MultiBinding StringFormat="{}{0} / {1}">
                                         <Binding Path="RamUsed" />
@@ -179,12 +269,6 @@
                                     </MultiBinding>
                                 </TextBlock.Text>
                             </TextBlock>
-                            <ProgressBar Minimum="0" Maximum="100" Height="6"
-                                         Value="{Binding RamPercent}"
-                                         Foreground="{DynamicResource Accent.Primary}"
-                                         Background="{DynamicResource Background.Elevated}"
-                                         BorderThickness="0"
-                                         Style="{StaticResource ModernProgressBarStyle}" />
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -217,11 +301,10 @@
                             </Grid>
                             <Separator Margin="0,12,0,10" />
                             <!-- Read row -->
-                            <Grid Margin="0,0,0,8">
+                            <Grid Margin="0,0,0,6">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="{Binding Loc[LBLMetricRead]}"
                                            Style="{StaticResource CaptionStyle}"
@@ -230,18 +313,13 @@
                                                          Values="{Binding DiskReadHistory}"
                                                          Stroke="{DynamicResource Accent.Primary}"
                                                          Fill="{DynamicResource Accent.Subtle}"
-                                                         Height="32" />
-                                <TextBlock Grid.Column="2" Text="{Binding DiskRead}"
-                                           Style="{StaticResource MonoStyle}"
-                                           Foreground="{DynamicResource Foreground.Secondary}"
-                                           VerticalAlignment="Center" Margin="8,0,0,0" />
+                                                         Height="28" />
                             </Grid>
                             <!-- Write row -->
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="{Binding Loc[LBLMetricWrite]}"
                                            Style="{StaticResource CaptionStyle}"
@@ -250,12 +328,19 @@
                                                          Values="{Binding DiskWriteHistory}"
                                                          Stroke="{DynamicResource Accent.Primary}"
                                                          Fill="{DynamicResource Accent.Subtle}"
-                                                         Height="32" />
-                                <TextBlock Grid.Column="2" Text="{Binding DiskWrite}"
-                                           Style="{StaticResource MonoStyle}"
-                                           Foreground="{DynamicResource Foreground.Secondary}"
-                                           VerticalAlignment="Center" Margin="8,0,0,0" />
+                                                         Height="28" />
                             </Grid>
+                            <!-- Read / Write values beneath the charts -->
+                            <TextBlock Style="{StaticResource CaptionStyle}"
+                                       HorizontalAlignment="Right"
+                                       Margin="0,8,0,0">
+                                <TextBlock.Text>
+                                    <MultiBinding StringFormat="R {0}  W {1}">
+                                        <Binding Path="DiskRead" />
+                                        <Binding Path="DiskWrite" />
+                                    </MultiBinding>
+                                </TextBlock.Text>
+                            </TextBlock>
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -288,11 +373,10 @@
                             </Grid>
                             <Separator Margin="0,12,0,10" />
                             <!-- Download row -->
-                            <Grid Margin="0,0,0,8">
+                            <Grid Margin="0,0,0,6">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="↓"
                                            Foreground="{DynamicResource Accent.Primary}"
@@ -302,18 +386,13 @@
                                                          Values="{Binding NetRecvHistory}"
                                                          Stroke="{DynamicResource Accent.Primary}"
                                                          Fill="{DynamicResource Accent.Subtle}"
-                                                         Height="32" />
-                                <TextBlock Grid.Column="2" Text="{Binding NetworkRx}"
-                                           Style="{StaticResource MonoStyle}"
-                                           Foreground="{DynamicResource Foreground.Secondary}"
-                                           VerticalAlignment="Center" Margin="8,0,0,0" />
+                                                         Height="28" />
                             </Grid>
                             <!-- Upload row -->
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="↑"
                                            Foreground="{DynamicResource Foreground.Secondary}"
@@ -323,12 +402,19 @@
                                                          Values="{Binding NetSendHistory}"
                                                          Stroke="{DynamicResource Accent.Primary}"
                                                          Fill="{DynamicResource Accent.Subtle}"
-                                                         Height="32" />
-                                <TextBlock Grid.Column="2" Text="{Binding NetworkTx}"
-                                           Style="{StaticResource MonoStyle}"
-                                           Foreground="{DynamicResource Foreground.Secondary}"
-                                           VerticalAlignment="Center" Margin="8,0,0,0" />
+                                                         Height="28" />
                             </Grid>
+                            <!-- Down / Up values beneath the charts -->
+                            <TextBlock Style="{StaticResource CaptionStyle}"
+                                       HorizontalAlignment="Right"
+                                       Margin="0,8,0,0">
+                                <TextBlock.Text>
+                                    <MultiBinding StringFormat="↓ {0}  ↑ {1}">
+                                        <Binding Path="NetworkRx" />
+                                        <Binding Path="NetworkTx" />
+                                    </MultiBinding>
+                                </TextBlock.Text>
+                            </TextBlock>
                         </StackPanel>
                     </Grid>
                 </Border>

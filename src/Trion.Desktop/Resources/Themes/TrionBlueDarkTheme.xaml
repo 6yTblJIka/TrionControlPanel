@@ -51,8 +51,8 @@
 
     <!-- ── Misc ──────────────────────────────────────────────────────── -->
     <Color x:Key="Glow.Color">#00D4FF</Color>
-    <SolidColorBrush x:Key="ScrollBar.Thumb"   Color="#3A3A3A" />
-    <SolidColorBrush x:Key="ScrollBar.Track"   Color="#181818" />
+    <SolidColorBrush x:Key="ScrollBar.Thumb"   Color="#565668" />
+    <SolidColorBrush x:Key="ScrollBar.Track"   Color="#222230" />
     <SolidColorBrush x:Key="Tab.Underline"     Color="#00D4FF" />
 
 </ResourceDictionary>

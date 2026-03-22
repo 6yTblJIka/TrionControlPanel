@@ -2,7 +2,6 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Trion.Core.Abstractions.Auth;
-using Trion.Core.Abstractions.Services;
 using Trion.Core.Auth;
 
 namespace Trion.Web.Api;
@@ -51,7 +50,7 @@ public static class AuthEndpoints
         var ip = GetClientIp(ctx);
 
         var authResult = await authService.AuthenticateAsync(
-            request.Username, request.Password, request.EmulatorType, ct);
+            request.Username, request.Password, ip, ct);
 
         if (!authResult.Success)
             return TypedResults.Unauthorized();
@@ -137,9 +136,9 @@ public static class AuthEndpoints
 
     private static string GetClientIp(HttpContext ctx)
     {
-        var forwarded = ctx.Request.Headers["X-Forwarded-For"].FirstOrDefault();
-        if (!string.IsNullOrEmpty(forwarded))
-            return forwarded.Split(',')[0].Trim();
+        // Use RemoteIpAddress only — X-Forwarded-For is not trusted without a configured proxy.
+        // If the app runs behind a reverse proxy, enable UseForwardedHeaders with KnownProxies
+        // in Program.cs instead of reading the header manually.
         return ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
     }
 }
@@ -147,9 +146,8 @@ public static class AuthEndpoints
 // ── Request / Response DTOs ───────────────────────────────────────────────
 
 public sealed record LoginRequest(
-    string       Username,
-    string       Password,
-    EmulatorType EmulatorType = EmulatorType.TrinityCore);
+    string Username,
+    string Password);
 
 public sealed record LoginResponse(
     string AccessToken,

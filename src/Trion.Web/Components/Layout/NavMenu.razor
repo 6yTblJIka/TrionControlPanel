@@ -1,11 +1,66 @@
-﻿
+@using Trion.Core.Constants
+@inject GlobalLocalizer L
 
-<MudNavMenu>
-    <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
-    <MudNavLink Href="server-control" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Dns">Server Control</MudNavLink>
-    <MudNavLink Href="ddns-settings" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Language">DDNS Settings</MudNavLink>
-    <MudNavLink Href="installer" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.InstallDesktop">Installer</MudNavLink>
-    <MudNavLink Href="login" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Login">Sign In</MudNavLink>
-</MudNavMenu>
+<nav class="trion-nav" aria-label="Main navigation">
 
+    <NavLink class="trion-nav-item" href="" Match="NavLinkMatch.All" title="@L["Nav_Dashboard"]">
+        <span class="trion-nav-icon">
+            <MudIcon Icon="@Icons.Material.Filled.Dashboard" />
+        </span>
+        <span class="trion-nav-label">@L["Nav_Dashboard"]</span>
+    </NavLink>
 
+    <NavLink class="trion-nav-item" href="server-control" Match="NavLinkMatch.Prefix" title="@L["Nav_ServerControl"]">
+        <span class="trion-nav-icon">
+            <MudIcon Icon="@Icons.Material.Filled.Dns" />
+        </span>
+        <span class="trion-nav-label">@L["Nav_ServerControl"]</span>
+    </NavLink>
+
+    <NavLink class="trion-nav-item" href="installer" Match="NavLinkMatch.Prefix" title="@L["Nav_Installer"]">
+        <span class="trion-nav-icon">
+            <MudIcon Icon="@Icons.Material.Filled.InstallDesktop" />
+        </span>
+        <span class="trion-nav-label">@L["Nav_Installer"]</span>
+    </NavLink>
+
+    <NavLink class="trion-nav-item" href="ddns-settings" Match="NavLinkMatch.Prefix" title="@L["Nav_DdnsSettings"]">
+        <span class="trion-nav-icon">
+            <MudIcon Icon="@Icons.Material.Filled.Language" />
+        </span>
+        <span class="trion-nav-label">@L["Nav_DdnsSettings"]</span>
+    </NavLink>
+
+    <div class="trion-nav-divider"></div>
+
+    <NavLink class="trion-nav-item" href="login" Match="NavLinkMatch.Prefix" title="@L["Nav_SignIn"]">
+        <span class="trion-nav-icon">
+            <MudIcon Icon="@Icons.Material.Filled.Login" />
+        </span>
+        <span class="trion-nav-label">@L["Nav_SignIn"]</span>
+    </NavLink>
+
+    <div class="trion-nav-divider"></div>
+
+    <a class="trion-nav-item" href="@ExternalLinks.Discord" target="_blank" rel="noopener noreferrer" title="@L["Nav_Discord"]">
+        <span class="trion-nav-icon">
+            <MudIcon Icon="@Icons.Material.Filled.Forum" />
+        </span>
+        <span class="trion-nav-label">@L["Nav_Discord"]</span>
+    </a>
+
+    <a class="trion-nav-item" href="@ExternalLinks.Support" target="_blank" rel="noopener noreferrer" title="@L["Nav_Support"]">
+        <span class="trion-nav-icon">
+            <MudIcon Icon="@Icons.Material.Filled.HelpOutline" />
+        </span>
+        <span class="trion-nav-label">@L["Nav_Support"]</span>
+    </a>
+
+    <a class="trion-nav-item" href="@ExternalLinks.Donation" target="_blank" rel="noopener noreferrer" title="@L["Nav_Donate"]">
+        <span class="trion-nav-icon">
+            <MudIcon Icon="@Icons.Material.Filled.Favorite" />
+        </span>
+        <span class="trion-nav-label">@L["Nav_Donate"]</span>
+    </a>
+
+</nav>

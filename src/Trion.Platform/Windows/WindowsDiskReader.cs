@@ -11,10 +11,17 @@ public sealed class WindowsDiskReader : IDisposable
     private readonly ILogger _log;
     private PerformanceCounter? _readCounter;
     private PerformanceCounter? _writeCounter;
+    private bool _initialized;
 
     public WindowsDiskReader(TrionLogger trionLogger)
     {
         _log = trionLogger.CreateLogger(nameof(WindowsDiskReader));
+    }
+
+    private void EnsureInitialized()
+    {
+        if (_initialized) return;
+        _initialized = true;
         try
         {
             _readCounter  = new PerformanceCounter("PhysicalDisk", "Disk Read Bytes/sec",  "_Total");
@@ -37,6 +44,7 @@ public sealed class WindowsDiskReader : IDisposable
     /// </summary>
     public (float ReadBytesPerSec, float WriteBytesPerSec) GetDiskThroughput()
     {
+        EnsureInitialized();
         try
         {
             var r = _readCounter?.NextValue()  ?? 0f;

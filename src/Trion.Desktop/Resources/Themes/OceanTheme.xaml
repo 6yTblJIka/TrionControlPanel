@@ -58,8 +58,8 @@
     <Color x:Key="Glow.Color">#F43F5E</Color>
 
     <!-- Scrollbar -->
-    <SolidColorBrush x:Key="ScrollBar.Thumb"   Color="#451C32" />
-    <SolidColorBrush x:Key="ScrollBar.Track"   Color="#120910" />
+    <SolidColorBrush x:Key="ScrollBar.Thumb"   Color="#60304C" />
+    <SolidColorBrush x:Key="ScrollBar.Track"   Color="#1C0E18" />
 
     <!-- Tab underline -->
     <SolidColorBrush x:Key="Tab.Underline"     Color="#F43F5E" />

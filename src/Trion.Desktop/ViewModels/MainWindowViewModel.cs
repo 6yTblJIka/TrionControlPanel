@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using Trion.Core.Database;
 using Trion.Desktop.Models;
 using Trion.Desktop.Services;
 using Trion.Desktop.Views;
@@ -157,7 +158,14 @@ public partial class MainWindowViewModel : ObservableObject
         IsThemeDark  = _themeService.IsDark;
 
         BuildNavItems();
-        Navigate(NavItems[0]);
+
+        // Defer loading the initial view to Background priority so the window shell
+        // (title bar, sidebar, server bar) renders first on the UI thread.
+        // Without this, DashboardView loads synchronously as part of the first layout
+        // pass, blocking the UI for several seconds.
+        App.Current.Dispatcher.BeginInvoke(
+            System.Windows.Threading.DispatcherPriority.Background,
+            () => Navigate(NavItems[0]));
     }
 
     private void OnUnreadCountChanged()

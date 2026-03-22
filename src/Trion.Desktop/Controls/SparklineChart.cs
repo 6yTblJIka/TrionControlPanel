@@ -39,6 +39,16 @@ public sealed class SparklineChart : FrameworkElement
             new FrameworkPropertyMetadata(0.0,
                 FrameworkPropertyMetadataOptions.AffectsRender));
 
+    /// <summary>
+    /// When true, draws a solid horizontal reference line at the MaxValue ceiling.
+    /// Requires <see cref="MaxValue"/> &gt; 0 to have any effect.
+    /// </summary>
+    public static readonly DependencyProperty ShowMaxLineProperty =
+        DependencyProperty.Register(nameof(ShowMaxLine), typeof(bool),
+            typeof(SparklineChart),
+            new FrameworkPropertyMetadata(false,
+                FrameworkPropertyMetadataOptions.AffectsRender));
+
     // ── CLR wrappers ──────────────────────────────────────────────────────────
 
     public double[]? Values
@@ -63,6 +73,12 @@ public sealed class SparklineChart : FrameworkElement
     {
         get => (double)GetValue(MaxValueProperty);
         set => SetValue(MaxValueProperty, value);
+    }
+
+    public bool ShowMaxLine
+    {
+        get => (bool)GetValue(ShowMaxLineProperty);
+        set => SetValue(ShowMaxLineProperty, value);
     }
 
     // ── Rendering ─────────────────────────────────────────────────────────────
@@ -111,6 +127,16 @@ public sealed class SparklineChart : FrameworkElement
                 double yGrid = h - 1.0 - pct * yScale;
                 dc.DrawLine(gridPen, new Point(0, yGrid), new Point(w, yGrid));
             }
+        }
+
+        // ── Max / ceiling reference line ──────────────────────────────────────
+
+        if (ShowMaxLine && MaxValue > 0)
+        {
+            double yCeil = Y(max);   // top of scale — y ≈ 1 px
+            var ceilPen = new Pen(Stroke, 1.0) { DashStyle = DashStyles.Dash };
+            ceilPen.Freeze();
+            dc.DrawLine(ceilPen, new Point(0, yCeil), new Point(w, yCeil));
         }
 
         // ── Filled area geometry ──────────────────────────────────────────────

@@ -58,6 +58,23 @@ public sealed class EmulatorInstallerService : IEmulatorInstallerService
         }
     }
 
+    public async Task<AvailablePackagesResponse> FetchAvailablePackagesAsync(CancellationToken ct)
+    {
+        try
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Get, AppLinks.PackagesUrl);
+            AddApiKeyHeader(req);
+            using var resp = await _http.SendAsync(req, ct);
+            resp.EnsureSuccessStatusCode();
+            return await resp.Content.ReadFromJsonAsync<AvailablePackagesResponse>(ct)
+                   ?? new AvailablePackagesResponse();
+        }
+        catch
+        {
+            return new AvailablePackagesResponse();
+        }
+    }
+
     public string GetLocalVersion(string exePath)
     {
         if (string.IsNullOrWhiteSpace(exePath) || !File.Exists(exePath))

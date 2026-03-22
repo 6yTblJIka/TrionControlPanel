@@ -28,11 +28,18 @@ public sealed class MetricsChannelAccessor
     private volatile MachineMetrics?  _lastMachine;
     private volatile ProcessMetrics[]? _lastProcess;
 
-    internal void SetLastMachine(MachineMetrics m)   => _lastMachine = m;
+    internal void SetLastMachine(MachineMetrics m)
+    {
+        _lastMachine = m;
+        MachineUpdated?.Invoke(m);
+    }
     internal void SetLastProcess(ProcessMetrics[] p) => _lastProcess = p;
 
     public MachineMetrics?   LastMachine => _lastMachine;
     public ProcessMetrics[]? LastProcess => _lastProcess;
+
+    /// <summary>Fired synchronously each time a new machine snapshot is published.</summary>
+    public event Action<MachineMetrics>? MachineUpdated;
 
     /// <summary>
     /// Creates a new reader that receives every metric update written to the channels.

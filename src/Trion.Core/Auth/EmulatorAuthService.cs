@@ -1,136 +1,112 @@
-using System.Security.Cryptography;
-using System.Text;
+using System.Net.Http;
+using System.Net.Http.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Trion.Core.Abstractions.Auth;
-using Trion.Core.Abstractions.Database;
-using Trion.Core.Abstractions.Database.Models;
-using Trion.Core.Abstractions.Services;
 using Trion.Core.Abstractions.Settings;
+using Trion.Core.Constants;
 using Trion.Core.Logging;
+using Trion.Core.Setup;
 
 namespace Trion.Core.Auth;
 
 public sealed class EmulatorAuthService : IEmulatorAuthService
 {
-    private const string LockoutKeyPrefix  = "lockout:";
-    private const string FailCountPrefix   = "failcount:";
+    private const string LockoutKeyPrefix = "lockout:";
+    private const string FailCountPrefix  = "failcount:";
 
-    private readonly IEmulatorRepositoryFactory _repoFactory;
-    private readonly ISettingsRepository        _settings;
-    private readonly AuditLogger                _audit;
+    private static readonly HttpClient _phoenixHttp =
+        new() { Timeout = TimeSpan.FromSeconds(15) };
+
+    private readonly ISettingsRepository                  _settings;
+    private readonly AuditLogger                          _audit;
     private readonly IOptionsMonitor<EmulatorAuthOptions> _opts;
-    private readonly ILogger                    _log;
+    private readonly ILogger                              _log;
 
     public EmulatorAuthService(
-        IEmulatorRepositoryFactory           repoFactory,
         ISettingsRepository                  settings,
         AuditLogger                          audit,
         IOptionsMonitor<EmulatorAuthOptions> opts,
         TrionLogger                          trionLogger)
     {
-        _repoFactory = repoFactory;
-        _settings    = settings;
-        _audit       = audit;
-        _opts        = opts;
-        _log         = trionLogger.CreateLogger(nameof(EmulatorAuthService));
+        _settings = settings;
+        _audit    = audit;
+        _opts     = opts;
+        _log      = trionLogger.CreateLogger(nameof(EmulatorAuthService));
     }
 
     public async Task<AuthResult> AuthenticateAsync(
-        string       username,
-        string       password,
-        EmulatorType emulatorType,
+        string username,
+        string password,
+        string ip = "",
         CancellationToken ct = default)
     {
         var lower = username.ToLowerInvariant();
 
-        // ── Lockout check ────────────────────────────────────────────────────
-        var lockoutKey = LockoutKeyPrefix + lower;
+        // ── Lockout check ─────────────────────────────────────────────────────
+        var lockoutKey    = LockoutKeyPrefix + lower;
         var lockoutExpiry = await _settings.GetAsync<DateTimeOffset?>(lockoutKey, ct);
         if (lockoutExpiry.HasValue && lockoutExpiry.Value > DateTimeOffset.UtcNow)
         {
             var remaining = lockoutExpiry.Value - DateTimeOffset.UtcNow;
-            RecordFailure(username, "locked", string.Empty);
+            RecordFailure(username, "locked", ip);
             return AuthResult.Fail($"Account locked. Try again in {(int)remaining.TotalMinutes + 1} minute(s).");
         }
 
-        // ── Bootstrap account (always available, not tied to an emulator DB) ─
-        if (await BootstrapAccount.ValidateAsync(_settings, username, password, ct))
+        // ── Owner account check ───────────────────────────────────────────────
+        var ownerUsername = await _settings.GetAsync<string>("bootstrap_username", ct);
+        if (ownerUsername is null ||
+            !ownerUsername.Equals(username, StringComparison.OrdinalIgnoreCase))
         {
-            await ClearFailCount(lower, ct);
-            _audit.Record(new AuditEvent(
-                Timestamp: DateTimeOffset.UtcNow,
-                Username:  username,
-                IpAddress: "internal",
-                Action:    AuditAction.LoginSuccess,
-                Result:    "bootstrap",
-                Detail:    null));
-            return AuthResult.Ok(username, gmLevel: 3);
+            return await Fail(lower, username, ip, "Invalid username or password.", ct);
         }
 
-        // ── Emulator repository auth ─────────────────────────────────────────
-        var repo = _repoFactory.Get(emulatorType);
-        if (repo is null)
+        var accountType = await _settings.GetAsync<string>(SetupKeys.AccountType, ct);
+
+        if (accountType == "phoenix_api")
         {
-            // No DB configured yet (M4 not implemented) — deny cleanly
-            return await Fail(lower, username, "No emulator database configured.", ct);
+            // Live verification against the Flying-Phoenix API
+            var (apiOk, apiErr) = await VerifyPhoenixApiAsync(username, password, ct);
+            if (apiOk)
+            {
+                await ClearFailCount(lower, ct);
+                _audit.Record(new AuditEvent(
+                    Timestamp: DateTimeOffset.UtcNow,
+                    Username:  username,
+                    IpAddress: ip.Length > 0 ? ip : "internal",
+                    Action:    AuditAction.LoginSuccess,
+                    Result:    "phoenix_api",
+                    Detail:    null));
+                return AuthResult.Ok(username, gmLevel: 3);
+            }
+            return await Fail(lower, username, ip, apiErr ?? "Phoenix API verification failed.", ct);
         }
-
-        var expectedHash = ComputeHash(username, password, emulatorType);
-
-        AccountRecord? account;
-        try
+        else
         {
-            account = await repo.GetAccountAsync(username, ct);
+            // Local account — BCrypt hash comparison
+            if (await BootstrapAccount.ValidateAsync(_settings, username, password, ct))
+            {
+                await ClearFailCount(lower, ct);
+                _audit.Record(new AuditEvent(
+                    Timestamp: DateTimeOffset.UtcNow,
+                    Username:  username,
+                    IpAddress: ip.Length > 0 ? ip : "internal",
+                    Action:    AuditAction.LoginSuccess,
+                    Result:    "bootstrap",
+                    Detail:    null));
+                return AuthResult.Ok(username, gmLevel: 3);
+            }
+            return await Fail(lower, username, ip, "Invalid username or password.", ct);
         }
-        catch (Exception ex)
-        {
-            _log.LogError(ex, "Failed to query emulator repository for user {Username}.", username);
-            return AuthResult.Fail("Authentication service unavailable.");
-        }
-
-        if (account is null)
-            return await Fail(lower, username, "Invalid username or password.", ct);
-
-        // Verify stored hash matches
-        var storedHash = account.PasswordHash;
-        if (!string.Equals(expectedHash, storedHash, StringComparison.OrdinalIgnoreCase))
-            return await Fail(lower, username, "Invalid username or password.", ct);
-
-        // GM level check
-        int gmLevel;
-        try
-        {
-            gmLevel = await repo.GetGmLevelAsync(username, ct);
-        }
-        catch (Exception ex)
-        {
-            _log.LogError(ex, "Failed to get GM level for {Username}.", username);
-            return AuthResult.Fail("Authentication service unavailable.");
-        }
-
-        if (gmLevel < 1)
-            return await Fail(lower, username, "Access denied: GM level 0.", ct);
-
-        // Success
-        await ClearFailCount(lower, ct);
-        _audit.Record(new AuditEvent(
-            Timestamp: DateTimeOffset.UtcNow,
-            Username:  username,
-            IpAddress: "internal",
-            Action:    AuditAction.LoginSuccess,
-            Result:    $"gm:{gmLevel}",
-            Detail:    emulatorType.ToString()));
-
-        return AuthResult.Ok(username, gmLevel);
     }
 
-    // ── Failure tracking ──────────────────────────────────────────────────
+    // ── Failure tracking ──────────────────────────────────────────────────────
 
     private async Task<AuthResult> Fail(
-        string lower, string username, string reason, CancellationToken ct)
+        string lower, string username, string ip, string reason, CancellationToken ct)
     {
-        RecordFailure(username, reason, string.Empty);
+        RecordFailure(username, reason, ip);
 
         var failKey   = FailCountPrefix + lower;
         var failCount = (await _settings.GetAsync<int>(failKey, ct)) + 1;
@@ -166,14 +142,46 @@ public sealed class EmulatorAuthService : IEmulatorAuthService
             Detail:    reason));
     }
 
-    // ── Password hash computation ─────────────────────────────────────────
+    // ── Phoenix API verification ──────────────────────────────────────────────
 
-    private static string ComputeHash(string username, string password, EmulatorType type)
+    private async Task<(bool Ok, string? Error)> VerifyPhoenixApiAsync(
+        string username, string password, CancellationToken ct)
     {
-        // TrinityCore / CMaNGOS: SHA1(UPPER(username) + ":" + UPPER(password))
-        // AzerothCore uses the same format by default
-        var input = $"{username.ToUpperInvariant()}:{password.ToUpperInvariant()}";
-        var bytes = SHA1.HashData(Encoding.UTF8.GetBytes(input));
-        return Convert.ToHexString(bytes); // uppercase hex, no dashes
+        try
+        {
+            var url  = ApiEndpoints.AccountLoginUrl(ExternalLinks.ApiDefaultHost);
+            var resp = await _phoenixHttp.PostAsJsonAsync(
+                url, new { username, password }, ct);
+
+            if (!resp.IsSuccessStatusCode)
+                return (false, $"Phoenix API returned {(int)resp.StatusCode}.");
+
+            var body = await resp.Content.ReadFromJsonAsync<PhoenixLoginResponse>(ct);
+            if (body is null || string.IsNullOrEmpty(body.Token))
+                return (false, "Invalid response from the Phoenix API.");
+
+            if (body.IsBanned)
+                return (false, "This account is banned.");
+
+            return (true, null);
+        }
+        catch (HttpRequestException)
+        {
+            return (false, "Cannot reach the Trion/Phoenix server. Check your internet connection.");
+        }
+        catch (TaskCanceledException)
+        {
+            return (false, "Request timed out.");
+        }
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "Unexpected error during Phoenix API verification for {Username}.", username);
+            return (false, "Authentication service unavailable.");
+        }
     }
+
+    private sealed record PhoenixLoginResponse(
+        [property: JsonPropertyName("token")]     string Token,
+        [property: JsonPropertyName("is_banned")] bool   IsBanned
+    );
 }

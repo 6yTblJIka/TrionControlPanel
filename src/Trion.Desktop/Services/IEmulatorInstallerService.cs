@@ -19,6 +19,12 @@ public interface IEmulatorInstallerService
     /// <summary>Fetch the latest versions for all expansions from the API.</summary>
     Task<EmulatorVersions> FetchLatestVersionsAsync(CancellationToken ct);
 
+    /// <summary>
+    /// Fetch which packages are available for the current API key tier.
+    /// Returns an empty response (all unavailable) on network failure.
+    /// </summary>
+    Task<AvailablePackagesResponse> FetchAvailablePackagesAsync(CancellationToken ct);
+
     /// <summary>Read the local version string from a world-server exe (returns "—" on failure).</summary>
     string GetLocalVersion(string exePath);
 }

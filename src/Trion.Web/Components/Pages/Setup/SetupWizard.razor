@@ -1,0 +1,380 @@
+@page "/setup"
+@layout BlankLayout
+@rendermode InteractiveServer
+
+@using Trion.Core.Setup
+
+@inject SetupService      Setup
+@inject NavigationManager Nav
+
+<PageTitle>Trion — Setup</PageTitle>
+
+<div class="login-bg">
+    <div class="login-glow"></div>
+
+    <div class="login-card trion-card" style="max-width:540px;">
+        <div class="trion-card-accent" style="width:100%;height:4px;border-radius:10px 10px 0 0;flex-shrink:0;"></div>
+        <div class="trion-card-body" style="padding:32px 40px 40px;">
+
+            <!-- Brand -->
+            <div class="d-flex justify-center align-center gap-3 mb-1">
+                <div class="trion-logo" style="width:40px;height:40px;flex-shrink:0;"></div>
+                <div>
+                    <div style="font-size:1.4rem;font-weight:800;letter-spacing:3px;
+                                color:var(--mud-palette-primary);line-height:1.1;">TRION</div>
+                    <div style="font-size:0.7rem;font-weight:500;letter-spacing:1.5px;
+                                color:var(--mud-palette-text-secondary);">SETUP WIZARD</div>
+                </div>
+            </div>
+
+            <MudDivider Class="my-4" />
+
+            <!-- Step indicators -->
+            <div class="d-flex justify-center align-center mb-5" style="gap:8px;">
+                @for (int i = 0; i < 4; i++)
+                {
+                    int idx     = i;
+                    bool active = idx == _step;
+                    bool done   = idx < _step;
+                    string bg   = done   ? "var(--mud-palette-success)"
+                                : active ? "var(--mud-palette-primary)"
+                                         : "var(--mud-palette-lines-inputs)";
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <div style="width:28px;height:28px;border-radius:50%;background:@bg;
+                                    display:flex;align-items:center;justify-content:center;
+                                    font-size:0.75rem;font-weight:700;
+                                    color:@(active||done ? "#fff" : "var(--mud-palette-text-secondary)");">
+                            @if (done)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Check" Style="font-size:14px;" />
+                            }
+                            else
+                            {
+                                @(idx + 1)
+                            }
+                        </div>
+                        @if (idx < 3)
+                        {
+                            <div style="width:36px;height:2px;
+                                        background:@(done ? "var(--mud-palette-success)" : "var(--mud-palette-lines-inputs)");">
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <!-- Global error -->
+            @if (!string.IsNullOrEmpty(_globalError))
+            {
+                <MudAlert Severity="Severity.Error" Dense="true" Class="mb-4">@_globalError</MudAlert>
+            }
+
+            <!-- ── Step 0: Welcome ───────────────────────────────────────── -->
+            @if (_step == 0)
+            {
+                <MudText Typo="Typo.h6" Class="mb-3" Style="font-weight:700;">Welcome</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+                    This wizard will guide you through setting up the Trion Control Panel.
+                    You will choose a settings database and create the owner account used to sign in.
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">
+                    This only runs once. You can always reconfigure later from the panel settings.
+                </MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           FullWidth="true" Size="Size.Large"
+                           OnClick="() => _step = 1"
+                           StartIcon="@Icons.Material.Filled.ArrowForward">
+                    Get Started
+                </MudButton>
+            }
+
+            <!-- ── Step 1: Storage ──────────────────────────────────────── -->
+            @if (_step == 1)
+            {
+                <MudText Typo="Typo.h6" Class="mb-1" Style="font-weight:700;">Settings Storage</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                    Choose where Trion stores its configuration. SQLite is recommended for single-machine setups.
+                </MudText>
+
+                <MudRadioGroup @bind-Value="_dbChoice" Class="mb-4">
+                    <MudRadio Value="@("sqlite")" Color="Color.Primary">
+                        <MudText><b>SQLite</b> — embedded, no extra software needed</MudText>
+                    </MudRadio>
+                    <MudRadio Value="@("mysql")" Color="Color.Primary">
+                        <MudText><b>MySQL / MariaDB</b> — for multi-instance or production use</MudText>
+                    </MudRadio>
+                </MudRadioGroup>
+
+                @if (_dbChoice == "mysql")
+                {
+                    <MudTextField @bind-Value="_mysqlConn"
+                                  Label="MySQL Connection String"
+                                  Placeholder="Server=localhost;Database=trion;Uid=root;Pwd=secret;"
+                                  Variant="Variant.Outlined"
+                                  Class="mb-3" FullWidth="true" />
+
+                    <div class="d-flex align-center gap-3 mb-2">
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.Cable"
+                                   OnClick="TestMySqlAsync" Disabled="_testing">
+                            @if (_testing)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                            }
+                            Test Connection
+                        </MudButton>
+                        @if (_mysqlOk == true)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Style="color:var(--mud-palette-success);" />
+                            <MudText Typo="Typo.body2" Color="Color.Success">Connected</MudText>
+                        }
+                        @if (_mysqlOk == false)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Error" Style="color:var(--mud-palette-error);" />
+                            <MudText Typo="Typo.body2" Color="Color.Error">@_mysqlError</MudText>
+                        }
+                    </div>
+                }
+
+                <div class="d-flex justify-space-between mt-6">
+                    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack"
+                               OnClick="() => _step = 0">Back</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                               EndIcon="@Icons.Material.Filled.ArrowForward"
+                               OnClick="AdvanceFromStorage"
+                               Disabled="@(_dbChoice == "mysql" && _mysqlOk != true)">
+                        Next
+                    </MudButton>
+                </div>
+            }
+
+            <!-- ── Step 2: Admin Account ────────────────────────────────── -->
+            @if (_step == 2)
+            {
+                <MudText Typo="Typo.h6" Class="mb-1" Style="font-weight:700;">Owner Account</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                    This account will have full access to the control panel.
+                </MudText>
+
+                <MudRadioGroup @bind-Value="_accountChoice" Class="mb-4">
+                    <MudRadio Value="@("local")" Color="Color.Primary">
+                        <MudText><b>Local account</b> — create a new panel-only account</MudText>
+                    </MudRadio>
+                    <MudRadio Value="@("phoenix_api")" Color="Color.Primary">
+                        <MudText><b>Phoenix account</b> — sign in with your flying-phoenix.dev account</MudText>
+                    </MudRadio>
+                </MudRadioGroup>
+
+                @if (_accountChoice == "local")
+                {
+                    <MudTextField @bind-Value="_username"
+                                  Label="Username" Variant="Variant.Outlined"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Person"
+                                  Class="mb-3" FullWidth="true" />
+                    <MudTextField @bind-Value="_password"
+                                  Label="Password" Variant="Variant.Outlined"
+                                  InputType="@_pwInputType"
+                                  Adornment="Adornment.End"
+                                  AdornmentIcon="@_pwIcon"
+                                  OnAdornmentClick="TogglePw"
+                                  Class="mb-3" FullWidth="true" />
+                    <MudTextField @bind-Value="_passwordConfirm"
+                                  Label="Confirm Password" Variant="Variant.Outlined"
+                                  InputType="InputType.Password"
+                                  Class="mb-3" FullWidth="true" />
+                }
+
+                @if (_accountChoice == "phoenix_api")
+                {
+                    <MudTextField @bind-Value="_username"
+                                  Label="Phoenix Username" Variant="Variant.Outlined"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Person"
+                                  Class="mb-3" FullWidth="true" />
+                    <MudTextField @bind-Value="_password"
+                                  Label="Phoenix Password" Variant="Variant.Outlined"
+                                  InputType="@_pwInputType"
+                                  Adornment="Adornment.End"
+                                  AdornmentIcon="@_pwIcon"
+                                  OnAdornmentClick="TogglePw"
+                                  Class="mb-3" FullWidth="true" />
+                }
+
+                @if (!string.IsNullOrEmpty(_accountError))
+                {
+                    <MudAlert Severity="Severity.Error" Dense="true" Class="mt-2 mb-2">@_accountError</MudAlert>
+                }
+
+                <div class="d-flex justify-space-between mt-6">
+                    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack"
+                               OnClick="() => _step = 1" Disabled="_testing">Back</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                               EndIcon="@Icons.Material.Filled.ArrowForward"
+                               OnClick="AdvanceFromAccountAsync"
+                               Disabled="_testing">
+                        @if (_testing)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        }
+                        Next
+                    </MudButton>
+                </div>
+            }
+
+            <!-- ── Step 3: Finish ────────────────────────────────────────── -->
+            @if (_step == 3)
+            {
+                <MudText Typo="Typo.h6" Class="mb-3" Style="font-weight:700;">Review &amp; Finish</MudText>
+
+                <MudList T="string" Dense="true" Class="mb-4">
+                    <MudListItem Icon="@Icons.Material.Filled.Storage" IconColor="Color.Primary">
+                        <MudText Typo="Typo.body2">
+                            <b>Storage:</b>
+                            @(_dbChoice == "mysql" ? $"MySQL — {TruncateConn(_mysqlConn)}" : "SQLite (embedded)")
+                        </MudText>
+                    </MudListItem>
+                    <MudListItem Icon="@Icons.Material.Filled.Person" IconColor="Color.Primary">
+                        <MudText Typo="Typo.body2">
+                            <b>Account:</b>
+                            @(_accountChoice == "local"
+                                ? $"Local — {_username}"
+                                : $"Phoenix — {_username}")
+                        </MudText>
+                    </MudListItem>
+                </MudList>
+
+                @if (!string.IsNullOrEmpty(_finishError))
+                {
+                    <MudAlert Severity="Severity.Error" Dense="true" Class="mb-4">@_finishError</MudAlert>
+                }
+
+                <div class="d-flex justify-space-between mt-4">
+                    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack"
+                               OnClick="() => _step = 2" Disabled="_finishing">Back</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Success"
+                               Size="Size.Large"
+                               StartIcon="@Icons.Material.Filled.CheckCircle"
+                               OnClick="FinishAsync"
+                               Disabled="_finishing">
+                        @if (_finishing)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        }
+                        Complete Setup
+                    </MudButton>
+                </div>
+            }
+
+        </div>
+    </div>
+</div>
+
+@code {
+    private int    _step        = 0;
+    private string _globalError = string.Empty;
+
+    private string  _dbChoice   = "sqlite";
+    private string  _mysqlConn  = string.Empty;
+    private bool?   _mysqlOk    = null;
+    private string? _mysqlError;
+    private bool    _testing    = false;
+
+    private string  _accountChoice   = "local";
+    private string  _username        = string.Empty;
+    private string  _password        = string.Empty;
+    private string  _passwordConfirm = string.Empty;
+    private string? _accountError;
+
+    private bool    _finishing   = false;
+    private string? _finishError;
+
+    private bool      _showPw      = false;
+    private InputType _pwInputType => _showPw ? InputType.Text : InputType.Password;
+    private string    _pwIcon      => _showPw
+        ? Icons.Material.Filled.VisibilityOff
+        : Icons.Material.Filled.Visibility;
+
+    private void TogglePw() => _showPw = !_showPw;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (await Setup.IsCompletedAsync())
+            Nav.NavigateTo("/login", replace: true);
+    }
+
+    private async Task TestMySqlAsync()
+    {
+        _testing    = true;
+        _mysqlOk    = null;
+        _mysqlError = null;
+        StateHasChanged();
+        var (ok, err) = await Setup.TestMySqlAsync(_mysqlConn);
+        _mysqlOk    = ok;
+        _mysqlError = err;
+        _testing    = false;
+    }
+
+    private void AdvanceFromStorage()
+    {
+        if (_dbChoice == "mysql" && _mysqlOk != true) return;
+        _step = 2;
+    }
+
+    private async Task AdvanceFromAccountAsync()
+    {
+        _accountError = null;
+
+        if (string.IsNullOrWhiteSpace(_username))
+        { _accountError = "Username is required."; return; }
+
+        if (string.IsNullOrWhiteSpace(_password))
+        { _accountError = "Password is required."; return; }
+
+        if (_accountChoice == "local")
+        {
+            if (_password != _passwordConfirm)
+            { _accountError = "Passwords do not match."; return; }
+        }
+        else
+        {
+            _testing = true;
+            StateHasChanged();
+            var (ok, err) = await Setup.ValidatePhoenixApiAccountAsync(_username, _password);
+            _testing = false;
+            if (!ok)
+            { _accountError = err ?? "Phoenix verification failed."; return; }
+        }
+
+        _step = 3;
+    }
+
+    private async Task FinishAsync()
+    {
+        _finishing   = true;
+        _finishError = null;
+        StateHasChanged();
+
+        try
+        {
+            bool    useMySql = _dbChoice == "mysql";
+            string? connStr  = useMySql ? _mysqlConn : null;
+
+            if (_accountChoice == "local")
+                await Setup.CompleteWithLocalAccountAsync(_username, _password, useMySql, connStr);
+            else
+                await Setup.CompleteWithPhoenixApiAccountAsync(_username, useMySql, connStr);
+
+            Nav.NavigateTo("/login");
+        }
+        catch (Exception ex)
+        {
+            _finishError = $"Setup failed: {ex.Message}";
+            _finishing   = false;
+        }
+    }
+
+    private static string TruncateConn(string conn) =>
+        string.IsNullOrWhiteSpace(conn) ? "(none)"
+        : conn.Length > 40 ? conn[..40] + "…" : conn;
+}

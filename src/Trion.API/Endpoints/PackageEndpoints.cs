@@ -15,8 +15,8 @@ public static class PackageEndpoints
         g.MapGet("Ping", Ping);
         g.MapGet("GetExternalIPv4", GetExternalIPv4);
         g.MapGet("GetFileVersion",  GetFileVersion);
-        g.MapGet("DownloadFile",    DownloadFileGet).RequireRateLimiting("download");
-        g.MapPost("DownloadFile",   DownloadFilePost).RequireRateLimiting("download");
+        g.MapGet("DownloadFile",    DownloadFileGet).RequireRateLimiting("download").RequireRateLimiting("downloads-ip");
+        g.MapPost("DownloadFile",   DownloadFilePost).RequireRateLimiting("download").RequireRateLimiting("downloads-ip");
         g.MapPost("RepairSPP",      RepairSpp);
         g.MapGet("DownloadSpeedTest", DownloadSpeedTest);
 

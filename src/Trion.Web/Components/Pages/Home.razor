@@ -1,4 +1,420 @@
-﻿@page "/"
-@inject Trion.UI.Localization.GlobalLocalizer L
-<h1>@L["H_World"]</h1>
-<p>Culture: @System.Globalization.CultureInfo.CurrentUICulture.Name</p>
+@page "/"
+@using Trion.Core.Monitoring
+@using Trion.Core.Services.Infrastructure
+@using System.Globalization
+@implements IDisposable
+
+@inject MetricsChannelAccessor  MetricsAccessor
+@inject InfraStatusService      InfraProbe
+@inject ThemeState              ThemeState
+@inject GlobalLocalizer         L
+
+<PageTitle>@L["Page_Dashboard"] – Trion</PageTitle>
+
+<!-- ── Page header ──────────────────────────────────────────────────── -->
+<div class="mb-6">
+    <MudText Typo="Typo.h5" Style="font-weight:700;">@L["Page_Dashboard"]</MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">
+        @L["Page_DashboardSubtitle"]
+    </MudText>
+</div>
+
+<!-- ── Infrastructure Services ──────────────────────────────────────── -->
+<MudText Typo="Typo.overline" Color="Color.Secondary" Class="mb-3"
+         Style="letter-spacing:1.5px;font-size:0.7rem;">
+    @L["Section_ServiceStatus"]
+</MudText>
+
+<MudGrid Spacing="3" Class="mb-8">
+    @foreach (var svc in _infraStatuses)
+    {
+        <MudItem xs="12" sm="6" md="3">
+            <div class="trion-card">
+                <div class="trion-card-accent"
+                     style="background:@InfraAccentColor(svc.State);"></div>
+                <div class="trion-card-body" style="padding:14px 16px;">
+                    <div style="display:flex;align-items:center;
+                                justify-content:space-between;gap:8px;">
+                        <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                            <div class="trion-icon-badge">
+                                <MudIcon Icon="@InfraIcon(svc.Name)"
+                                         Style="color:var(--mud-palette-text-secondary);font-size:18px;" />
+                            </div>
+                            <div style="min-width:0;">
+                                <MudText Typo="Typo.subtitle2"
+                                         Style="font-weight:600;white-space:nowrap;">
+                                    @svc.Name
+                                </MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary"
+                                         Style="white-space:nowrap;overflow:hidden;
+                                                text-overflow:ellipsis;display:block;">
+                                    @svc.Detail
+                                </MudText>
+                            </div>
+                        </div>
+                        <div style="width:10px;height:10px;border-radius:50%;flex-shrink:0;
+                                    background:@InfraAccentColor(svc.State);
+                                    box-shadow:0 0 6px @InfraAccentColor(svc.State);">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </MudItem>
+    }
+</MudGrid>
+
+<!-- ── Machine Resources ─────────────────────────────────────────────── -->
+<MudText Typo="Typo.overline" Color="Color.Secondary" Class="mb-3"
+         Style="letter-spacing:1.5px;font-size:0.7rem;">
+    @L["Section_MachineResources"]
+</MudText>
+
+<MudGrid Spacing="3">
+
+    <!-- CPU ──────────────────────────────────────────────────────────── -->
+    <MudItem xs="12" sm="6">
+        <div class="trion-card">
+            <div class="trion-card-accent"></div>
+            <div class="trion-card-body">
+                <div style="display:flex;align-items:center;
+                            justify-content:space-between;margin-bottom:8px;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div class="trion-icon-badge">
+                            <MudIcon Icon="@Icons.Material.Filled.Memory"
+                                     Style="color:var(--mud-palette-text-secondary);font-size:18px;" />
+                        </div>
+                        <MudText Typo="Typo.subtitle2" Style="font-weight:600;">CPU</MudText>
+                    </div>
+                    <MudText Typo="Typo.subtitle2"
+                             Style="color:var(--mud-palette-primary);font-weight:600;">
+                        @(_cpu.ToString("F1", CultureInfo.InvariantCulture))%
+                    </MudText>
+                </div>
+                <MudDivider Class="mb-2" />
+                <MudChart ChartType="ChartType.Line"
+                          ChartSeries="@_cpuSeries"
+                          ChartLabels="@_xLabels"
+                          Width="100%" Height="130px"
+                          MatchBoundsToSize="true"
+                          ChartOptions="@_chartOptsPct" />
+                <div style="text-align:right;margin-top:4px;">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@_cpuCores</MudText>
+                </div>
+            </div>
+        </div>
+    </MudItem>
+
+    <!-- RAM ──────────────────────────────────────────────────────────── -->
+    <MudItem xs="12" sm="6">
+        <div class="trion-card">
+            <div class="trion-card-accent"></div>
+            <div class="trion-card-body">
+                <div style="display:flex;align-items:center;
+                            justify-content:space-between;margin-bottom:8px;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div class="trion-icon-badge">
+                            <MudIcon Icon="@Icons.Material.Filled.Storage"
+                                     Style="color:var(--mud-palette-text-secondary);font-size:18px;" />
+                        </div>
+                        <MudText Typo="Typo.subtitle2" Style="font-weight:600;">RAM</MudText>
+                    </div>
+                    <MudText Typo="Typo.subtitle2"
+                             Style="color:var(--mud-palette-primary);font-weight:600;">
+                        @(_ramPct.ToString("F1", CultureInfo.InvariantCulture))%
+                    </MudText>
+                </div>
+                <MudDivider Class="mb-2" />
+                <MudChart ChartType="ChartType.Line"
+                          ChartSeries="@_ramSeries"
+                          ChartLabels="@_xLabels"
+                          Width="100%" Height="130px"
+                          MatchBoundsToSize="true"
+                          ChartOptions="@_chartOptsPct" />
+                <div style="text-align:right;margin-top:4px;">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        @_ramUsed / @_ramTotal
+                    </MudText>
+                </div>
+            </div>
+        </div>
+    </MudItem>
+
+    <!-- Disk I/O ─────────────────────────────────────────────────────── -->
+    <MudItem xs="12" sm="6">
+        <div class="trion-card">
+            <div class="trion-card-accent"></div>
+            <div class="trion-card-body">
+                <div style="display:flex;align-items:center;
+                            justify-content:space-between;margin-bottom:8px;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div class="trion-icon-badge">
+                            <MudIcon Icon="@Icons.Material.Filled.Save"
+                                     Style="color:var(--mud-palette-text-secondary);font-size:18px;" />
+                        </div>
+                        <MudText Typo="Typo.subtitle2" Style="font-weight:600;">Disk I/O</MudText>
+                    </div>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        R @_diskRead &nbsp; W @_diskWrite
+                    </MudText>
+                </div>
+                <MudDivider Class="mb-2" />
+                <MudChart ChartType="ChartType.Line"
+                          ChartSeries="@_diskSeries"
+                          ChartLabels="@_xLabels"
+                          Width="100%" Height="130px"
+                          MatchBoundsToSize="true"
+                          ChartOptions="@_chartOptsRaw" />
+            </div>
+        </div>
+    </MudItem>
+
+    <!-- Network ──────────────────────────────────────────────────────── -->
+    <MudItem xs="12" sm="6">
+        <div class="trion-card">
+            <div class="trion-card-accent"></div>
+            <div class="trion-card-body">
+                <div style="display:flex;align-items:center;
+                            justify-content:space-between;margin-bottom:8px;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div class="trion-icon-badge">
+                            <MudIcon Icon="@Icons.Material.Filled.NetworkCheck"
+                                     Style="color:var(--mud-palette-text-secondary);font-size:18px;" />
+                        </div>
+                        <MudText Typo="Typo.subtitle2" Style="font-weight:600;">Network</MudText>
+                    </div>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        ↓ @_netRx &nbsp; ↑ @_netTx
+                    </MudText>
+                </div>
+                <MudDivider Class="mb-2" />
+                <MudChart ChartType="ChartType.Line"
+                          ChartSeries="@_netSeries"
+                          ChartLabels="@_xLabels"
+                          Width="100%" Height="130px"
+                          MatchBoundsToSize="true"
+                          ChartOptions="@_chartOptsRaw" />
+            </div>
+        </div>
+    </MudItem>
+
+</MudGrid>
+
+@code {
+    private const int HistoryCap = 60;
+
+    // ── Infrastructure status ──────────────────────────────────────────
+    private InfraStatus[]            _infraStatuses = [];
+    private System.Threading.Timer?  _infraTimer;
+
+    // ── Metric values ──────────────────────────────────────────────────
+    private double _cpu     = 0;
+    private double _ramPct  = 0;
+    private string _ramUsed  = "—";
+    private string _ramTotal = "—";
+    private string _diskRead  = "—";
+    private string _diskWrite = "—";
+    private string _netRx = "—";
+    private string _netTx = "—";
+    private string _cpuCores = $"{Environment.ProcessorCount} Cores";
+
+    // ── History buffers ────────────────────────────────────────────────
+    private readonly List<double> _cpuBuf      = new(HistoryCap + 1);
+    private readonly List<double> _ramBuf      = new(HistoryCap + 1);
+    private readonly List<double> _diskReadBuf = new(HistoryCap + 1);
+    private readonly List<double> _diskWriteBuf= new(HistoryCap + 1);
+    private readonly List<double> _netRecvBuf  = new(HistoryCap + 1);
+    private readonly List<double> _netSendBuf  = new(HistoryCap + 1);
+
+    // ── Chart series (rebuilt on every metrics tick) ───────────────────
+    private List<MudBlazor.ChartSeries<double>> _cpuSeries  = [];
+    private List<MudBlazor.ChartSeries<double>> _ramSeries  = [];
+    private List<MudBlazor.ChartSeries<double>> _diskSeries = [];
+    private List<MudBlazor.ChartSeries<double>> _netSeries  = [];
+    private string[]          _xLabels    = [];
+
+    // ── Chart options — rebuilt whenever the theme changes ─────────────
+    private LineChartOptions _chartOptsPct = new();
+    private LineChartOptions _chartOptsRaw = new();
+
+    private void RebuildChartOptions()
+    {
+        var entry   = TrionThemes.Get(ThemeState.CurrentColorId);
+        var primary = ThemeState.IsDark ? entry.Dark.Primary  : entry.Light.Primary;
+        var info    = ThemeState.IsDark ? "#4A86FF"           : "#0288D1";
+
+        _chartOptsPct = new LineChartOptions
+        {
+            InterpolationOption = InterpolationOption.NaturalSpline,
+            LineDisplayType     = LineDisplayType.Area,
+            ShowDataMarkers     = true,
+            LineStrokeWidth     = 2,
+            YAxisTicks          = 4,
+            MaxNumYAxisTicks    = 5,
+            YAxisLines          = false,
+            XAxisLines          = false,
+            ShowLegend          = false,
+            ShowToolTips        = true,
+            ChartPalette        = [primary],
+        };
+
+        _chartOptsRaw = new LineChartOptions
+        {
+            InterpolationOption = InterpolationOption.NaturalSpline,
+            LineDisplayType     = LineDisplayType.Area,
+            ShowDataMarkers     = true,
+            LineStrokeWidth     = 2,
+            YAxisTicks          = 3,
+            MaxNumYAxisTicks    = 4,
+            YAxisLines          = false,
+            XAxisLines          = false,
+            ShowLegend          = true,
+            ShowToolTips        = true,
+            ChartPalette        = [primary, info],
+            YAxisToStringFunc   = static v => v switch
+            {
+                >= 1_073_741_824 => $"{v / 1_073_741_824.0:F1}G",
+                >= 1_048_576     => $"{v / 1_048_576.0:F1}M",
+                >= 1_024         => $"{v / 1_024.0:F1}K",
+                _                => $"{v:F0}B",
+            },
+        };
+    }
+
+    // ── Lifecycle ──────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        // NaturalSpline requires ≥4 points — seed every buffer so charts
+        // are valid from the very first render before real data arrives.
+        SeedBuffers();
+        RebuildChartOptions();
+        ThemeState.OnChanged += OnThemeChanged;
+
+        _ = RefreshInfraAsync();
+        _infraTimer = new System.Threading.Timer(
+            _ => InvokeAsync(async () => { await RefreshInfraAsync(); StateHasChanged(); }),
+            null,
+            TimeSpan.FromSeconds(10),
+            TimeSpan.FromSeconds(10));
+
+        // Apply the latest cached snapshot immediately (no wait for next poll tick)
+        if (MetricsAccessor.LastMachine is { } last)
+            ApplyMetrics(last);
+        else
+            RebuildSeries(); // build series from seed data so charts render immediately
+
+        MetricsAccessor.MachineUpdated += OnMachineMetricsUpdated;
+    }
+
+    private void SeedBuffers()
+    {
+        // 4 is the minimum for NaturalSpline; seed with zeros so charts are valid on first render.
+        for (int i = 0; i < 4; i++)
+        {
+            _cpuBuf.Add(0);
+            _ramBuf.Add(0);
+            _diskReadBuf.Add(0);
+            _diskWriteBuf.Add(0);
+            _netRecvBuf.Add(0);
+            _netSendBuf.Add(0);
+        }
+    }
+
+    private async Task RefreshInfraAsync() =>
+        _infraStatuses = await InfraProbe.GetAllAsync();
+
+    private void OnMachineMetricsUpdated(MachineMetrics m) =>
+        InvokeAsync(() => { ApplyMetrics(m); StateHasChanged(); });
+
+    private void ApplyMetrics(MachineMetrics m)
+    {
+        double ramPct = m.RamTotalBytes > 0
+            ? (double)m.RamUsedBytes / m.RamTotalBytes * 100.0
+            : 0.0;
+
+        _cpu       = Math.Round(m.CpuPercent, 1);
+        _ramPct    = Math.Round(ramPct, 1);
+        _ramUsed   = MetricsFormatter.FormatBytes(m.RamUsedBytes);
+        _ramTotal  = MetricsFormatter.FormatBytes(m.RamTotalBytes);
+        _diskRead  = MetricsFormatter.FormatBps(m.DiskReadBytesPerSec);
+        _diskWrite = MetricsFormatter.FormatBps(m.DiskWriteBytesPerSec);
+        _netRx     = MetricsFormatter.FormatBps(m.NetworkRxBytesPerSec);
+        _netTx     = MetricsFormatter.FormatBps(m.NetworkTxBytesPerSec);
+
+        Push(_cpuBuf,       _cpu);
+        Push(_ramBuf,       _ramPct);
+        Push(_diskReadBuf,  m.DiskReadBytesPerSec);
+        Push(_diskWriteBuf, m.DiskWriteBytesPerSec);
+        Push(_netRecvBuf,   m.NetworkRxBytesPerSec);
+        Push(_netSendBuf,   m.NetworkTxBytesPerSec);
+
+        RebuildSeries();
+    }
+
+    private static MudBlazor.ChartData<double> ToChartData(List<double> buf) =>
+        new(buf.ToArray());
+
+    private void RebuildSeries()
+    {
+        _xLabels = new string[_cpuBuf.Count];
+
+        _cpuSeries =
+        [
+            new MudBlazor.ChartSeries<double> { Name = "CPU",   Data = ToChartData(_cpuBuf) }
+        ];
+
+        _ramSeries =
+        [
+            new MudBlazor.ChartSeries<double> { Name = "RAM",   Data = ToChartData(_ramBuf) }
+        ];
+
+        _diskSeries =
+        [
+            new MudBlazor.ChartSeries<double> { Name = "Read",  Data = ToChartData(_diskReadBuf)  },
+            new MudBlazor.ChartSeries<double> { Name = "Write", Data = ToChartData(_diskWriteBuf) },
+        ];
+
+        _netSeries =
+        [
+            new MudBlazor.ChartSeries<double> { Name = "↓ Rx",  Data = ToChartData(_netRecvBuf) },
+            new MudBlazor.ChartSeries<double> { Name = "↑ Tx",  Data = ToChartData(_netSendBuf) },
+        ];
+    }
+
+    private static void Push(List<double> buf, double value)
+    {
+        buf.Add(value);
+        if (buf.Count > HistoryCap) buf.RemoveAt(0);
+    }
+
+    // ── Infra helpers ──────────────────────────────────────────────────
+
+    private static string InfraAccentColor(InfraServiceState state) => state switch
+    {
+        InfraServiceState.Online  => "#4CAF50",
+        InfraServiceState.Offline => "#F44336",
+        _                         => "#3E3E3E",
+    };
+
+    private static string InfraIcon(string name) => name switch
+    {
+        "MySQL"        => Icons.Material.Filled.Storage,
+        "Auth Server"  => Icons.Material.Filled.Lock,
+        "World Server" => Icons.Material.Filled.Public,
+        "Nginx"        => Icons.Material.Filled.Language,
+        _              => Icons.Material.Filled.Circle,
+    };
+
+    private void OnThemeChanged()
+    {
+        RebuildChartOptions();
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        ThemeState.OnChanged           -= OnThemeChanged;
+        MetricsAccessor.MachineUpdated -= OnMachineMetricsUpdated;
+        _infraTimer?.Dispose();
+    }
+}

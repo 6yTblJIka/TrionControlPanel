@@ -11,7 +11,7 @@ public static class AdminEndpoints
 {
     public static WebApplication MapAdminEndpoints(this WebApplication app)
     {
-        var g = app.MapGroup("/Trion/admin").WithTags("Admin");
+        var g = app.MapGroup("/Trion/admin").WithTags("Admin").RequireAuthorization("AdminPolicy");
 
         g.MapPost("supporter-key",  CreateSupporterKey);
         g.MapPost("upload-emulator", UploadEmulator);
@@ -111,7 +111,15 @@ public static class AdminEndpoints
             foreach (var entry in archive.Entries)
             {
                 ct.ThrowIfCancellationRequested();
-                var target = Path.GetFullPath(Path.Combine(filesDir, entry.FullName));
+
+                // Reject symlinks (Unix mode 0xA000 in high 16 bits of ExternalAttributes)
+                if ((entry.ExternalAttributes >> 16 & 0xF000) == 0xA000) continue;
+
+                // Validate the relative path BEFORE combining to prevent Zip Slip
+                var relative = entry.FullName.Replace('\\', '/').TrimStart('/');
+                if (relative.Contains("..") || Path.IsPathRooted(relative)) continue;
+
+                var target = Path.GetFullPath(Path.Combine(filesDir, relative));
                 if (!target.StartsWith(baseDir, StringComparison.OrdinalIgnoreCase)) continue;
 
                 if (string.IsNullOrEmpty(entry.Name)) { Directory.CreateDirectory(target); continue; }
@@ -145,7 +153,10 @@ public static class AdminEndpoints
     private static bool IsAdminKey(string? key, IConfiguration cfg)
     {
         var configured = cfg["AdminApiKey"];
-        return !string.IsNullOrEmpty(key) && key == configured;
+        if (string.IsNullOrEmpty(key) || string.IsNullOrEmpty(configured)) return false;
+        var a = System.Text.Encoding.UTF8.GetBytes(key);
+        var b = System.Text.Encoding.UTF8.GetBytes(configured);
+        return CryptographicOperations.FixedTimeEquals(a, b);
     }
 
     private static string NormalizeEmulatorName(string emulator) =>
@@ -177,7 +188,7 @@ public static class AdminEndpoints
                 var info     = new FileInfo(f);
                 var relative = Path.GetRelativePath(filesPath, f).Replace('\\', '/');
                 var dir      = Path.GetDirectoryName(relative)?.Replace('\\', '/') ?? "";
-                var hash     = await ComputeMd5Async(f, ct);
+                var hash     = await ComputeSha256Async(f, ct);
 
                 entries.Add(new
                 {
@@ -194,15 +205,13 @@ public static class AdminEndpoints
         return JsonSerializer.Serialize(new { files = entries.ToList() });
     }
 
-#pragma warning disable CA5351   // MD5 is used for file integrity, not security
-    private static async Task<string> ComputeMd5Async(string path, CancellationToken ct)
+    private static async Task<string> ComputeSha256Async(string path, CancellationToken ct)
     {
         await using var stream = new FileStream(
             path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true);
-        using var md5 = MD5.Create();
-        return BitConverter.ToString(await md5.ComputeHashAsync(stream, ct)).Replace("-", "").ToUpperInvariant();
+        using var sha = SHA256.Create();
+        return Convert.ToHexString(await sha.ComputeHashAsync(stream, ct));
     }
-#pragma warning restore CA5351
 
     private static int CountFiles(string manifestJson) =>
         manifestJson.Split("\"name\"").Length - 1;

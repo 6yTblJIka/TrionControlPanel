@@ -49,17 +49,31 @@
     </Style>
 
     <!-- ══════════════════════════════════════════════════════════
-         SCROLLVIEWER + SCROLLBAR (thin, themed)
+         SCROLLVIEWER + SCROLLBAR
+         · Rest:  thin thumb (4 px), track invisible
+         · Hover: thumb expands to 8 px + Accent colour, track fades in
+         · Drag:  Accent colour, fully expanded
          ══════════════════════════════════════════════════════════ -->
+
+    <!-- Thumb -->
     <Style x:Key="ThinScrollBarThumb" TargetType="Thumb">
+        <Setter Property="OverridesDefaultStyle" Value="True" />
+        <Setter Property="IsTabStop"             Value="False" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Thumb">
-                    <Border x:Name="Root" Background="{DynamicResource ScrollBar.Thumb}"
-                            CornerRadius="3" Margin="1" />
+                    <Border x:Name="Root"
+                            Background="{DynamicResource ScrollBar.Thumb}"
+                            CornerRadius="4"
+                            Margin="3,2" />
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Root" Property="Opacity" Value="0.85" />
+                            <Setter TargetName="Root" Property="Background"
+                                    Value="{DynamicResource Accent.Primary}" />
+                        </Trigger>
+                        <Trigger Property="IsDragging" Value="True">
+                            <Setter TargetName="Root" Property="Background"
+                                    Value="{DynamicResource Accent.Primary}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -67,28 +81,58 @@
         </Setter>
     </Style>
 
+    <!-- ScrollBar (vertical only — horizontal is disabled in the ScrollViewer template) -->
     <Style x:Key="ThinScrollBarStyle" TargetType="ScrollBar">
-        <Setter Property="Width"    Value="6" />
-        <Setter Property="MinWidth" Value="6" />
-        <Setter Property="Opacity"  Value="0.6" />
+        <Setter Property="OverridesDefaultStyle" Value="True" />
+        <Setter Property="Width"    Value="12" />
+        <Setter Property="MinWidth" Value="12" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ScrollBar">
                     <Grid>
-                        <Border Background="{DynamicResource ScrollBar.Track}" CornerRadius="3" />
+                        <!-- Track background — invisible at rest, fades in on hover -->
+                        <Border x:Name="TrackBg"
+                                Background="{DynamicResource ScrollBar.Track}"
+                                CornerRadius="6"
+                                Opacity="0" />
+
+                        <!-- Thumb lives directly in the Track (no arrow buttons) -->
                         <Track x:Name="PART_Track" IsDirectionReversed="True">
                             <Track.Thumb>
                                 <Thumb Style="{StaticResource ThinScrollBarThumb}" />
                             </Track.Thumb>
                         </Track>
                     </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="TrackBg"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.15" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="TrackBg"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.3" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
     </Style>
 
+    <!-- ScrollViewer -->
     <Style TargetType="ScrollViewer">
-        <Setter Property="CanContentScroll"             Value="False" />
+        <Setter Property="CanContentScroll"              Value="False" />
         <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
         <Setter Property="Template">
             <Setter.Value>
@@ -98,8 +142,10 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <ScrollContentPresenter Grid.Column="0" />
-                        <ScrollBar Grid.Column="1"
+                        <ScrollContentPresenter x:Name="PART_ScrollContentPresenter"
+                                                Grid.Column="0" />
+                        <ScrollBar x:Name="PART_VerticalScrollBar"
+                                   Grid.Column="1"
                                    Style="{StaticResource ThinScrollBarStyle}"
                                    Value="{TemplateBinding VerticalOffset}"
                                    Maximum="{TemplateBinding ScrollableHeight}"

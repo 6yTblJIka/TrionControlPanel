@@ -77,9 +77,12 @@ public sealed class EmulatorInstaller
 
         _log.LogInformation("Starting git clone {Url}", repoUrl);
 
+        using var cloneTimeout = new CancellationTokenSource(TimeSpan.FromHours(1));
+        using var linkedCt    = CancellationTokenSource.CreateLinkedTokenSource(ct, cloneTimeout.Token);
+
         var launch = await _agent.LaunchProcessAsync(
             new LaunchRequest(GitPath, ["clone", repoUrl, installDirectory], null),
-            ct: ct);
+            ct: linkedCt.Token);
 
         if (!launch.Success)
         {

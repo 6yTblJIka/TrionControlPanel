@@ -40,7 +40,8 @@ builder.Services
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(o =>
+    o.AddPolicy("AdminPolicy", p => p.RequireRole("admin")));
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
 builder.Services.AddRateLimiter(o =>
@@ -56,12 +57,21 @@ builder.Services.AddRateLimiter(o =>
         opt.PermitLimit = 5;
         opt.QueueLimit  = 2;
     });
+    o.AddFixedWindowLimiter("downloads-ip", opt =>
+    {
+        opt.PermitLimit = 10;
+        opt.Window      = TimeSpan.FromMinutes(1);
+        opt.QueueLimit  = 0;
+    });
     o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 });
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
 builder.Services.AddCors(o =>
-    o.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
+    o.AddDefaultPolicy(p => p
+        .WithOrigins("https://flying-phoenix.dev", "https://www.flying-phoenix.dev")
+        .AllowAnyMethod()
+        .AllowAnyHeader()));
 
 // ── Caching ───────────────────────────────────────────────────────────────────
 builder.Services.AddMemoryCache();
@@ -70,8 +80,8 @@ builder.Services.AddOutputCache();
 // ── Allow large multipart uploads (admin upload-emulator endpoint) ─────────────
 builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(o =>
 {
-    o.MultipartBodyLengthLimit = long.MaxValue;
-    o.ValueLengthLimit         = int.MaxValue;
+    o.MultipartBodyLengthLimit = 10L * 1024 * 1024 * 1024; // 10 GB — enough for any emulator package
+    o.ValueLengthLimit         = 128 * 1024;                // 128 KB for form fields
 });
 
 // ── OpenAPI / Swagger ─────────────────────────────────────────────────────────
@@ -102,6 +112,14 @@ builder.Services.AddSingleton<TrionDbAccess>();
 builder.Services.AddSingleton<IJwtService, JwtService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<INewsService, NewsService>();
+
+// ── Startup validation: reject placeholder secrets ────────────────────────────
+var adminKey  = builder.Configuration["AdminApiKey"] ?? "";
+var secretKey = builder.Configuration["Jwt:SecretKey"] ?? "";
+if (adminKey.StartsWith("change-this") || secretKey.StartsWith("change-this"))
+    throw new InvalidOperationException(
+        "Default placeholder secrets detected. Set real values via environment variables " +
+        "(TRION_AdminApiKey, TRION_Jwt__SecretKey) before running in production.");
 
 // ── Build ─────────────────────────────────────────────────────────────────────
 var app = builder.Build();

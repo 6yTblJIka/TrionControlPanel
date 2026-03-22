@@ -28,13 +28,13 @@ public static class BootstrapAccount
         await settings.SetAsync(UsernameKey, DefaultUsername, ct);
         await settings.SetAsync(PasswordHashKey, hash, ct);
 
-        // Write the temporary password to a first-run file so the operator can retrieve it
-        var firstRunPath = Path.Combine(AppContext.BaseDirectory, "FIRST_RUN_PASSWORD.txt");
-        await File.WriteAllTextAsync(firstRunPath,
-            $"Trion bootstrap account created.\r\n" +
-            $"Username: {DefaultUsername}\r\n" +
-            $"Password: {password}\r\n" +
-            $"Delete this file after logging in.\r\n", ct);
+        // Print temporary password to console only — never write to disk in plaintext
+        Console.WriteLine("=== TRION FIRST RUN ===");
+        Console.WriteLine($"Bootstrap account created. Username: {DefaultUsername}");
+        Console.WriteLine($"Temporary password: {password}");
+        Console.WriteLine("Save this now — it will not be shown again.");
+        Console.WriteLine("=======================");
+        await Task.CompletedTask;
     }
 
     public static async Task<bool> ValidateAsync(

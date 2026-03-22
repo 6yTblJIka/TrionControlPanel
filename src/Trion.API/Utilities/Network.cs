@@ -26,7 +26,7 @@ internal sealed class OnTheFlyRandomStream(long length) : Stream
     {
         if (_pos >= length) return 0;
         int n = (int)Math.Min(count, length - _pos);
-        Random.Shared.NextBytes(buffer.AsSpan(offset, n));
+        System.Security.Cryptography.RandomNumberGenerator.Fill(buffer.AsSpan(offset, n));
         _pos += n;
         return n;
     }

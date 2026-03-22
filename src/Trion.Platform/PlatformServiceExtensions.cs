@@ -3,6 +3,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Trion.Core.Abstractions.Monitoring;
 using Trion.Core.Abstractions.Settings;
 using Trion.Core.Agent;
+using Trion.Core.Database;
+using Trion.Core.WebServer;
 using Trion.Platform.Shared;
 
 namespace Trion.Platform;
@@ -30,6 +32,8 @@ public static class PlatformServiceExtensions
             services.AddSingleton<Linux.LinuxRamReader>();
             services.AddSingleton<IMachineMetricsProvider, Linux.LinuxMetricsProvider>();
             services.AddSingleton<ISecretStore, Linux.LinuxSecretStore>();
+            services.AddSingleton<IMySqlSetupService, Linux.LinuxMySqlService>();
+            services.AddSingleton<INginxPhpSetupService, Linux.LinuxNginxPhpService>();
         }
         else
         {

@@ -6,6 +6,7 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Extensions.Logging;
+using Trion.Core.Database;
 using Trion.Core.Logging;
 using Trion.Desktop.Infrastructure.Constants;
 using Trion.Desktop.Models;

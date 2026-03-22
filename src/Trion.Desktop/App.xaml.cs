@@ -2,12 +2,16 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Windows;
+using Trion.Core.Database;
 using Trion.Core.Logging;
+using Trion.Core.Monitoring;
+using Trion.Core.WebServer;
 using Trion.Desktop.Infrastructure.Extensions;
 using Trion.Desktop.Models;
 using Trion.Desktop.Services;
 using Trion.Desktop.ViewModels;
 using Trion.Desktop.Views;
+using Trion.Platform;
 #pragma warning disable CA2000 // services are disposed by the host
 
 namespace Trion.Desktop;
@@ -39,6 +43,7 @@ public partial class App : Application
                 services.AddSingleton<INavigationService, NavigationService>();
                 services.AddSingleton<INotificationService, NotificationService>();
                 services.AddSingleton<IMySqlSetupService, MySqlSetupService>();
+                services.AddSingleton<INginxPhpSetupService, NginxPhpSetupService>();
                 services.AddSingleton<IApiKeyService, ApiKeyService>();
                 services.AddSingleton<IAccountService, AccountService>();
                 services.AddSingleton<INewsService, NewsService>();
@@ -48,10 +53,17 @@ public partial class App : Application
                 services.AddSingleton<IDdnsUpdateService, DdnsUpdateService>();
                 services.AddSingleton<IDatabaseService, DatabaseService>();
 
-                // System metrics — singleton shared between hosted service lifecycle and DashboardViewModel
-                services.AddSingleton<SystemMetricsService>();
-                services.AddSingleton<ISystemMetricsService>(sp => sp.GetRequiredService<SystemMetricsService>());
-                services.AddHostedService(sp => sp.GetRequiredService<SystemMetricsService>());
+                // Platform + monitoring (OS-aware, cross-platform)
+                services.AddPlatformServices();
+                services.AddMonitoringServices();
+
+                // Wire the user's chosen metrics interval into ProcessMonitorOptions.
+                // Configure<ISettingsService> runs lazily when CurrentValue is first accessed
+                // (always after settings.Load() which is called before StartAsync).
+                services.AddOptions<ProcessMonitorOptions>()
+                    .Configure<ISettingsService>((opts, settings) =>
+                        opts.RefreshInterval = TimeSpan.FromSeconds(
+                            Math.Clamp(settings.Current.MetricsIntervalSeconds, 1, 60)));
 
                 // Register all ViewModels, Views, and Services via extension
                 services.RegisterViewModels();
@@ -120,6 +132,18 @@ public partial class App : Application
             catch (Exception ex)
             { logger.LogException(ex, "App.MySqlStartup"); }
         });
+
+        // Web server (nginx + PHP) — only starts when WebServerAutoStart is enabled.
+        // Users opt in via Settings so those who don't need a web server are unaffected.
+        if (settings.Current.WebServerAutoStart)
+        {
+            var webServer = AppHost.Services.GetRequiredService<INginxPhpSetupService>();
+            _ = Task.Run(async () =>
+            {
+                try   { await webServer.RunStartupCheckAsync(); }
+                catch (Exception ex) { logger.LogException(ex, "App.WebServerStartup"); }
+            });
+        }
     }
 
     protected override async void OnExit(ExitEventArgs e)
@@ -134,6 +158,11 @@ public partial class App : Application
         var mysql = AppHost.Services.GetRequiredService<IMySqlSetupService>();
         try { await mysql.StopAsync(); }
         catch (Exception ex) { logger.LogException(ex, "App.OnExit.StopMySQL"); }
+
+        // Gracefully stop web server (nginx + PHP-CGI) if it was running
+        var webServer = AppHost.Services.GetRequiredService<INginxPhpSetupService>();
+        try { await webServer.StopAsync(); }
+        catch (Exception ex) { logger.LogException(ex, "App.OnExit.StopWebServer"); }
 
         var settings = AppHost.Services.GetRequiredService<ISettingsService>();
 

@@ -1,6 +1,10 @@
 @inherits LayoutComponentBase
+@implements IDisposable
 
-<MudThemeProvider Theme="_theme" IsDarkMode="true" />
+@inject ThemeState ThemeState
+@inject IJSRuntime JS
+
+<MudThemeProvider Theme="_theme" IsDarkMode="@ThemeState.IsDark" />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
@@ -8,21 +12,34 @@
 @Body
 
 @code {
-    private readonly MudTheme _theme = new()
+    private MudTheme _theme = TrionThemes.BuildMudTheme("TrionBlue");
+
+    protected override void OnInitialized()
     {
-        PaletteDark = new PaletteDark
-        {
-            Primary          = "#7e6fff",
-            Surface          = "#1e1e2d",
-            Background       = "#1a1a27",
-            BackgroundGray   = "#151521",
-            AppbarBackground = "rgba(26,26,39,0.8)",
-            TextPrimary      = "#b2b0bf",
-            TextSecondary    = "#92929f",
-            Info             = "#4a86ff",
-            Success          = "#3dcb6c",
-            Warning          = "#ffb545",
-            Error            = "#ff3f5f",
-        }
-    };
+        ThemeState.OnChanged += OnThemeChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        var savedColor = await JS.InvokeAsync<string?>("localStorage.getItem", "trion_theme_color");
+        if (!string.IsNullOrWhiteSpace(savedColor) && TrionThemes.All.Any(t => t.Id == savedColor))
+            ThemeState.SetColor(savedColor);
+
+        var savedDark = await JS.InvokeAsync<string?>("localStorage.getItem", "trion_theme_dark");
+        if (!string.IsNullOrWhiteSpace(savedDark) && bool.TryParse(savedDark, out var isDark))
+            ThemeState.SetVariant(isDark);
+
+        _theme = TrionThemes.BuildMudTheme(ThemeState.CurrentColorId);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void OnThemeChanged()
+    {
+        _theme = TrionThemes.BuildMudTheme(ThemeState.CurrentColorId);
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose() => ThemeState.OnChanged -= OnThemeChanged;
 }

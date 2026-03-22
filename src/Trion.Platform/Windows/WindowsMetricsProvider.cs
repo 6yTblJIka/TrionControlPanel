@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using Microsoft.Extensions.Logging;
@@ -9,14 +8,20 @@ using Trion.Core.Monitoring;
 namespace Trion.Platform.Windows;
 
 [SupportedOSPlatform("windows")]
-public sealed class WindowsMetricsProvider : IMachineMetricsProvider, IDisposable
+public sealed class WindowsMetricsProvider : IMachineMetricsProvider
 {
     private readonly ILogger              _log;
     private readonly WindowsDiskReader    _disk;
     private readonly WindowsNetworkReader _net;
 
-    private PerformanceCounter? _cpuCounter;
     private long _totalRamBytes;
+    private volatile bool _initialized;
+    private readonly object _initLock = new();
+
+    // ── CPU via GetSystemTimes ────────────────────────────────────────────
+    private long _prevIdle;
+    private long _prevTotal;
+    private bool _sysTimesSeeded;
 
     public WindowsMetricsProvider(
         TrionLogger          trionLogger,
@@ -26,17 +31,27 @@ public sealed class WindowsMetricsProvider : IMachineMetricsProvider, IDisposabl
         _log  = trionLogger.CreateLogger(nameof(WindowsMetricsProvider));
         _disk = disk;
         _net  = net;
+    }
 
-        InitCpuCounter();
-        InitTotalRam();
+    private void EnsureInitialized()
+    {
+        if (_initialized) return;
+        lock (_initLock)
+        {
+            if (_initialized) return;
+            SeedCpuTimes();
+            InitTotalRam();
+            _initialized = true;
+        }
     }
 
     public MachineMetrics GetSnapshot()
     {
-        var cpu = GetCpuPercent();
+        EnsureInitialized();
+        var cpu    = GetCpuPercent();
         var usedRam = GetUsedRamBytes();
         var (diskRead, diskWrite) = _disk.GetDiskThroughput();
-        var (netRx, netTx) = _net.GetNetworkThroughput();
+        var (netRx, netTx)        = _net.GetNetworkThroughput();
 
         return new MachineMetrics(
             CpuPercent:           cpu,
@@ -49,18 +64,13 @@ public sealed class WindowsMetricsProvider : IMachineMetricsProvider, IDisposabl
             Timestamp:            DateTimeOffset.UtcNow);
     }
 
-    private void InitCpuCounter()
+    // Seed the previous-tick baseline so the first real call returns a valid rate.
+    private void SeedCpuTimes()
     {
-        try
-        {
-            _cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
-            _cpuCounter.NextValue(); // First call always returns 0 — discard
-        }
-        catch (Exception ex)
-        {
-            _log.LogWarning(ex, "CPU PerformanceCounter unavailable.");
-            _cpuCounter = null;
-        }
+        if (!GetSystemTimes(out var idle, out var kernel, out var user)) return;
+        _prevIdle  = FileTimeToLong(idle);
+        _prevTotal = FileTimeToLong(kernel) + FileTimeToLong(user);
+        _sysTimesSeeded = true;
     }
 
     private void InitTotalRam()
@@ -81,9 +91,22 @@ public sealed class WindowsMetricsProvider : IMachineMetricsProvider, IDisposabl
 
     private double GetCpuPercent()
     {
-        if (_cpuCounter is null) return 0.0;
-        try { return Math.Round(_cpuCounter.NextValue(), 1); }
-        catch { return 0.0; }
+        if (!_sysTimesSeeded) return 0.0;
+        if (!GetSystemTimes(out var idle, out var kernel, out var user)) return 0.0;
+
+        long currentIdle  = FileTimeToLong(idle);
+        long currentTotal = FileTimeToLong(kernel) + FileTimeToLong(user);
+
+        long idleDelta  = currentIdle  - _prevIdle;
+        long totalDelta = currentTotal - _prevTotal;
+
+        _prevIdle  = currentIdle;
+        _prevTotal = currentTotal;
+
+        if (totalDelta <= 0) return 0.0;
+
+        // kernel time includes idle time → CPU% = (1 − idle/total) × 100
+        return Math.Round(Math.Clamp((1.0 - (double)idleDelta / totalDelta) * 100.0, 0.0, 100.0), 1);
     }
 
     private long GetUsedRamBytes()
@@ -95,6 +118,24 @@ public sealed class WindowsMetricsProvider : IMachineMetricsProvider, IDisposabl
         }
         catch { return 0; }
     }
+
+    // ── GetSystemTimes P/Invoke ───────────────────────────────────────────
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct FILETIME
+    {
+        public uint dwLowDateTime;
+        public uint dwHighDateTime;
+    }
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool GetSystemTimes(
+        out FILETIME lpIdleTime,
+        out FILETIME lpKernelTime,
+        out FILETIME lpUserTime);
+
+    private static long FileTimeToLong(FILETIME ft) =>
+        ((long)ft.dwHighDateTime << 32) | ft.dwLowDateTime;
 
     // ── GlobalMemoryStatusEx P/Invoke ─────────────────────────────────────
 
@@ -120,6 +161,4 @@ public sealed class WindowsMetricsProvider : IMachineMetricsProvider, IDisposabl
         mem = new MEMORYSTATUSEX { dwLength = (uint)Marshal.SizeOf<MEMORYSTATUSEX>() };
         return GlobalMemoryStatusEx(ref mem);
     }
-
-    public void Dispose() => _cpuCounter?.Dispose();
 }

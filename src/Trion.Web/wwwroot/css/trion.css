@@ -1,0 +1,306 @@
+/* ── Trion Web UI — custom overrides on top of MudBlazor ──────────────── */
+
+/* ── Language / theme selector button ───────────────────────────────── */
+.lang-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    background: var(--mud-palette-gray-lighter);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 8px;
+    padding: 5px 12px;
+    transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+    user-select: none;
+    color: var(--mud-palette-text-primary);
+}
+
+.lang-btn:hover {
+    border-color: var(--mud-palette-primary);
+    background: color-mix(in srgb, var(--mud-palette-primary) 7%, transparent);
+    color: var(--mud-palette-primary);
+}
+
+.lang-btn:hover .lang-btn-chevron {
+    color: var(--mud-palette-primary) !important;
+}
+
+/* ── Drawer border ────────────────────────────────────────────────────── */
+.mud-drawer-content {
+    border-right: 1px solid var(--mud-palette-divider) !important;
+}
+
+/* ── Custom nav container ─────────────────────────────────────────────── */
+.trion-nav {
+    display: flex;
+    flex-direction: column;
+    padding: 8px 0;
+    width: 100%;
+}
+
+.trion-nav-divider {
+    height: 1px;
+    background: var(--mud-palette-divider);
+    margin: 4px 10px;
+    flex-shrink: 0;
+}
+
+/* ── Nav item — icon always occupies the full mini-width (60px) so it    */
+/*   never shifts position between collapsed and expanded states.          */
+/*   overflow:hidden lets the drawer's own width clip the label naturally  */
+/*   so no JS / open-class tricks are needed.                              */
+.trion-nav-item {
+    display: flex;
+    align-items: center;
+    height: 44px;
+    overflow: hidden;
+    text-decoration: none;
+    color: var(--mud-palette-text-secondary);
+    transition: color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+    position: relative;
+    cursor: pointer;
+    user-select: none;
+}
+
+.trion-nav-item:hover {
+    color: var(--mud-palette-text-primary);
+    background: color-mix(in srgb, var(--mud-palette-primary) 6%, transparent);
+}
+
+.trion-nav-item.active {
+    color: var(--mud-palette-primary) !important;
+    background: color-mix(in srgb, var(--mud-palette-primary) 9%, transparent);
+    box-shadow: inset 3px 0 0 var(--mud-palette-primary);
+}
+
+.trion-nav-item.active .mud-icon-root {
+    color: var(--mud-palette-primary) !important;
+}
+
+/* Icon wrapper — always 60px wide so icons don't jump on expand/collapse */
+.trion-nav-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    min-width: 60px;
+    height: 44px;
+    flex-shrink: 0;
+    color: inherit;
+}
+
+.trion-nav-icon .mud-icon-root {
+    font-size: 20px !important;
+    color: inherit;
+    transition: color 0.15s ease;
+}
+
+/* Label — clipped naturally by the drawer's width at 60px (mini),        */
+/*   visible once the drawer expands to 220px.                             */
+.trion-nav-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    white-space: nowrap;
+    color: inherit;
+}
+
+/* ── Session countdown badge (bottom-right corner) ───────────────────── */
+.trion-session-badge {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 11px 5px 9px;
+    border-radius: 20px;
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-divider);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+    font-size: 0.78rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.4px;
+    color: var(--mud-palette-text-secondary);
+    user-select: none;
+    pointer-events: none;
+    transition: color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.trion-session-badge--warn {
+    color: var(--mud-palette-warning, #FF9800);
+    border-color: var(--mud-palette-warning, #FF9800);
+    box-shadow: 0 2px 12px color-mix(in srgb, var(--mud-palette-warning, #FF9800) 25%, transparent);
+}
+
+/* ── AppBar border ────────────────────────────────────────────────────── */
+header.mud-appbar {
+    border-bottom: 1px solid var(--mud-palette-divider);
+}
+
+/* ── Metric card row layout ───────────────────────────────────────────── */
+.metric-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.metric-row-label {
+    width: 18px;
+    flex-shrink: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* ── Trion card — left accent strip + themed surface ─────────────────── */
+.trion-card {
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    border: 1px solid var(--mud-palette-divider);
+    background: var(--mud-palette-surface);
+}
+
+.trion-card-accent {
+    width: 5px;
+    flex-shrink: 0;
+    border-radius: 10px 0 0 10px;
+    background: var(--mud-palette-primary);
+}
+
+.trion-card-body {
+    flex: 1;
+    padding: 16px 18px;
+}
+
+/* ── Theme switcher — mode buttons (Light / Dark) ────────────────────── */
+.tsp-mode-btn {
+    flex: 1;
+    padding: 5px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--mud-palette-divider);
+    background: transparent;
+    color: var(--mud-palette-text-secondary);
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 500;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    white-space: nowrap;
+}
+
+.tsp-mode-btn--active {
+    background: var(--mud-palette-primary);
+    border-color: var(--mud-palette-primary);
+    color: var(--mud-palette-primary-contrasttext, #000);
+}
+
+/* ── Theme switcher — color swatch buttons ───────────────────────────── */
+.tsp-swatch-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    padding: 5px;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s ease;
+}
+
+/* ── AppBar brand button (logo + TRION + Control Panel) ─────────────── */
+/* Mirrors the WPF title-bar Button that wraps the logo + text labels.   */
+.trion-brand-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 4px 10px 4px 4px;
+    border-radius: 8px;
+    transition: background 0.15s ease;
+    text-decoration: none;
+    outline: none;
+}
+
+.trion-brand-btn:hover {
+    background: color-mix(in srgb, var(--mud-palette-primary) 10%, transparent);
+}
+
+.trion-brand-trion {
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--mud-palette-primary);
+}
+
+.trion-brand-sub {
+    font-size: 0.95rem;
+    font-weight: 400;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* ── Trion logo mask — fills silhouette with the current primary color ── */
+/* Mirrors the WPF Rectangle + OpacityMask technique used in the desktop. */
+.trion-logo {
+    display: inline-block;
+    flex-shrink: 0;
+    background-color: var(--mud-palette-primary);
+    -webkit-mask-image: url('/trion-logo.png');
+            mask-image: url('/trion-logo.png');
+    -webkit-mask-size: contain;
+            mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+            mask-position: center;
+}
+
+/* ── Icon badge — neutral tinted square behind card icon ─────────────── */
+.trion-icon-badge {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--mud-palette-text-secondary) 10%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* ── Login page ─────────────────────────────────────────────────────── */
+.login-bg {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--mud-palette-background);
+    position: relative;
+    overflow: hidden;
+}
+
+.login-glow {
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle,
+        color-mix(in srgb, var(--mud-palette-primary) 12%, transparent) 0%,
+        transparent 70%);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+.login-card {
+    width: 100%;
+    max-width: 420px;
+    flex-direction: column;
+    position: relative;
+    z-index: 1;
+}

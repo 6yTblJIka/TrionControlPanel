@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text.Json;
 using System.Threading.RateLimiting;
 using Microsoft.Data.Sqlite;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -22,6 +23,8 @@ using Trion.Core.Services.Features;
 using Trion.Core.Services.Orchestration;
 using Trion.Core.Services.Software;
 using Trion.Core.Settings;
+using Trion.Core.Services.Infrastructure;
+using Trion.Core.Setup;
 using Trion.Platform;
 using Trion.UI.Localization;
 using Trion.Web.Components;
@@ -39,19 +42,48 @@ builder.Services.Configure<LoggerOptions>(
 builder.Services.AddPlatformServices();
 builder.Services.Configure<AgentClientOptions>(builder.Configuration.GetSection("Agent"));
 
+// ── Startup security check: HMAC key must not be empty ────────────────────
+var hmacKey = builder.Configuration["Agent:HmacSharedKey"] ?? string.Empty;
+if (string.IsNullOrWhiteSpace(hmacKey))
+    throw new InvalidOperationException(
+        "Agent:HmacSharedKey is not set. " +
+        "Set it via the Agent__HmacSharedKey environment variable. " +
+        "Never store this secret in appsettings.json.");
+
 // ── Settings database ─────────────────────────────────────────────────────
-var dbPath = Path.Combine(AppContext.BaseDirectory, "settings.db");
-builder.Services.AddSingleton<ISettingsRepository>(
-    new SettingsRepository(dbPath));
+var dbPath      = Path.Combine(AppContext.BaseDirectory, "settings.db");
+var dbJsonPath  = Path.Combine(AppContext.BaseDirectory, "trion-db.json");
+
+ISettingsRepository settingsRepo;
+
+if (File.Exists(dbJsonPath))
+{
+    using var jsonDoc = JsonDocument.Parse(File.ReadAllText(dbJsonPath));
+    var dbType  = jsonDoc.RootElement.GetProperty("DatabaseType").GetString();
+    var connStr = jsonDoc.RootElement.GetProperty("ConnectionString").GetString();
+
+    settingsRepo = dbType == "mysql" && !string.IsNullOrWhiteSpace(connStr)
+        ? new MySqlSettingsRepository(connStr)
+        : new SettingsRepository(dbPath);
+}
+else
+{
+    settingsRepo = new SettingsRepository(dbPath);
+}
+
+builder.Services.AddSingleton<ISettingsRepository>(settingsRepo);
 builder.Services.AddSingleton(
     new RefreshTokenStore($"Data Source={dbPath};"));
+
+// ── Setup wizard ───────────────────────────────────────────────────────────
+builder.Services.AddScoped<SetupService>();
+
+// ── Infrastructure status probes ───────────────────────────────────────────
+builder.Services.AddScoped<InfraStatusService>();
 
 // ── Auth services ──────────────────────────────────────────────────────────
 builder.Services.Configure<EmulatorAuthOptions>(
     builder.Configuration.GetSection("Auth"));
-builder.Services.Configure<EmulatorConnectionOptions>(
-    builder.Configuration.GetSection("Emulators"));
-builder.Services.AddSingleton<IEmulatorRepositoryFactory, EmulatorRepositoryFactory>();
 builder.Services.AddSingleton<AuditLogger>(sp =>
     new AuditLogger(Path.Combine(AppContext.BaseDirectory, "Audit")));
 builder.Services.AddSingleton<TokenService>();
@@ -97,6 +129,10 @@ builder.Services.AddHostedService(
     sp => sp.GetRequiredService<EmulatorOrchestrator>());
 
 // ── DDNS ───────────────────────────────────────────────────────────────────
+// Load DDNS credentials from environment variables first (TRION_DDNS_* prefix).
+// Never put real credentials in appsettings.json — use env vars or a secrets manager.
+// Example: TRION_DDNS_Password=secret  (maps to Ddns:Password via AddEnvironmentVariables prefix)
+builder.Configuration.AddEnvironmentVariables("TRION_DDNS_");
 builder.Services.Configure<DdnsOptions>(builder.Configuration.GetSection("Ddns"));
 builder.Services.AddSingleton<IDdnsUpdater>(sp =>
     new DdnsUpdater(
@@ -148,6 +184,7 @@ builder.Services.AddRateLimiter(options =>
 });
 
 // ── UI & Framework services ────────────────────────────────────────────────
+builder.Services.AddScoped<Trion.Web.Services.ThemeState>();
 builder.Services.AddMudServices();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
@@ -180,10 +217,12 @@ var app = builder.Build();
     await SettingsMigrations.RunAsync(startupConn);
 }
 
-// ── Ensure bootstrap admin account exists ──────────────────────────────────
+// ── Ensure bootstrap admin account exists (only after setup is complete) ───
 {
-    var settings = app.Services.GetRequiredService<ISettingsRepository>();
-    await BootstrapAccount.EnsureCreatedAsync(settings);
+    var settings     = app.Services.GetRequiredService<ISettingsRepository>();
+    var setupService = app.Services.CreateScope().ServiceProvider.GetRequiredService<SetupService>();
+    if (await setupService.IsCompletedAsync())
+        await BootstrapAccount.EnsureCreatedAsync(settings);
 }
 
 // ── Patch JWT key resolver with the real RSA public key from TokenService ──
@@ -217,6 +256,7 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
+app.UseMiddleware<SetupGateMiddleware>();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();

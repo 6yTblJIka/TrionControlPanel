@@ -9,6 +9,28 @@ namespace Trion.Desktop.Models;
 /// </summary>
 public class AppSettings
 {
+    // ── Web server (nginx + PHP) ──────────────────────────────────────────────
+
+    /// <summary>True once nginx + PHP have been successfully installed.</summary>
+    public bool   WebServerInstalled { get; set; }
+    /// <summary>Root directory of the portable web server installation (webserver/ folder).</summary>
+    public string WebServerLocation  { get; set; } = "";
+    /// <summary>HTTP port nginx listens on. Defaults to 80.</summary>
+    public int    WebServerPort      { get; set; } = 80;
+    /// <summary>When true, nginx also listens on HttpsPort with TLS.</summary>
+    public bool   EnableHttps        { get; set; }
+    /// <summary>HTTPS port. Defaults to 443. Only used when EnableHttps is true.</summary>
+    public int    HttpsPort          { get; set; } = 443;
+    /// <summary>Path to the PEM certificate file. Empty = use auto-generated self-signed cert.</summary>
+    public string SslCertPath        { get; set; } = "";
+    /// <summary>Path to the PEM private key file. Empty = use auto-generated self-signed key.</summary>
+    public string SslKeyPath         { get; set; } = "";
+    /// <summary>
+    /// When true, RunStartupCheckAsync is called at launch — installs if absent, starts if installed.
+    /// Opt-in (false by default) so users who don't need a web server aren't affected.
+    /// </summary>
+    public bool   WebServerAutoStart { get; set; }
+
     // ── Database server ────────────────────────────────────────────────────────
 
     public string WorldDatabase      { get; set; } = "wotlk_world";

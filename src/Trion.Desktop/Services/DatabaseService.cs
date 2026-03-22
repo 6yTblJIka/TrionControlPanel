@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
+using Trion.Core.Database;
 using Trion.Desktop.Infrastructure.Constants;
 using Trion.Desktop.Models;
 

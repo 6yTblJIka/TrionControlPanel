@@ -120,4 +120,28 @@
   <data name="H_World" xml:space="preserve">
     <value>Salut Lume</value>
   </data>
+
+  <!-- Nav -->
+  <data name="Nav_Dashboard" xml:space="preserve"><value>Tablou de bord</value></data>
+  <data name="Nav_ServerControl" xml:space="preserve"><value>Control Server</value></data>
+  <data name="Nav_Installer" xml:space="preserve"><value>Instalator</value></data>
+  <data name="Nav_DdnsSettings" xml:space="preserve"><value>Setări DDNS</value></data>
+  <data name="Nav_SignIn" xml:space="preserve"><value>Autentificare</value></data>
+  <data name="Nav_Discord" xml:space="preserve"><value>Discord</value></data>
+  <data name="Nav_Support" xml:space="preserve"><value>Suport</value></data>
+  <data name="Nav_Donate" xml:space="preserve"><value>Donație</value></data>
+
+  <!-- Dashboard page -->
+  <data name="Page_Dashboard" xml:space="preserve"><value>Tablou de bord</value></data>
+  <data name="Page_DashboardSubtitle" xml:space="preserve"><value>Prezentare generală sistem &amp; stare server</value></data>
+  <data name="Section_ServiceStatus" xml:space="preserve"><value>STARE SERVICII</value></data>
+  <data name="Section_MachineResources" xml:space="preserve"><value>RESURSE MAȘINĂ</value></data>
+
+  <!-- Login page -->
+  <data name="Login_Username" xml:space="preserve"><value>Utilizator</value></data>
+  <data name="Login_Password" xml:space="preserve"><value>Parolă</value></data>
+  <data name="Login_SignIn" xml:space="preserve"><value>Autentificare</value></data>
+  <data name="Login_Required" xml:space="preserve"><value>Utilizatorul și parola sunt obligatorii.</value></data>
+  <data name="Login_Failed" xml:space="preserve"><value>Autentificare eșuată.</value></data>
+  <data name="Login_Error" xml:space="preserve"><value>A apărut o eroare neașteptată. Vă rugăm încercați din nou.</value></data>
 </root>

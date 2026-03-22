@@ -19,7 +19,6 @@ internal static class TestLogger
             WriteToConsole = false,
             WriteToFile    = false,
             ShowInfo       = false,
-            ShowSuccess    = false,
             ShowWarning    = false,
             ShowError      = false,
         };

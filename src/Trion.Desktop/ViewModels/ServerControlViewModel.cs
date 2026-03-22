@@ -4,7 +4,10 @@ using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.IO;
 using System.Windows.Threading;
+using Trion.Core.Database;
 using Trion.Core.Logging;
+using Trion.Core.WebServer;
+using Trion.Desktop.Models;
 using Trion.Desktop.Services;
 
 namespace Trion.Desktop.ViewModels;
@@ -14,6 +17,7 @@ public partial class ServerControlViewModel : ObservableObject, IDisposable
     private readonly ISettingsService                        _settings;
     private readonly ILocalizationService                    _loc;
     private readonly IMySqlSetupService                      _mysql;
+    private readonly INginxPhpSetupService                   _webServer;
     private readonly ILogger<ServerControlViewModel>         _logger;
     private readonly DispatcherTimer                         _pollTimer;
 
@@ -23,26 +27,47 @@ public partial class ServerControlViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool   _isWorldRunning;
     [ObservableProperty] private bool   _isLogonRunning;
     [ObservableProperty] private bool   _isEmulatorInstalled;
+    [ObservableProperty] private bool   _isWebServerRunning;
     [ObservableProperty] private string _statusMessage = string.Empty;
 
     public ServerControlViewModel(ISettingsService settings,
                                   ILocalizationService loc,
                                   IMySqlSetupService mysql,
+                                  INginxPhpSetupService webServer,
                                   ILogger<ServerControlViewModel> logger)
     {
-        _settings = settings;
-        _loc      = loc;
-        _mysql    = mysql;
-        _logger   = logger;
+        _settings  = settings;
+        _loc       = loc;
+        _mysql     = mysql;
+        _webServer = webServer;
+        _logger    = logger;
 
-        // Sync initial database state from the service
+        // Sync initial state from the services
         IsDatabaseRunning    = _mysql.IsProcessRunning;
+        IsWebServerRunning   = _webServer.IsProcessRunning;
         IsEmulatorInstalled  = CheckEmulatorInstalled();
 
         // React immediately to mysqld start/stop
         _mysql.StatusChanged += OnMySqlStatusChanged;
 
-        RefreshWorldLogonStatus();
+        // React immediately to nginx start/stop
+        _webServer.StatusChanged += OnWebServerStatusChanged;
+
+        // Defer process scan to a background thread — Process.GetProcessesByName()
+        // can take 1-3 s on first call and would freeze the UI thread.
+        _ = Task.Run(() =>
+        {
+            var active = GetActiveEmulator();
+            bool world = IsProcessRunning(active.WorldExeName);
+            bool logon = IsProcessRunning(active.LogonExeName);
+            App.Current?.Dispatcher.InvokeAsync(() =>
+            {
+                IsWorldRunning = world;
+                IsLogonRunning = logon;
+                ToggleWorldCommand.NotifyCanExecuteChanged();
+                ToggleLogonCommand.NotifyCanExecuteChanged();
+            });
+        });
 
         // Poll every 3 s so the button stays in sync even when the StatusChanged
         // event was fired before this ViewModel was constructed (e.g. auto-start on
@@ -53,6 +78,17 @@ public partial class ServerControlViewModel : ObservableObject, IDisposable
         };
         _pollTimer.Tick += OnPollTick;
         _pollTimer.Start();
+    }
+
+    private void OnWebServerStatusChanged(bool running)
+    {
+        App.Current.Dispatcher.InvokeAsync(() =>
+        {
+            IsWebServerRunning = running;
+            StatusMessage      = running ? "Web server started." : "Web server stopped.";
+            StartWebServerCommand.NotifyCanExecuteChanged();
+            StopWebServerCommand.NotifyCanExecuteChanged();
+        });
     }
 
     private void OnMySqlStatusChanged(bool running)
@@ -68,13 +104,25 @@ public partial class ServerControlViewModel : ObservableObject, IDisposable
 
     private void OnPollTick(object? sender, EventArgs e)
     {
-        // Always runs on the UI thread (DispatcherTimer) — safe to set observable properties
+        // Fast checks — read from in-memory state, safe to do on UI thread
         IsDatabaseRunning   = _mysql.IsProcessRunning;
-        IsWorldRunning      = IsProcessRunning(GetWorldExeName());
-        IsLogonRunning      = IsProcessRunning(GetLogonExeName());
+        IsWebServerRunning  = _webServer.IsProcessRunning;
         IsEmulatorInstalled = CheckEmulatorInstalled();
-        ToggleWorldCommand.NotifyCanExecuteChanged();
-        ToggleLogonCommand.NotifyCanExecuteChanged();
+
+        // Process.GetProcessesByName() can take 1-3 s on Windows — run off the UI thread
+        _ = Task.Run(() =>
+        {
+            var active = GetActiveEmulator();
+            bool world = IsProcessRunning(active.WorldExeName);
+            bool logon = IsProcessRunning(active.LogonExeName);
+            App.Current?.Dispatcher.InvokeAsync(() =>
+            {
+                IsWorldRunning = world;
+                IsLogonRunning = logon;
+                ToggleWorldCommand.NotifyCanExecuteChanged();
+                ToggleLogonCommand.NotifyCanExecuteChanged();
+            });
+        });
     }
 
     private bool CheckEmulatorInstalled()
@@ -90,21 +138,78 @@ public partial class ServerControlViewModel : ObservableObject, IDisposable
 
     private void RefreshWorldLogonStatus()
     {
-        IsWorldRunning = IsProcessRunning(GetWorldExeName());
-        IsLogonRunning = IsProcessRunning(GetLogonExeName());
+        var active = GetActiveEmulator();
+        IsWorldRunning = IsProcessRunning(active.WorldExeName);
+        IsLogonRunning = IsProcessRunning(active.LogonExeName);
     }
 
-    private string GetWorldExeName()
+    /// <summary>
+    /// Returns the paths and executable names for whichever SPP expansion is currently enabled.
+    /// Falls back to safe defaults so the server control page never crashes when no expansion
+    /// is enabled yet.
+    /// </summary>
+    private ActiveEmulatorInfo GetActiveEmulator()
     {
         var cfg = _settings.Current;
-        return string.IsNullOrWhiteSpace(cfg.WotLKWorldExeName) ? "worldserver" : cfg.WotLKWorldExeName;
+
+        if (cfg.LaunchClassicCore)
+            return new(
+                WorldExeLoc:  cfg.ClassicWorldExeLoc,
+                LogonExeLoc:  cfg.ClassicLogonExeLoc,
+                WorkingDir:   cfg.ClassicWorkingDirectory,
+                WorldExeName: string.IsNullOrWhiteSpace(cfg.ClassicWorldExeName) ? EmulatorProfiles.Classic.WorldExeName : cfg.ClassicWorldExeName,
+                LogonExeName: string.IsNullOrWhiteSpace(cfg.ClassicLogonExeName) ? EmulatorProfiles.Classic.LogonExeName : cfg.ClassicLogonExeName);
+
+        if (cfg.LaunchTBCCore)
+            return new(
+                WorldExeLoc:  cfg.TBCWorldExeLoc,
+                LogonExeLoc:  cfg.TBCLogonExeLoc,
+                WorkingDir:   cfg.TBCWorkingDirectory,
+                WorldExeName: string.IsNullOrWhiteSpace(cfg.TBCWorldExeName) ? EmulatorProfiles.Tbc.WorldExeName : cfg.TBCWorldExeName,
+                LogonExeName: string.IsNullOrWhiteSpace(cfg.TBCLogonExeName) ? EmulatorProfiles.Tbc.LogonExeName : cfg.TBCLogonExeName);
+
+        if (cfg.LaunchWotLKCore)
+            return new(
+                WorldExeLoc:  cfg.WotLKWorldExeLoc,
+                LogonExeLoc:  cfg.WotLKLogonExeLoc,
+                WorkingDir:   cfg.WotLKWorkingDirectory,
+                WorldExeName: string.IsNullOrWhiteSpace(cfg.WotLKWorldExeName) ? EmulatorProfiles.Wotlk.WorldExeName : cfg.WotLKWorldExeName,
+                LogonExeName: string.IsNullOrWhiteSpace(cfg.WotLKLogonExeName) ? EmulatorProfiles.Wotlk.LogonExeName : cfg.WotLKLogonExeName);
+
+        if (cfg.LaunchCataCore)
+            return new(
+                WorldExeLoc:  cfg.CataWorldExeLoc,
+                LogonExeLoc:  cfg.CataLogonExeLoc,
+                WorkingDir:   cfg.CataWorkingDirectory,
+                WorldExeName: string.IsNullOrWhiteSpace(cfg.CataWorldExeName) ? EmulatorProfiles.Cata.WorldExeName : cfg.CataWorldExeName,
+                LogonExeName: string.IsNullOrWhiteSpace(cfg.CataLogonExeName) ? EmulatorProfiles.Cata.LogonExeName : cfg.CataLogonExeName);
+
+        if (cfg.LaunchMoPCore)
+            return new(
+                WorldExeLoc:  cfg.MopWorldExeLoc,
+                LogonExeLoc:  cfg.MopLogonExeLoc,
+                WorkingDir:   cfg.MopWorkingDirectory,
+                WorldExeName: string.IsNullOrWhiteSpace(cfg.MopWorldExeName) ? EmulatorProfiles.Mop.WorldExeName : cfg.MopWorldExeName,
+                LogonExeName: string.IsNullOrWhiteSpace(cfg.MopLogonExeName) ? EmulatorProfiles.Mop.LogonExeName : cfg.MopLogonExeName);
+
+        if (cfg.LaunchCustomCore)
+            return new(
+                WorldExeLoc:  cfg.CustomWorldExeLoc,
+                LogonExeLoc:  cfg.CustomLogonExeLoc,
+                WorkingDir:   cfg.CustomWorkingDirectory,
+                WorldExeName: string.IsNullOrWhiteSpace(cfg.CustomWorldExeName) ? "worldserver" : cfg.CustomWorldExeName,
+                LogonExeName: string.IsNullOrWhiteSpace(cfg.CustomLogonExeName) ? "authserver"  : cfg.CustomLogonExeName);
+
+        // No expansion enabled — return safe defaults so nothing crashes
+        return new("", "", "", "worldserver", "authserver");
     }
 
-    private string GetLogonExeName()
-    {
-        var cfg = _settings.Current;
-        return string.IsNullOrWhiteSpace(cfg.WotLKLogonExeName) ? "authserver" : cfg.WotLKLogonExeName;
-    }
+    private readonly record struct ActiveEmulatorInfo(
+        string WorldExeLoc,
+        string LogonExeLoc,
+        string WorkingDir,
+        string WorldExeName,
+        string LogonExeName);
 
     private static bool IsProcessRunning(string exeName)
     {
@@ -170,16 +275,17 @@ public partial class ServerControlViewModel : ObservableObject, IDisposable
 
     private async Task StartWorldCoreAsync(int crashCount)
     {
-        var cfg = _settings.Current;
         if (!IsDatabaseRunning)
         {
             _logger.LogWarning("World server start blocked — database is not running.");
             StatusMessage = "Database must be running before starting World server.";
             return;
         }
-        _logger.LogInformation("Starting World server (crash attempt {Attempt}). Exe: {Exe}", crashCount, cfg.WotLKWorldExeLoc);
 
-        var proc = await LaunchProcessAsync(cfg.WotLKWorldExeLoc, cfg.WotLKWorkingDirectory);
+        var active = GetActiveEmulator();
+        _logger.LogInformation("Starting World server (crash attempt {Attempt}). Exe: {Exe}", crashCount, active.WorldExeLoc);
+
+        var proc = await LaunchProcessAsync(active.WorldExeLoc, active.WorkingDir);
         if (proc is null)
         {
             StatusMessage = "World server executable not found.";
@@ -212,7 +318,7 @@ public partial class ServerControlViewModel : ObservableObject, IDisposable
         _worldMonitorCts?.Dispose();
         _worldMonitorCts = null;
 
-        await GracefulStopAsync(GetWorldExeName());
+        await GracefulStopAsync(GetActiveEmulator().WorldExeName);
         IsWorldRunning = false;
         StatusMessage  = "World server stopped.";
         _logger.LogInformation("World server stopped.");
@@ -230,16 +336,17 @@ public partial class ServerControlViewModel : ObservableObject, IDisposable
 
     private async Task StartLogonCoreAsync(int crashCount)
     {
-        var cfg = _settings.Current;
         if (!IsDatabaseRunning)
         {
             _logger.LogWarning("Logon server start blocked — database is not running.");
             StatusMessage = "Database must be running before starting Logon server.";
             return;
         }
-        _logger.LogInformation("Starting Logon server (crash attempt {Attempt}). Exe: {Exe}", crashCount, cfg.WotLKLogonExeLoc);
 
-        var proc = await LaunchProcessAsync(cfg.WotLKLogonExeLoc, cfg.WotLKWorkingDirectory);
+        var active = GetActiveEmulator();
+        _logger.LogInformation("Starting Logon server (crash attempt {Attempt}). Exe: {Exe}", crashCount, active.LogonExeLoc);
+
+        var proc = await LaunchProcessAsync(active.LogonExeLoc, active.WorkingDir);
         if (proc is null)
         {
             StatusMessage = "Logon server executable not found.";
@@ -270,7 +377,7 @@ public partial class ServerControlViewModel : ObservableObject, IDisposable
         _logonMonitorCts?.Dispose();
         _logonMonitorCts = null;
 
-        await GracefulStopAsync(GetLogonExeName());
+        await GracefulStopAsync(GetActiveEmulator().LogonExeName);
         IsLogonRunning = false;
         StatusMessage  = "Logon server stopped.";
         _logger.LogInformation("Logon server stopped.");
@@ -401,6 +508,53 @@ public partial class ServerControlViewModel : ObservableObject, IDisposable
     }
     private bool CanToggleLogon() => IsLogonRunning || IsEmulatorInstalled;
 
+    // ── Web server (nginx + PHP) ──────────────────────────────────────────────
+
+    [RelayCommand(CanExecute = nameof(CanStartWebServer))]
+    private async Task StartWebServerAsync()
+    {
+        _logger.LogInformation("User requested web server start.");
+        StatusMessage = "Starting web server...";
+        try
+        {
+            await _webServer.StartAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogException(ex);
+            StatusMessage = $"Failed to start web server: {ex.Message}";
+        }
+        StartWebServerCommand.NotifyCanExecuteChanged();
+        StopWebServerCommand.NotifyCanExecuteChanged();
+    }
+    private bool CanStartWebServer() => !IsWebServerRunning && !_webServer.IsRunning;
+
+    [RelayCommand(CanExecute = nameof(CanStopWebServer))]
+    private async Task StopWebServerAsync()
+    {
+        _logger.LogInformation("User requested web server stop.");
+        StatusMessage = "Stopping web server...";
+        try
+        {
+            await _webServer.StopAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogException(ex);
+            StatusMessage = $"Failed to stop web server: {ex.Message}";
+        }
+        StartWebServerCommand.NotifyCanExecuteChanged();
+        StopWebServerCommand.NotifyCanExecuteChanged();
+    }
+    private bool CanStopWebServer() => IsWebServerRunning;
+
+    [RelayCommand]
+    private async Task ToggleWebServerAsync()
+    {
+        if (IsWebServerRunning) await StopWebServerAsync();
+        else                    await StartWebServerAsync();
+    }
+
     // ── Start All / Stop All ──────────────────────────────────────────────────
 
     [RelayCommand]
@@ -480,7 +634,8 @@ public partial class ServerControlViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         _pollTimer.Stop();
-        _mysql.StatusChanged -= OnMySqlStatusChanged;
+        _mysql.StatusChanged      -= OnMySqlStatusChanged;
+        _webServer.StatusChanged  -= OnWebServerStatusChanged;
         _worldMonitorCts?.Cancel();
         _worldMonitorCts?.Dispose();
         _logonMonitorCts?.Cancel();

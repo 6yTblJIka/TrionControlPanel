@@ -55,6 +55,10 @@ public sealed class ProcessMonitor : BackgroundService, IProcessMonitor
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Yield immediately so BackgroundService.StartAsync() returns before we do any
+        // work — keeps Process.GetProcesses() off the UI thread on first poll.
+        await Task.Yield();
+
         var opts = _opts.CurrentValue;
 
         if (opts.ProcessNameFilter.Length == 0 && _trackedPids.IsEmpty)

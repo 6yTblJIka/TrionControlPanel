@@ -1,104 +1,128 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
+@implements IDisposable
+@using System.Globalization
 
-<MudThemeProvider Theme="@_theme" IsDarkMode="_isDarkMode" />
+@inject ThemeState ThemeState
+@inject IJSRuntime JS
+
+<MudThemeProvider Theme="_theme" IsDarkMode="@ThemeState.IsDark" />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
+
 <MudLayout>
-    <MudAppBar Elevation="1">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
-        <MudText Typo="Typo.h5" Class="ml-3">Application</MudText>
+
+    <MudAppBar Elevation="1" Dense="true" DisableGutters="true">
+        <button class="trion-brand-btn" @onclick="DrawerToggle" title="Toggle sidebar">
+            <div class="trion-logo" style="width:22px;height:22px;flex-shrink:0;"></div>
+            <span class="trion-brand-trion">TRION</span>
+            <span class="trion-brand-sub">Control Panel</span>
+        </button>
         <MudSpacer />
-        <LanguageSelector />
-        <MudIconButton Icon="@(DarkLightModeButtonIcon)" Color="Color.Inherit" OnClick="@DarkModeToggle" />
-        <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+            <ThemeSwitcher />
+            <LanguageSelector />
+        </MudStack>
     </MudAppBar>
-    <MudDrawer id="nav-drawer" @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
+
+    <MudDrawer @bind-Open="_drawerOpen"
+               ClipMode="DrawerClipMode.Always"
+               Elevation="0"
+               Variant="DrawerVariant.Mini"
+               MiniWidth="60px"
+               Width="220px">
         <NavMenu />
     </MudDrawer>
-    <MudMainContent Class="pt-16 pa-4">
-        @Body
+
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.False" Class="pa-6 pt-4">
+            @Body
+        </MudContainer>
     </MudMainContent>
+
 </MudLayout>
 
+<!-- Session countdown badge — updated every second by idle-logout.js -->
+<div id="trion-idle-timer" class="trion-session-badge">
+    <MudIcon Icon="@Icons.Material.Outlined.Timer" Style="font-size:14px;" />
+    <span id="trion-idle-countdown">15:00</span>
+</div>
 
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.
     <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
+    <span class="dismiss">&times;</span>
 </div>
 
 @code {
-    private bool _drawerOpen = true;
-    private bool _isDarkMode = true;
-    private MudTheme? _theme = null;
+    private bool     _drawerOpen = false;
+    private MudTheme _theme      = TrionThemes.BuildMudTheme("TrionBlue");
 
     protected override void OnInitialized()
     {
-        base.OnInitialized();
+        ThemeState.OnChanged += OnThemeChanged;
+    }
 
-        _theme = new()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        // ── Culture ────────────────────────────────────────────────────────
+        // Blazor Server's rendering threads don't inherit the culture set by
+        // UseRequestLocalization (which only runs on the HTTP request thread).
+        // Re-apply it here from the trion_lang cookie so IStringLocalizer
+        // returns the correct language inside the interactive SignalR circuit.
+        var cookieVal = await JS.InvokeAsync<string?>("trionGetCookie", "trion_lang");
+        if (!string.IsNullOrWhiteSpace(cookieVal))
         {
-            PaletteLight = _lightPalette,
-            PaletteDark = _darkPalette,
-            LayoutProperties = new LayoutProperties()
-        };
+            // Cookie format produced by CookieRequestCultureProvider: "c=de|uic=de"
+            var cultureName = cookieVal.Split('|')
+                .Select(p => p.Trim())
+                .FirstOrDefault(p => p.StartsWith("uic=", StringComparison.Ordinal))
+                ?[4..];
+
+            if (!string.IsNullOrWhiteSpace(cultureName))
+            {
+                try
+                {
+                    var ci = new CultureInfo(cultureName);
+                    CultureInfo.DefaultThreadCurrentCulture   = ci;
+                    CultureInfo.DefaultThreadCurrentUICulture = ci;
+                    await InvokeAsync(StateHasChanged); // re-render with correct culture
+                }
+                catch (CultureNotFoundException) { }
+            }
+        }
+
+        // Restore persisted color
+        var savedColor = await JS.InvokeAsync<string?>("localStorage.getItem", "trion_theme_color");
+        if (!string.IsNullOrWhiteSpace(savedColor) && TrionThemes.All.Any(t => t.Id == savedColor))
+            ThemeState.SetColor(savedColor);
+
+        // Restore persisted variant
+        var savedDark = await JS.InvokeAsync<string?>("localStorage.getItem", "trion_theme_dark");
+        if (!string.IsNullOrWhiteSpace(savedDark) && bool.TryParse(savedDark, out var isDark))
+            ThemeState.SetVariant(isDark);
+
+        // Rebuild theme after restore (fires OnChanged if either changed)
+        _theme = TrionThemes.BuildMudTheme(ThemeState.CurrentColorId);
+        await InvokeAsync(StateHasChanged);
+
+        // Start inactivity timer — logs out after 15 min of no user activity
+        await JS.InvokeVoidAsync("trionIdle.init");
     }
 
-    private void DrawerToggle()
+    private void OnThemeChanged()
     {
-        _drawerOpen = !_drawerOpen;
+        _theme = TrionThemes.BuildMudTheme(ThemeState.CurrentColorId);
+        InvokeAsync(StateHasChanged);
     }
 
-    private void DarkModeToggle()
+    private void DrawerToggle() => _drawerOpen = !_drawerOpen;
+
+    public void Dispose()
     {
-        _isDarkMode = !_isDarkMode;
+        ThemeState.OnChanged -= OnThemeChanged;
+        JS.InvokeVoidAsync("trionIdle.dispose");
     }
-
-    private readonly PaletteLight _lightPalette = new()
-    {
-        Black = "#110e2d",
-        AppbarText = "#424242",
-        AppbarBackground = "rgba(255,255,255,0.8)",
-        DrawerBackground = "#ffffff",
-        GrayLight = "#e8e8e8",
-        GrayLighter = "#f9f9f9",
-    };
-
-    private readonly PaletteDark _darkPalette = new()
-    {
-        Primary = "#7e6fff",
-        Surface = "#1e1e2d",
-        Background = "#1a1a27",
-        BackgroundGray = "#151521",
-        AppbarText = "#92929f",
-        AppbarBackground = "rgba(26,26,39,0.8)",
-        DrawerBackground = "#1a1a27",
-        ActionDefault = "#74718e",
-        ActionDisabled = "#9999994d",
-        ActionDisabledBackground = "#605f6d4d",
-        TextPrimary = "#b2b0bf",
-        TextSecondary = "#92929f",
-        TextDisabled = "#ffffff33",
-        DrawerIcon = "#92929f",
-        DrawerText = "#92929f",
-        GrayLight = "#2a2833",
-        GrayLighter = "#1e1e2d",
-        Info = "#4a86ff",
-        Success = "#3dcb6c",
-        Warning = "#ffb545",
-        Error = "#ff3f5f",
-        LinesDefault = "#33323e",
-        TableLines = "#33323e",
-        Divider = "#292838",
-        OverlayLight = "#1e1e2d80",
-    };
-
-    public string DarkLightModeButtonIcon => _isDarkMode switch
-    {
-        true => Icons.Material.Rounded.AutoMode,
-        false => Icons.Material.Outlined.DarkMode,
-    };
 }
-
-

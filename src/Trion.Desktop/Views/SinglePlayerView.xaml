@@ -27,14 +27,99 @@
                 </StackPanel>
             </Grid>
 
+            <!-- ── Loading indicator ── -->
+            <Border Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}"
+                    Padding="0,40,0,0">
+                <TextBlock Text="Loading available packages…"
+                           Style="{StaticResource CaptionStyle}"
+                           HorizontalAlignment="Center" />
+            </Border>
+
+            <!-- ── No packages available ── -->
+            <Border Visibility="{Binding HasAnyAvailable,
+                                 Converter={StaticResource InverseBoolToVisibility}}"
+                    Padding="0,40,0,0">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding IsLoading}"       Value="False" />
+                                    <Condition Binding="{Binding HasAnyAvailable}" Value="False" />
+                                </MultiDataTrigger.Conditions>
+                                <Setter Property="Visibility" Value="Visible" />
+                            </MultiDataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="No packages available for your account."
+                               Style="{StaticResource CaptionStyle}"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,8" />
+                    <TextBlock Text="Upgrade your supporter tier to unlock more expansions."
+                               Style="{StaticResource CaptionStyle}"
+                               HorizontalAlignment="Center" />
+                </StackPanel>
+            </Border>
+
             <!-- ── Emulator cards — full-width stack ── -->
             <ItemsControl ItemsSource="{Binding Emulators}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type vm:EmulatorCardViewModel}">
 
-                        <Border Margin="0,0,0,14"
-                                Style="{StaticResource ElevatedCardStyle}"
-                                Padding="0">
+                        <Grid Margin="0,0,0,14"
+                              Visibility="{Binding IsAvailable,
+                                           Converter={StaticResource BoolToVisibility}}">
+
+                            <!-- Accent glow layer — fades in when this expansion is enabled -->
+                            <Border CornerRadius="10"
+                                    IsHitTestVisible="False"
+                                    BorderBrush="{Binding AccentBrush}"
+                                    BorderThickness="1">
+                                <Border.Effect>
+                                    <DropShadowEffect Color="{Binding AccentColor}"
+                                                      BlurRadius="28" ShadowDepth="0" Opacity="1" />
+                                </Border.Effect>
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Opacity" Value="0" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsEnabled}" Value="True">
+                                                <DataTrigger.EnterActions>
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                             To="1" Duration="0:0:0.35" />
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </DataTrigger.EnterActions>
+                                                <DataTrigger.ExitActions>
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                             To="0" Duration="0:0:0.35" />
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </DataTrigger.ExitActions>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                            </Border>
+
+                            <!-- Main card — border turns accent when enabled -->
+                            <Border Padding="0">
+                                <Border.Style>
+                                    <Style TargetType="Border" BasedOn="{StaticResource ElevatedCardStyle}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsEnabled}" Value="True">
+                                                <Setter Property="BorderBrush" Value="{Binding AccentBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="6" />   <!-- accent strip -->
@@ -394,7 +479,8 @@
 
                                 </Grid>
                             </Grid>
-                        </Border>
+                            </Border>
+                        </Grid>
 
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>

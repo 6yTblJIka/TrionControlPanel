@@ -3,6 +3,9 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Timers;
+using Trion.Core.Database;
+using Trion.Core.Monitoring;
+using Trion.Core.WebServer;
 using Trion.Desktop.Models;
 using Trion.Desktop.Services;
 using Timer = System.Timers.Timer;
@@ -13,6 +16,7 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
 {
     private readonly ISettingsService      _settings;
     private readonly IMySqlSetupService    _mysql;
+    private readonly INginxPhpSetupService _webServer;
     private readonly ISystemMetricsService _metrics;
     private readonly ILocalizationService  _loc;
     private readonly INewsService          _news;
@@ -31,16 +35,21 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool _isDatabaseRunning;
     [ObservableProperty] private bool _isWorldRunning;
     [ObservableProperty] private bool _isLogonRunning;
+    [ObservableProperty] private bool _isWebServerRunning;
 
-    [ObservableProperty] private string _databaseUptime = "00:00:00";
-    [ObservableProperty] private string _worldUptime    = "00:00:00";
-    [ObservableProperty] private string _logonUptime    = "00:00:00";
+    [ObservableProperty] private string _databaseUptime  = "00:00:00";
+    [ObservableProperty] private string _worldUptime     = "00:00:00";
+    [ObservableProperty] private string _logonUptime     = "00:00:00";
+    [ObservableProperty] private string _webServerUptime = "00:00:00";
 
     [ObservableProperty] private int _databasePid;
     [ObservableProperty] private int _worldPid;
     [ObservableProperty] private int _logonPid;
+    [ObservableProperty] private int _webServerPid;
 
     // ── Machine metrics ───────────────────────────────────────────────────────
+
+    public string CpuCores { get; } = $"{Environment.ProcessorCount} Cores";
 
     [ObservableProperty] private double _cpuPercent;
     [ObservableProperty] private double _ramPercent;
@@ -54,15 +63,32 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
     // Sparkline history (newest value appended; oldest dropped when over capacity)
     private const int HistoryCapacity = 60;   // 60 × 2 s = 2 min window
 
+    private readonly List<double> _cpuBuf       = new(HistoryCapacity + 1);
+    private readonly List<double> _ramBuf        = new(HistoryCapacity + 1);
     private readonly List<double> _diskReadBuf  = new(HistoryCapacity + 1);
     private readonly List<double> _diskWriteBuf = new(HistoryCapacity + 1);
     private readonly List<double> _netRecvBuf   = new(HistoryCapacity + 1);
     private readonly List<double> _netSendBuf   = new(HistoryCapacity + 1);
 
+    [ObservableProperty] private double[] _cpuHistory        = [];
+    [ObservableProperty] private double[] _ramHistory        = [];
     [ObservableProperty] private double[] _diskReadHistory  = [];
     [ObservableProperty] private double[] _diskWriteHistory = [];
     [ObservableProperty] private double[] _netRecvHistory   = [];
     [ObservableProperty] private double[] _netSendHistory   = [];
+
+    // ── Loading state ─────────────────────────────────────────────────────────
+
+    [ObservableProperty] private bool _isLoading = true;
+    private bool _metricsReady;
+    private bool _serverStatusReady;
+
+    private void CheckLoadingComplete()
+    {
+        // Must already be on the UI thread (all callers dispatch here first)
+        if (_metricsReady && _serverStatusReady)
+            IsLoading = false;
+    }
 
     // ── News ─────────────────────────────────────────────────────────────────
 
@@ -75,18 +101,21 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
     private DateTime? _dbStartTime;
     private DateTime? _worldStartTime;
     private DateTime? _logonStartTime;
+    private DateTime? _webServerStartTime;
 
     // ── Construction ──────────────────────────────────────────────────────────
 
     public DashboardViewModel(ISettingsService settings, IMySqlSetupService mysql,
+                              INginxPhpSetupService webServer,
                               ISystemMetricsService metrics, ILocalizationService loc,
                               INewsService news)
     {
-        _settings = settings;
-        _mysql    = mysql;
-        _metrics  = metrics;
-        _loc      = loc;
-        _news     = news;
+        _settings  = settings;
+        _mysql     = mysql;
+        _webServer = webServer;
+        _metrics   = metrics;
+        _loc       = loc;
+        _news      = news;
 
         // MySQL setup banner
         IsSetupRunning     = _mysql.IsRunning;
@@ -94,7 +123,10 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
         _mysql.ProgressChanged += OnMySqlProgress;
         _mysql.StatusChanged   += OnMySqlStatusChanged;
 
-        // Machine metrics — handle late subscription
+        // Web server — sync initial state
+        _webServer.StatusChanged += OnWebServerStatusChanged;
+
+        // Machine metrics — handle late subscription (first sample may already be ready)
         _metrics.Updated += OnMetricsUpdated;
         if (_metrics.Last is { } last)
             ApplyMetrics(last);
@@ -109,7 +141,9 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
         _uptimeTimer.Elapsed += (_, _) => TickUptime();
         _uptimeTimer.Start();
 
-        RefreshServerStatus();
+        // Defer initial process scan to a background thread — Process.GetProcessesByName()
+        // can take 1-3 s on first call and would freeze the UI thread.
+        _ = Task.Run(RefreshServerStatus);
         _ = LoadNewsAsync();
     }
 
@@ -151,27 +185,52 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
         });
     }
 
+    private void OnWebServerStatusChanged(bool running)
+    {
+        App.Current?.Dispatcher.InvokeAsync(() =>
+        {
+            IsWebServerRunning   = running;
+            WebServerPid         = _webServer.ProcessId ?? 0;
+            _webServerStartTime  = _webServer.StartTime;
+            WebServerUptime      = FormatUptime(_webServerStartTime);
+        });
+    }
+
     // ── Machine metrics ───────────────────────────────────────────────────────
 
-    private void OnMetricsUpdated(SystemMetrics m)
+    private void OnMetricsUpdated(MachineMetrics m)
         => App.Current?.Dispatcher.InvokeAsync(() => ApplyMetrics(m));
 
-    private void ApplyMetrics(SystemMetrics m)
+    private void ApplyMetrics(MachineMetrics m)
     {
+        double ramPct = m.RamTotalBytes > 0
+            ? (double)m.RamUsedBytes / m.RamTotalBytes * 100.0
+            : 0.0;
+
         CpuPercent = Math.Round(m.CpuPercent, 1);
-        RamPercent = Math.Round(m.RamPercent, 1);
-        RamUsed    = SystemMetricsService.FormatMb(m.RamUsedMb);
-        RamTotal   = SystemMetricsService.FormatMb(m.RamTotalMb);
-        DiskRead   = SystemMetricsService.FormatBps(m.DiskReadBps);
-        DiskWrite  = SystemMetricsService.FormatBps(m.DiskWriteBps);
-        NetworkRx  = SystemMetricsService.FormatBps(m.NetRecvBps);
-        NetworkTx  = SystemMetricsService.FormatBps(m.NetSendBps);
 
-        Push(_diskReadBuf,  m.DiskReadBps);
-        Push(_diskWriteBuf, m.DiskWriteBps);
-        Push(_netRecvBuf,   m.NetRecvBps);
-        Push(_netSendBuf,   m.NetSendBps);
+        if (!_metricsReady)
+        {
+            _metricsReady = true;
+            CheckLoadingComplete();
+        }
+        RamPercent = Math.Round(ramPct, 1);
+        RamUsed    = MetricsFormatter.FormatBytes(m.RamUsedBytes);
+        RamTotal   = MetricsFormatter.FormatBytes(m.RamTotalBytes);
+        DiskRead   = MetricsFormatter.FormatBps(m.DiskReadBytesPerSec);
+        DiskWrite  = MetricsFormatter.FormatBps(m.DiskWriteBytesPerSec);
+        NetworkRx  = MetricsFormatter.FormatBps(m.NetworkRxBytesPerSec);
+        NetworkTx  = MetricsFormatter.FormatBps(m.NetworkTxBytesPerSec);
 
+        Push(_cpuBuf,       CpuPercent);
+        Push(_ramBuf,       RamPercent);
+        Push(_diskReadBuf,  m.DiskReadBytesPerSec);
+        Push(_diskWriteBuf, m.DiskWriteBytesPerSec);
+        Push(_netRecvBuf,   m.NetworkRxBytesPerSec);
+        Push(_netSendBuf,   m.NetworkTxBytesPerSec);
+
+        CpuHistory       = [.. _cpuBuf];
+        RamHistory       = [.. _ramBuf];
         DiskReadHistory  = [.. _diskReadBuf];
         DiskWriteHistory = [.. _diskWriteBuf];
         NetRecvHistory   = [.. _netRecvBuf];
@@ -189,14 +248,16 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
 
     private void TickUptime()
     {
-        var db    = FormatUptime(_dbStartTime);
-        var world = FormatUptime(_worldStartTime);
-        var logon = FormatUptime(_logonStartTime);
+        var db        = FormatUptime(_dbStartTime);
+        var world     = FormatUptime(_worldStartTime);
+        var logon     = FormatUptime(_logonStartTime);
+        var webServer = FormatUptime(_webServerStartTime);
         App.Current?.Dispatcher.InvokeAsync(() =>
         {
-            DatabaseUptime = db;
-            WorldUptime    = world;
-            LogonUptime    = logon;
+            DatabaseUptime  = db;
+            WorldUptime     = world;
+            LogonUptime     = logon;
+            WebServerUptime = webServer;
         });
     }
 
@@ -213,6 +274,14 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
         else
             _dbStartTime ??= _mysql.StartTime;
 
+        // Web server: same PID-based approach via the service
+        bool wsRunning = _webServer.IsProcessRunning;
+        int  wsPid     = _webServer.ProcessId ?? 0;
+        if (!wsRunning)
+            _webServerStartTime = null;
+        else
+            _webServerStartTime ??= _webServer.StartTime;
+
         bool    worldRunning = false;
         int     worldPid     = 0;
         bool    logonRunning = false;
@@ -225,15 +294,24 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
 
         App.Current?.Dispatcher.InvokeAsync(() =>
         {
-            IsDatabaseRunning = dbRunning;
-            IsWorldRunning    = worldRunning;
-            IsLogonRunning    = logonRunning;
-            DatabasePid       = dbPid;
-            WorldPid          = worldPid;
-            LogonPid          = logonPid;
-            DatabaseUptime    = FormatUptime(_dbStartTime);
-            WorldUptime       = FormatUptime(_worldStartTime);
-            LogonUptime       = FormatUptime(_logonStartTime);
+            IsDatabaseRunning  = dbRunning;
+            IsWorldRunning     = worldRunning;
+            IsLogonRunning     = logonRunning;
+            IsWebServerRunning = wsRunning;
+            DatabasePid        = dbPid;
+            WorldPid           = worldPid;
+            LogonPid           = logonPid;
+            WebServerPid       = wsPid;
+            DatabaseUptime     = FormatUptime(_dbStartTime);
+            WorldUptime        = FormatUptime(_worldStartTime);
+            LogonUptime        = FormatUptime(_logonStartTime);
+            WebServerUptime    = FormatUptime(_webServerStartTime);
+
+            if (!_serverStatusReady)
+            {
+                _serverStatusReady = true;
+                CheckLoadingComplete();
+            }
         });
     }
 
@@ -266,9 +344,10 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
-        _mysql.ProgressChanged -= OnMySqlProgress;
-        _mysql.StatusChanged   -= OnMySqlStatusChanged;
-        _metrics.Updated       -= OnMetricsUpdated;
+        _mysql.ProgressChanged     -= OnMySqlProgress;
+        _mysql.StatusChanged       -= OnMySqlStatusChanged;
+        _webServer.StatusChanged   -= OnWebServerStatusChanged;
+        _metrics.Updated           -= OnMetricsUpdated;
         _serverTimer.Stop();
         _serverTimer.Dispose();
         _uptimeTimer.Stop();

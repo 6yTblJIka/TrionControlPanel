@@ -25,7 +25,7 @@ public sealed class JwtService : IJwtService
         _key         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
         _issuer      = s["Issuer"]   ?? "TrionAPI";
         _audience    = s["Audience"] ?? "TrionClient";
-        _expiryHours = int.TryParse(s["ExpiryHours"], out var h) ? h : 24;
+        _expiryHours = Math.Clamp(int.TryParse(s["ExpiryHours"], out var h) ? h : 24, 1, 24);
     }
 
     public string GenerateToken(User user)
@@ -37,7 +37,6 @@ public sealed class JwtService : IJwtService
             new(JwtRegisteredClaimNames.Jti,   Guid.NewGuid().ToString()),
             new(ClaimTypes.Name,               user.Username),
             new(ClaimTypes.Role,               user.Role),
-            new("api_key",                     user.ApiKey),
             new("api_tier",                    user.ApiTier),
         ];
 

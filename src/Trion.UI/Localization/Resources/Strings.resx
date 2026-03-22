@@ -120,4 +120,28 @@
   <data name="H_World" xml:space="preserve">
     <value>Hello World</value>
   </data>
+
+  <!-- Nav -->
+  <data name="Nav_Dashboard" xml:space="preserve"><value>Dashboard</value></data>
+  <data name="Nav_ServerControl" xml:space="preserve"><value>Server Control</value></data>
+  <data name="Nav_Installer" xml:space="preserve"><value>Installer</value></data>
+  <data name="Nav_DdnsSettings" xml:space="preserve"><value>DDNS Settings</value></data>
+  <data name="Nav_SignIn" xml:space="preserve"><value>Sign In</value></data>
+  <data name="Nav_Discord" xml:space="preserve"><value>Discord</value></data>
+  <data name="Nav_Support" xml:space="preserve"><value>Support</value></data>
+  <data name="Nav_Donate" xml:space="preserve"><value>Donate</value></data>
+
+  <!-- Dashboard page -->
+  <data name="Page_Dashboard" xml:space="preserve"><value>Dashboard</value></data>
+  <data name="Page_DashboardSubtitle" xml:space="preserve"><value>System overview &amp; server status</value></data>
+  <data name="Section_ServiceStatus" xml:space="preserve"><value>SERVICE STATUS</value></data>
+  <data name="Section_MachineResources" xml:space="preserve"><value>MACHINE RESOURCES</value></data>
+
+  <!-- Login page -->
+  <data name="Login_Username" xml:space="preserve"><value>Username</value></data>
+  <data name="Login_Password" xml:space="preserve"><value>Password</value></data>
+  <data name="Login_SignIn" xml:space="preserve"><value>Sign In</value></data>
+  <data name="Login_Required" xml:space="preserve"><value>Username and password are required.</value></data>
+  <data name="Login_Failed" xml:space="preserve"><value>Login failed.</value></data>
+  <data name="Login_Error" xml:space="preserve"><value>An unexpected error occurred. Please try again.</value></data>
 </root>

@@ -1,0 +1,66 @@
+@inject ThemeState ThemeState
+@inject IJSRuntime JS
+
+<MudMenu Dense="true"
+         Icon="@Icons.Material.Filled.Palette"
+         IconColor="Color.Default"
+         Size="Size.Small"
+         AnchorOrigin="Origin.BottomRight"
+         TransformOrigin="Origin.TopRight">
+
+    <ChildContent>
+        <div style="width:218px;padding:10px 14px 14px;">
+
+            <!-- THEME header -->
+            <div style="font-size:0.65rem;letter-spacing:1.2px;
+                        color:var(--mud-palette-text-secondary);
+                        font-weight:600;margin-bottom:10px;">THEME</div>
+
+            <!-- Mode row: Light / Dark -->
+            <div style="display:flex;gap:4px;margin-bottom:14px;">
+                <button class="@(_isDark ? "tsp-mode-btn" : "tsp-mode-btn tsp-mode-btn--active")"
+                        @onclick="() => SetVariantAsync(false)">
+                    <MudIcon Icon="@Icons.Material.Filled.LightMode" Style="font-size:14px;vertical-align:middle;" />
+                    Light
+                </button>
+                <button class="@(_isDark ? "tsp-mode-btn tsp-mode-btn--active" : "tsp-mode-btn")"
+                        @onclick="() => SetVariantAsync(true)">
+                    <MudIcon Icon="@Icons.Material.Filled.DarkMode" Style="font-size:14px;vertical-align:middle;" />
+                    Dark
+                </button>
+            </div>
+
+            <!-- Color swatches row -->
+            <div style="display:flex;justify-content:center;gap:10px;">
+                @foreach (var color in TrionThemes.All)
+                {
+                    bool active = color.Id == ThemeState.CurrentColorId;
+                    <button class="tsp-swatch-btn"
+                            style="border-color:@(active ? color.AccentHex : "transparent");"
+                            title="@color.DisplayName"
+                            @onclick="() => SetColorAsync(color.Id)">
+                        <div style="width:20px;height:20px;border-radius:50%;
+                                    background:@color.AccentHex;flex-shrink:0;"></div>
+                    </button>
+                }
+            </div>
+
+        </div>
+    </ChildContent>
+</MudMenu>
+
+@code {
+    private bool _isDark => ThemeState.IsDark;
+
+    private async Task SetColorAsync(string colorId)
+    {
+        ThemeState.SetColor(colorId);
+        await JS.InvokeVoidAsync("localStorage.setItem", "trion_theme_color", colorId);
+    }
+
+    private async Task SetVariantAsync(bool isDark)
+    {
+        ThemeState.SetVariant(isDark);
+        await JS.InvokeVoidAsync("localStorage.setItem", "trion_theme_dark", isDark.ToString());
+    }
+}

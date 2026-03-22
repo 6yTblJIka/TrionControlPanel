@@ -64,6 +64,20 @@
                         </Style>
                     </Button.Style>
                 </Button>
+                <Button Content="Web Server"
+                        Command="{Binding SwitchTabCommand}"
+                        CommandParameter="{x:Static vm:SettingsTab.WebServer}">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource SubTabStyle}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ActiveTab}" Value="{x:Static vm:SettingsTab.WebServer}">
+                                    <Setter Property="BorderBrush" Value="{DynamicResource Tab.Underline}" />
+                                    <Setter Property="Foreground"  Value="{DynamicResource Foreground.Primary}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
             </StackPanel>
         </Border>
 
@@ -781,6 +795,315 @@
                                             Style="{StaticResource DangerButtonStyle}"
                                             Width="100"
                                             ToolTip="Stop MySQL and permanently delete all database files" />
+                                </StackPanel>
+                            </Border>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                </StackPanel>
+
+                <!-- ══════════════════════════════════════════════════════════════
+                     WEB SERVER TAB
+                     ══════════════════════════════════════════════════════════════ -->
+                <StackPanel Visibility="{Binding ActiveTab,
+                                Converter={StaticResource EnumToVisibility},
+                                ConverterParameter={x:Static vm:SettingsTab.WebServer}}">
+
+                    <!-- Page header -->
+                    <StackPanel Margin="0,0,0,20">
+                        <TextBlock Text="Web Server" Style="{StaticResource H1Style}" />
+                        <TextBlock Text="nginx + PHP-CGI portable web server settings"
+                                   Style="{StaticResource CaptionStyle}" Margin="0,3,0,0" />
+                    </StackPanel>
+
+                    <!-- ── CONFIGURATION ── -->
+                    <Border Style="{StaticResource ElevatedCardStyle}" Padding="0" Margin="0,0,0,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="5" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" CornerRadius="10,0,0,10"
+                                    Background="{DynamicResource Accent.Primary}" />
+                            <StackPanel Grid.Column="1">
+                                <Border Padding="20,16,20,14">
+                                    <TextBlock Text="Configuration" Style="{StaticResource H4Style}" />
+                                </Border>
+                                <Separator />
+
+                            <!-- HTTP Port -->
+                            <StackPanel Margin="20,14">
+                                <TextBlock Text="HTTP Port" Style="{StaticResource CaptionStyle}" />
+                                <TextBox Text="{Binding WebServerPort, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource InputStyle}"
+                                         Tag="80"
+                                         Width="100" HorizontalAlignment="Left"
+                                         Margin="0,6,0,0" />
+                            </StackPanel>
+                            <Separator Margin="20,0" />
+
+                            <!-- Enable HTTPS toggle -->
+                            <Border Padding="20,11">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <TextBlock Text="Enable HTTPS"
+                                                   Foreground="{DynamicResource Foreground.Primary}" FontSize="13" />
+                                        <TextBlock Text="Serve over TLS — HTTP redirects to HTTPS automatically"
+                                                   Style="{StaticResource CaptionStyle}" Margin="0,2,0,0" />
+                                    </StackPanel>
+                                    <CheckBox Grid.Column="1"
+                                              IsChecked="{Binding EnableHttps, Mode=TwoWay}"
+                                              Style="{StaticResource ToggleSwitchStyle}"
+                                              Content="" VerticalAlignment="Center" />
+                                </Grid>
+                            </Border>
+
+                            <!-- HTTPS settings — only visible when HTTPS is on -->
+                            <StackPanel Visibility="{Binding EnableHttps, Converter={StaticResource BoolToVisibility}}">
+
+                                <Separator Margin="20,0" />
+
+                                <!-- HTTPS Port -->
+                                <StackPanel Margin="20,14">
+                                    <TextBlock Text="HTTPS Port" Style="{StaticResource CaptionStyle}" />
+                                    <TextBox Text="{Binding HttpsPort, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource InputStyle}"
+                                             Tag="443"
+                                             Width="100" HorizontalAlignment="Left"
+                                             Margin="0,6,0,0" />
+                                </StackPanel>
+
+                                <Separator Margin="20,0" />
+
+                                <!-- Certificate path -->
+                                <StackPanel Margin="20,14">
+                                    <TextBlock Text="TLS Certificate (PEM)" Style="{StaticResource CaptionStyle}" />
+                                    <Grid Margin="0,6,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="8" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Grid.Column="0"
+                                                 Text="{Binding SslCertPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                 Style="{StaticResource InputStyle}"
+                                                 Tag="Leave blank to use auto-generated certificate" />
+                                        <Button Grid.Column="2"
+                                                Content="{Binding Loc[BtnBrowse]}"
+                                                Command="{Binding BrowseCertCommand}"
+                                                Style="{StaticResource SecondaryButtonStyle}" />
+                                    </Grid>
+                                </StackPanel>
+
+                                <Separator Margin="20,0" />
+
+                                <!-- Private key path -->
+                                <StackPanel Margin="20,14">
+                                    <TextBlock Text="Private Key (PEM)" Style="{StaticResource CaptionStyle}" />
+                                    <Grid Margin="0,6,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="8" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Grid.Column="0"
+                                                 Text="{Binding SslKeyPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                 Style="{StaticResource InputStyle}"
+                                                 Tag="Leave blank to use auto-generated key" />
+                                        <Button Grid.Column="2"
+                                                Content="{Binding Loc[BtnBrowse]}"
+                                                Command="{Binding BrowseKeyCommand}"
+                                                Style="{StaticResource SecondaryButtonStyle}" />
+                                    </Grid>
+                                </StackPanel>
+
+                                <Separator Margin="20,0" />
+
+                                <!-- Generate self-signed cert row -->
+                                <Border Padding="20,11">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                            <TextBlock Text="Self-signed certificate"
+                                                       Foreground="{DynamicResource Foreground.Primary}" FontSize="13" />
+                                            <TextBlock Text="Generate a 10-year RSA-2048 cert for localhost — valid for local use"
+                                                       Style="{StaticResource CaptionStyle}" Margin="0,2,0,0" />
+                                        </StackPanel>
+                                        <Button Grid.Column="1"
+                                                Content="Generate"
+                                                Command="{Binding GenerateCertCommand}"
+                                                Style="{StaticResource SecondaryButtonStyle}"
+                                                VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+
+                            </StackPanel>
+
+                            <Separator Margin="20,0" />
+
+                            <!-- Auto-start toggle -->
+                            <Border Padding="20,11">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <TextBlock Text="Auto-start web server"
+                                                   Foreground="{DynamicResource Foreground.Primary}" FontSize="13" />
+                                        <TextBlock Text="Launch nginx + PHP-CGI automatically when Trion starts"
+                                                   Style="{StaticResource CaptionStyle}" Margin="0,2,0,0" />
+                                    </StackPanel>
+                                    <CheckBox Grid.Column="1"
+                                              IsChecked="{Binding WebServerAutoStart, Mode=TwoWay}"
+                                              Style="{StaticResource ToggleSwitchStyle}"
+                                              Content="" VerticalAlignment="Center" />
+                                </Grid>
+                            </Border>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- ── NGINX + PHP ENGINE ── -->
+                    <Border Style="{StaticResource ElevatedCardStyle}" Padding="0" Margin="0,0,0,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="5" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" CornerRadius="10,0,0,10"
+                                    Background="{DynamicResource Accent.Primary}" />
+                            <StackPanel Grid.Column="1">
+                                <Border Padding="20,16,20,14">
+                                    <TextBlock Text="nginx + PHP Engine" Style="{StaticResource H4Style}" />
+                                </Border>
+                                <Separator />
+
+                            <!-- Status row -->
+                            <Border Padding="20,14">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <Ellipse Grid.Column="0"
+                                             Width="10" Height="10"
+                                             VerticalAlignment="Center"
+                                             Margin="0,0,10,0"
+                                             Fill="{Binding IsWebServerInstalled, Converter={StaticResource StatusToColor}}" />
+
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding WebServerVersionInfo}"
+                                                       Foreground="{DynamicResource Foreground.Primary}"
+                                                       FontSize="13" FontWeight="SemiBold" />
+                                            <Border Margin="10,0,0,0" CornerRadius="3" Padding="6,1"
+                                                    Background="{Binding IsWebServerInstalled, Converter={StaticResource StatusToColor}}">
+                                                <TextBlock FontSize="11" Foreground="White">
+                                                    <TextBlock.Text>
+                                                        <Binding Path="IsWebServerInstalled">
+                                                            <Binding.Converter>
+                                                                <conv:BoolToStringConverter TrueValue="Installed" FalseValue="Not installed" />
+                                                            </Binding.Converter>
+                                                        </Binding>
+                                                    </TextBlock.Text>
+                                                </TextBlock>
+                                            </Border>
+                                        </StackPanel>
+                                        <TextBlock Text="{Binding WebServerInstallPath}"
+                                                   Style="{StaticResource CaptionStyle}"
+                                                   Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+
+                                    <!-- Running badge -->
+                                    <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right"
+                                                Visibility="{Binding IsWebServerInstalled, Converter={StaticResource BoolToVisibility}}">
+                                        <Border CornerRadius="3" Padding="8,2"
+                                                Background="{DynamicResource Status.Running}"
+                                                Visibility="{Binding IsWebServerRunning, Converter={StaticResource BoolToVisibility}}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Ellipse Width="6" Height="6"
+                                                         Fill="White"
+                                                         VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                                <TextBlock Text="Running" FontSize="11" Foreground="White" />
+                                            </StackPanel>
+                                        </Border>
+                                        <TextBlock Text="{Binding WebServerProcessInfo}"
+                                                   Style="{StaticResource CaptionStyle}"
+                                                   HorizontalAlignment="Right"
+                                                   Margin="0,3,0,0" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- Progress bar — visible while an operation is running -->
+                            <Border Padding="20,0,20,12"
+                                    Visibility="{Binding IsWebServerBusy, Converter={StaticResource BoolToVisibility}}">
+                                <StackPanel>
+                                    <ProgressBar IsIndeterminate="True"
+                                                 Style="{StaticResource ModernProgressBarStyle}"
+                                                 Foreground="{DynamicResource Accent.Primary}"
+                                                 Height="4" Margin="0,0,0,6" />
+                                    <TextBlock Text="{Binding WebServerStatusMessage}"
+                                               Style="{StaticResource CaptionStyle}"
+                                               TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </Border>
+
+                            <Separator Margin="20,0" />
+
+                            <!-- Download & Install — shown when not yet installed -->
+                            <Border Padding="20,12"
+                                    Visibility="{Binding IsWebServerInstalled, Converter={StaticResource InverseBoolToVisibility}}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <TextBlock Text="nginx + PHP not installed"
+                                                   Foreground="{DynamicResource Foreground.Primary}" FontSize="13" />
+                                        <TextBlock Text="Downloads nginx and PHP-CGI from the Trion API, extracts and configures them automatically"
+                                                   Style="{StaticResource CaptionStyle}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <Button Grid.Column="1"
+                                            Content="Download &amp; Install"
+                                            Command="{Binding InstallWebServerCommand}"
+                                            Style="{StaticResource PrimaryButtonStyle}"
+                                            VerticalAlignment="Center"
+                                            Margin="16,0,0,0" />
+                                </Grid>
+                            </Border>
+
+                            <!-- Manage buttons — shown when installed -->
+                            <Border Padding="20,12"
+                                    Visibility="{Binding IsWebServerInstalled, Converter={StaticResource BoolToVisibility}}">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Button Content="Repair config"
+                                            Command="{Binding RepairWebServerCommand}"
+                                            Style="{StaticResource SecondaryButtonStyle}"
+                                            Width="120" Margin="0,0,8,0"
+                                            ToolTip="Regenerate nginx.conf and php.ini for current hardware" />
+                                    <Button Content="Reinstall"
+                                            Command="{Binding ReinstallWebServerCommand}"
+                                            Style="{StaticResource SecondaryButtonStyle}"
+                                            Width="100" Margin="0,0,8,0"
+                                            ToolTip="Delete current installation and download a fresh copy from the Trion API" />
+                                    <Button Content="Uninstall"
+                                            Command="{Binding UninstallWebServerCommand}"
+                                            Style="{StaticResource DangerButtonStyle}"
+                                            Width="100"
+                                            ToolTip="Stop web server and permanently delete all web server files" />
                                 </StackPanel>
                             </Border>
                             </StackPanel>

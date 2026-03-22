@@ -19,7 +19,7 @@
     <PackageProjectUrl>https://flying-phoenix.dev/</PackageProjectUrl>
     <Title>Trion Control Panel</Title>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
-    <ApplicationIcon>..\Trion.Web\wwwroot\favicon.ico</ApplicationIcon>
+    <ApplicationIcon>..\..\res\icons\trion-logo\trion.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -33,6 +33,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Trion.Core\Trion.Core.csproj" />
+    <ProjectReference Include="..\Trion.Platform\Trion.Platform.csproj" />
   </ItemGroup>
 
   <!-- After build: build TrionUpdater (any TFM) then copy exe + dll to output -->
@@ -67,7 +68,7 @@
 
   <!-- Shared logo assets — linked from the repo, embedded as WPF resources -->
   <ItemGroup>
-    <Resource Include="..\Trion.Web\wwwroot\favicon.ico">
+    <Resource Include="..\..\res\icons\trion-logo\trion.ico">
       <Link>Resources\Images\favicon.ico</Link>
     </Resource>
     <Resource Include="..\..\res\icons\trion-logo\TrionLogoNew.png">
