@@ -84,7 +84,8 @@ logs/
 Audit/
 
 # MySQL portable install + config (created by MySqlSetupService at runtime)
-database/
+# /database anchors to repo root only — avoids matching src/*/Database/ source folders
+/database/
 my.ini
 
 # Nginx + PHP portable install (created by NginxPhpSetupService at runtime)
