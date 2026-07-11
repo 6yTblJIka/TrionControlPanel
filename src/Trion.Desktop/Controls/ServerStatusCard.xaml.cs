@@ -30,12 +30,17 @@ public partial class ServerStatusCard : UserControl
         DependencyProperty.Register(nameof(IconAccent), typeof(Brush), typeof(ServerStatusCard),
             new PropertyMetadata(null));
 
-    public string   Title     { get => (string)GetValue(TitleProperty);     set => SetValue(TitleProperty, value); }
-    public bool     IsRunning { get => (bool)GetValue(IsRunningProperty);   set => SetValue(IsRunningProperty, value); }
-    public string   Uptime    { get => (string)GetValue(UptimeProperty);    set => SetValue(UptimeProperty, value); }
-    public int      ProcessId { get => (int)GetValue(ProcessIdProperty);    set => SetValue(ProcessIdProperty, value); }
-    public Geometry IconData  { get => (Geometry)GetValue(IconDataProperty);set => SetValue(IconDataProperty, value); }
-    public Brush    IconAccent{ get => (Brush)GetValue(IconAccentProperty); set => SetValue(IconAccentProperty, value); }
+    public static readonly DependencyProperty UptimeLabelTextProperty =
+        DependencyProperty.Register(nameof(UptimeLabelText), typeof(string), typeof(ServerStatusCard),
+            new PropertyMetadata("Uptime"));
+
+    public string   Title          { get => (string)GetValue(TitleProperty);          set => SetValue(TitleProperty, value); }
+    public bool     IsRunning      { get => (bool)GetValue(IsRunningProperty);        set => SetValue(IsRunningProperty, value); }
+    public string   Uptime         { get => (string)GetValue(UptimeProperty);         set => SetValue(UptimeProperty, value); }
+    public int      ProcessId      { get => (int)GetValue(ProcessIdProperty);         set => SetValue(ProcessIdProperty, value); }
+    public Geometry IconData       { get => (Geometry)GetValue(IconDataProperty);     set => SetValue(IconDataProperty, value); }
+    public Brush    IconAccent     { get => (Brush)GetValue(IconAccentProperty);      set => SetValue(IconAccentProperty, value); }
+    public string   UptimeLabelText{ get => (string)GetValue(UptimeLabelTextProperty);set => SetValue(UptimeLabelTextProperty, value); }
 
     public ServerStatusCard() => InitializeComponent();
 }

@@ -12,7 +12,7 @@ public sealed class SupporterTierGroup
     public string  Tier      { get; }
     public string  Label     { get; }
     public string  IconKey   { get; }
-    public bool    IsRoyalty { get; }   // legend / champion → glow effect
+    public bool    IsRoyalty { get; }   // legend / champion -> glow effect
     public Color   GlowColor { get; }   // for DropShadowEffect.Color
     public Brush   TierBrush { get; }   // border / text accent
     public Brush   CardBackground { get; }  // subtle tinted fill for royalty cards

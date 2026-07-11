@@ -69,7 +69,7 @@ public sealed class DdnsUpdater : IDdnsUpdater
     public Task<DdnsUpdateResult?> GetLastResultAsync() =>
         _settings.GetAsync<DdnsUpdateResult>(LastResultKey);
 
-    // ── Public IP detection ────────────────────────────────────────────────────
+    // -- Public IP detection ----------------------------------------------------
 
     private async Task<string> GetPublicIpAsync(CancellationToken ct)
     {
@@ -79,7 +79,7 @@ public sealed class DdnsUpdater : IDdnsUpdater
         return ip;
     }
 
-    // ── Provider implementations ───────────────────────────────────────────────
+    // -- Provider implementations -----------------------------------------------
 
     private async Task<DdnsUpdateResult> UpdateNoIpAsync(
         string ip, DdnsOptions opts, CancellationToken ct)

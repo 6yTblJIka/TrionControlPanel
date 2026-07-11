@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <!-- Suppress NU1903 for SQLitePCLRaw.lib.e_sqlite3 (GHSA-2m69-gcr7-jv3q / CVE-2025-29087).
+         This is a transitive dep of Microsoft.Data.Sqlite 10.x; upgrade when a patched
+         SQLitePCLRaw.lib.e_sqlite3 > 2.1.11 becomes available on NuGet. -->
+    <NoWarn>$(NoWarn);NU1903</NoWarn>
+  </PropertyGroup>
+</Project>

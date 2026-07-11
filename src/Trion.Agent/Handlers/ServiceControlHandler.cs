@@ -9,7 +9,7 @@ namespace Trion.Agent.Handlers;
 /// <summary>
 /// Handles start / stop / restart / status operations on OS services.
 /// Linux: delegates to <c>systemctl</c> via <see cref="ProcessLaunchHandler"/>.
-/// Windows: stub — full <c>ServiceController</c> integration is a future milestone.
+/// Windows: stub -- full <c>ServiceController</c> integration is a future milestone.
 /// </summary>
 public sealed class ServiceControlHandler
 {
@@ -40,7 +40,7 @@ public sealed class ServiceControlHandler
             ErrorMessage:  "Unsupported platform");
     }
 
-    // ── Linux: delegate to systemctl ─────────────────────────────────────────
+    // -- Linux: delegate to systemctl -----------------------------------------
 
     private async Task<ServiceControlResponse> HandleLinuxAsync(
         string serviceName, string action, CancellationToken ct)
@@ -83,7 +83,7 @@ public sealed class ServiceControlHandler
         await Task.Delay(500, ct);
         var newState = await QueryLinuxStateAsync(serviceName, ct);
 
-        _log.LogInformation("Service {Name}: {Action} → {State}", serviceName, action, newState);
+        _log.LogInformation("Service {Name}: {Action} -> {State}", serviceName, action, newState);
 
         return new ServiceControlResponse(
             Success:       true,
@@ -99,13 +99,13 @@ public sealed class ServiceControlHandler
             Arguments:        ["is-active", "--quiet", serviceName],
             WorkingDirectory: null);
 
-        // is-active exits 0 if active, non-zero otherwise — but since we don't
+        // is-active exits 0 if active, non-zero otherwise -- but since we don't
         // capture exit code directly here, we just treat success as Running.
         var result = await _launcher.HandleAsync(isActiveCmd, ct);
         return result.Success ? ServiceState.Running : ServiceState.Stopped;
     }
 
-    // ── Windows: stub (full ServiceController impl is a future milestone) ────
+    // -- Windows: stub (full ServiceController impl is a future milestone) ----
 
     private static ServiceControlResponse HandleWindows(string serviceName, string action)
     {

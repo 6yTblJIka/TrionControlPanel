@@ -1,5 +1,6 @@
 ﻿using System.Windows;
 using System.Windows.Media;
+using Trion.Desktop.Services;
 
 namespace Trion.Desktop.Views;
 
@@ -14,7 +15,7 @@ public partial class TrayMenuWindow : Window
     // after a button already initiated it.
     private bool _closedByButton;
 
-    public TrayMenuWindow(Action restore, Action exit, int cursorX, int cursorY)
+    public TrayMenuWindow(Action restore, Action exit, ILocalizationService loc, int cursorX, int cursorY)
     {
         _restore = restore;
         _exit    = exit;
@@ -22,6 +23,10 @@ public partial class TrayMenuWindow : Window
         _cursorY = cursorY;
 
         InitializeComponent();
+
+        AppTitleText.Text  = loc["AppTitle"];
+        OpenButton.Content = loc["TrayMenuOpen"];
+        ExitButton.Content = loc["TrayMenuExit"];
 
         Loaded      += OnLoaded;
         Deactivated += (_, _) => { if (!_closedByButton) Close(); };

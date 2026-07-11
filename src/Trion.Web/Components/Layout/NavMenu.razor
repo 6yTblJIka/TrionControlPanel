@@ -1,5 +1,6 @@
 @using Trion.Core.Constants
 @inject GlobalLocalizer L
+@inject Trion.Core.Plugins.IPluginNavRegistry PluginNav
 
 <nav class="trion-nav" aria-label="Main navigation">
 
@@ -30,6 +31,35 @@
         </span>
         <span class="trion-nav-label">@L["Nav_DdnsSettings"]</span>
     </NavLink>
+
+    <NavLink class="trion-nav-item" href="plugin-store" Match="NavLinkMatch.Prefix" title="Plugin Store">
+        <span class="trion-nav-icon">
+            <MudIcon Icon="@Icons.Material.Filled.Store" />
+        </span>
+        <span class="trion-nav-label">Plugin Store</span>
+    </NavLink>
+
+    <NavLink class="trion-nav-item" href="plugins" Match="NavLinkMatch.Prefix" title="Installed Plugins">
+        <span class="trion-nav-icon">
+            <MudIcon Icon="@Icons.Material.Filled.Extension" />
+        </span>
+        <span class="trion-nav-label">Plugins</span>
+    </NavLink>
+
+    @if (PluginNav.Items.Count > 0)
+    {
+        <div class="trion-nav-divider"></div>
+
+        @foreach (var item in PluginNav.Items)
+        {
+            <NavLink class="trion-nav-item" href="@item.Href" Match="NavLinkMatch.Prefix" title="@item.Label">
+                <span class="trion-nav-icon">
+                    <MudIcon Icon="@item.Icon" />
+                </span>
+                <span class="trion-nav-label">@item.Label</span>
+            </NavLink>
+        }
+    }
 
     <div class="trion-nav-divider"></div>
 

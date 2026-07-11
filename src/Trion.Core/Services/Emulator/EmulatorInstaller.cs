@@ -9,11 +9,11 @@ namespace Trion.Core.Services.Emulator;
 
 /// <summary>
 /// Clones an emulator repository via the privileged agent and prepares the install directory.
-/// All Git URLs are hardcoded constants — not configurable by the user.
+/// All Git URLs are hardcoded constants -- not configurable by the user.
 /// </summary>
 public sealed class EmulatorInstaller
 {
-    // ── Hardcoded repository URLs ──────────────────────────────────────────────
+    // -- Hardcoded repository URLs ----------------------------------------------
     private const string TrinityCoreUrl =
         "https://github.com/TrinityCore/TrinityCore.git";
     private const string AzerothCoreUrl =
@@ -21,12 +21,12 @@ public sealed class EmulatorInstaller
     private const string CMaNGOSUrl =
         "https://github.com/cmangos/mangos-wotlk.git";
 
-    // ── Git executable paths ───────────────────────────────────────────────────
+    // -- Git executable paths ---------------------------------------------------
     private static readonly string GitPath = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
         ? @"C:\Program Files\Git\bin\git.exe"
         : "/usr/bin/git";
 
-    // ── Expected WoW client binaries by platform ───────────────────────────────
+    // -- Expected WoW client binaries by platform -------------------------------
     private static readonly string[] WowClientBinaries = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
         ? ["WoW.exe", "Wow.exe"]
         : ["wow", "Wow"];
@@ -51,7 +51,7 @@ public sealed class EmulatorInstaller
         ChannelWriter<InstallProgressEvent> progress,
         CancellationToken         ct = default)
     {
-        // ── Step 1: Validate WoW client path ──────────────────────────────────
+        // -- Step 1: Validate WoW client path ----------------------------------
         await Report(progress, "Validating client path", 5, null, ct);
 
         var (valid, reason) = ValidateWowClientPath(wowClientPath, installDirectory);
@@ -63,7 +63,7 @@ public sealed class EmulatorInstaller
 
         _log.LogInformation("WoW client path validated: {Path}", wowClientPath);
 
-        // ── Step 2: Clone emulator repository via agent ───────────────────────
+        // -- Step 2: Clone emulator repository via agent -----------------------
         var repoUrl = type switch
         {
             EmulatorType.TrinityCore => TrinityCoreUrl,
@@ -73,7 +73,7 @@ public sealed class EmulatorInstaller
         };
 
         await Report(progress, "Cloning repository", 10,
-            $"git clone {repoUrl} → {installDirectory}", ct);
+            $"git clone {repoUrl} -> {installDirectory}", ct);
 
         _log.LogInformation("Starting git clone {Url}", repoUrl);
 
@@ -91,7 +91,7 @@ public sealed class EmulatorInstaller
             return;
         }
 
-        // ── Step 3: Poll until git clone finishes ────────────────────────────
+        // -- Step 3: Poll until git clone finishes ----------------------------
         _log.LogInformation("git clone started (PID {Pid}); waiting for completion.", launch.Pid);
 
         int pollPercent = 10;
@@ -100,7 +100,7 @@ public sealed class EmulatorInstaller
         {
             pollPercent = Math.Min(pollPercent + 5, 45);
             await Report(progress, "Cloning repository", pollPercent,
-                "Waiting for git clone to finish…", ct);
+                "Waiting for git clone to finish...", ct);
             await Task.Delay(TimeSpan.FromSeconds(5), ct);
         }
 
@@ -117,12 +117,12 @@ public sealed class EmulatorInstaller
         await Report(progress, "Repository cloned", 50,
             $"{type} cloned successfully into {installDirectory}", ct);
 
-        // ── Step 4: Final completion ──────────────────────────────────────────
+        // -- Step 4: Final completion ------------------------------------------
         _log.LogInformation("Installation complete for {Type}", type);
         await Report(progress, "Installation complete", 100, null, ct);
     }
 
-    // ── Validation ─────────────────────────────────────────────────────────────
+    // -- Validation -------------------------------------------------------------
 
     private static (bool Valid, string? Reason) ValidateWowClientPath(
         string wowClientPath, string installDirectory)
@@ -150,7 +150,7 @@ public sealed class EmulatorInstaller
         return (true, null);
     }
 
-    // ── Helpers ────────────────────────────────────────────────────────────────
+    // -- Helpers ----------------------------------------------------------------
 
     private static ValueTask Report(
         ChannelWriter<InstallProgressEvent> w,

@@ -79,7 +79,7 @@
                 @foreach (var ev in _events)
                 {
                     <div style="color:@(ev.IsError ? "#ff6b6b" : "#aaffaa")">
-                        [@ev.PercentComplete%] @ev.StepName @(ev.Message is not null ? $"— {ev.Message}" : string.Empty)
+                        [@ev.PercentComplete%] @ev.StepName @(ev.Message is not null ? $"-- {ev.Message}" : string.Empty)
                     </div>
                 }
             </MudPaper>

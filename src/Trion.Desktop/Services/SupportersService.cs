@@ -24,7 +24,7 @@ public sealed class SupportersService : ISupportersService
         }
     }
 
-    // ── API response wrapper ──────────────────────────────────────────────────
+    // -- API response wrapper --------------------------------------------------
 
     private sealed record SupporterListResponse(
         [property: JsonPropertyName("total")]      int                  Total,

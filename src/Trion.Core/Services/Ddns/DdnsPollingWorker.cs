@@ -26,7 +26,7 @@ public sealed class DdnsPollingWorker : BackgroundService
     {
         if (_options.Value.Provider == DdnsProvider.None)
         {
-            _log.LogDebug("DDNS provider is None — polling worker is idle.");
+            _log.LogDebug("DDNS provider is None -- polling worker is idle.");
             return;
         }
 

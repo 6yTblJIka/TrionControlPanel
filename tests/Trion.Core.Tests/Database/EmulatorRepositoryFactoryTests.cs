@@ -9,7 +9,7 @@ public sealed class EmulatorRepositoryFactoryTests
     private static EmulatorRepositoryFactory CreateFactory(EmulatorConnectionOptions opts) =>
         new(Options.Create(opts));
 
-    // ── No configuration ──────────────────────────────────────────────────────
+    // -- No configuration ------------------------------------------------------
 
     [Fact]
     public void EmptyOptions_ReturnsNullForAllTypes()
@@ -21,7 +21,7 @@ public sealed class EmulatorRepositoryFactoryTests
         Assert.Null(factory.Get(EmulatorType.CMaNGOS));
     }
 
-    // ── Single-type configuration ─────────────────────────────────────────────
+    // -- Single-type configuration ---------------------------------------------
 
     [Fact]
     public void TrinityCore_Configured_ReturnsNonNull_OthersNull()
@@ -68,7 +68,7 @@ public sealed class EmulatorRepositoryFactoryTests
         Assert.NotNull(factory.Get(EmulatorType.CMaNGOS));
     }
 
-    // ── All types configured ──────────────────────────────────────────────────
+    // -- All types configured --------------------------------------------------
 
     [Fact]
     public void AllConfigured_ReturnsNonNullForAllTypes()
@@ -87,7 +87,7 @@ public sealed class EmulatorRepositoryFactoryTests
         Assert.NotNull(factory.Get(EmulatorType.CMaNGOS));
     }
 
-    // ── Same call always returns same instance (singleton-per-type) ───────────
+    // -- Same call always returns same instance (singleton-per-type) -----------
 
     [Fact]
     public void SameType_ReturnsSameInstance()
@@ -114,7 +114,7 @@ public sealed class EmulatorRepositoryFactoryTests
         Assert.NotSame(factory.Get(EmulatorType.TrinityCore), factory.Get(EmulatorType.AzerothCore));
     }
 
-    // ── Empty / whitespace connection string treated as not configured ─────────
+    // -- Empty / whitespace connection string treated as not configured ---------
 
     [Theory]
     [InlineData("")]

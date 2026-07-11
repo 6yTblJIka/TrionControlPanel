@@ -14,7 +14,7 @@ public static class NewsEndpoints
         return app;
     }
 
-    // ── GET /Trion/news?limit=6 ───────────────────────────────────────────────
+    // -- GET /Trion/news?limit=6 -----------------------------------------------
 
     private static async Task<IResult> GetNews(
         [FromQuery] int  limit,

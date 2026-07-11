@@ -40,12 +40,12 @@ public sealed class TrionLogger : ILoggerProvider, IAsyncDisposable
         _ = Task.Run(HouseKeepingLoop);
     }
 
-    // ── ILoggerProvider ──────────────────────────────────────────────────────
+    // -- ILoggerProvider ------------------------------------------------------
 
     public ILogger CreateLogger(string categoryName)
         => new TrionLoggerCategory(this, categoryName);
 
-    // ── Internal enqueue called by TrionLoggerCategory ───────────────────────
+    // -- Internal enqueue called by TrionLoggerCategory -----------------------
 
     internal void Enqueue(MsLogLevel level, string category, string message, Exception? exception)
     {
@@ -77,7 +77,7 @@ public sealed class TrionLogger : ILoggerProvider, IAsyncDisposable
             Interlocked.Increment(ref _droppedCount);
     }
 
-    // ── Background writer ────────────────────────────────────────────────────
+    // -- Background writer ----------------------------------------------------
 
     private void WritePump()
     {
@@ -90,7 +90,7 @@ public sealed class TrionLogger : ILoggerProvider, IAsyncDisposable
             }
         }
         catch (OperationCanceledException) { /* graceful shutdown */ }
-        catch { /* best effort — writer thread must not crash the process */ }
+        catch { /* best effort -- writer thread must not crash the process */ }
     }
 
     private void FlushDropCountIfNeeded()
@@ -99,7 +99,7 @@ public sealed class TrionLogger : ILoggerProvider, IAsyncDisposable
         if (dropped == 0) return;
         if ((DateTimeOffset.UtcNow - _lastDropLogTime).TotalMinutes < 1)
         {
-            // Not time yet — put the count back
+            // Not time yet -- put the count back
             Interlocked.Add(ref _droppedCount, dropped);
             return;
         }
@@ -153,7 +153,7 @@ public sealed class TrionLogger : ILoggerProvider, IAsyncDisposable
             : folder;
     }
 
-    // ── Housekeeping ──────────────────────────────────────────────────────────
+    // -- Housekeeping ----------------------------------------------------------
 
     private async Task HouseKeepingLoop()
     {
@@ -208,14 +208,14 @@ public sealed class TrionLogger : ILoggerProvider, IAsyncDisposable
                 }
                 catch
                 {
-                    // Keep original — compressed file may be corrupt
+                    // Keep original -- compressed file may be corrupt
                     try { File.Delete(gz); } catch { /* ignore */ }
                 }
             }
         }
     }
 
-    // ── Formatting ────────────────────────────────────────────────────────────
+    // -- Formatting ------------------------------------------------------------
 
     private static string Format(LogEntry e)
         => $"{e.Timestamp:O}|{e.Level,-7}|{e.Category,-20}|{e.Message}";
@@ -250,7 +250,7 @@ public sealed class TrionLogger : ILoggerProvider, IAsyncDisposable
         _                      => LogLevel.Info
     };
 
-    // ── Disposal ──────────────────────────────────────────────────────────────
+    // -- Disposal --------------------------------------------------------------
 
     public async ValueTask DisposeAsync()
     {
@@ -267,7 +267,7 @@ public sealed class TrionLogger : ILoggerProvider, IAsyncDisposable
     void IDisposable.Dispose() => DisposeAsync().AsTask().GetAwaiter().GetResult();
 }
 
-// ── Per-category ILogger wrapper ─────────────────────────────────────────────
+// -- Per-category ILogger wrapper ---------------------------------------------
 
 internal sealed class TrionLoggerCategory : ILogger
 {

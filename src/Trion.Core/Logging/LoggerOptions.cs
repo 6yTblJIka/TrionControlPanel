@@ -14,7 +14,7 @@ public sealed class LoggerOptions
     /// <summary>Days before a log file (or its .gz) is deleted. Default: 30.</summary>
     public int    DaysToKeep     { get; set; } = 30;
 
-    // Per-level visibility — configurable at runtime via appsettings / host config
+    // Per-level visibility -- configurable at runtime via appsettings / host config
     public bool ShowDebug   { get; set; } = false;
     public bool ShowInfo    { get; set; } = true;
     public bool ShowWarning { get; set; } = true;

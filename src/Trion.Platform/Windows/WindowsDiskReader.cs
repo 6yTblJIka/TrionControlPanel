@@ -40,7 +40,7 @@ public sealed class WindowsDiskReader : IDisposable
 
     /// <summary>
     /// Returns current disk read/write throughput in bytes per second.
-    /// Windows PerformanceCounter returns a rate directly — no delta required.
+    /// Windows PerformanceCounter returns a rate directly -- no delta required.
     /// </summary>
     public (float ReadBytesPerSec, float WriteBytesPerSec) GetDiskThroughput()
     {

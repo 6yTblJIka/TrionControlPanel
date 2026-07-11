@@ -22,7 +22,7 @@ public sealed class TokenService : ITokenService
     private readonly AuditLogger       _audit;
     private readonly ILogger           _log;
 
-    // Lazily initialised RSA key — created or loaded on first use
+    // Lazily initialised RSA key -- created or loaded on first use
     private RSA?     _rsa;
     private readonly Lock _rsaLock = new();
 
@@ -38,7 +38,7 @@ public sealed class TokenService : ITokenService
         _log        = trionLogger.CreateLogger(nameof(TokenService));
     }
 
-    // ── ITokenService ──────────────────────────────────────────────────────
+    // -- ITokenService ------------------------------------------------------
 
     public async Task<TokenPair> IssueTokensAsync(
         AuthenticatedUser user,
@@ -115,7 +115,7 @@ public sealed class TokenService : ITokenService
             Detail:    null));
     }
 
-    // ── Public key export (used by Program.cs JWT validation) ─────────────
+    // -- Public key export (used by Program.cs JWT validation) -------------
 
     public string GetPublicKeyPem()
     {
@@ -123,7 +123,7 @@ public sealed class TokenService : ITokenService
         return rsa.ExportSubjectPublicKeyInfoPem();
     }
 
-    // ── Internals ────────────────────────────────────────────────────────────
+    // -- Internals ------------------------------------------------------------
 
     private RSA EnsureRsaKey()
     {

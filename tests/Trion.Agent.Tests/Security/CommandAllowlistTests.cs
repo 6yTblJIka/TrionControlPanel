@@ -7,7 +7,7 @@ public sealed class CommandAllowlistTests
 {
     private readonly CommandAllowlist _sut = new();
 
-    // ── Emulator executables ──────────────────────────────────────────────────
+    // -- Emulator executables --------------------------------------------------
 
     [Theory]
     [InlineData("/opt/trinitycore/worldserver",     new string[0])]
@@ -27,7 +27,7 @@ public sealed class CommandAllowlistTests
     public void RelativePath_IsRejected()
         => Assert.False(_sut.IsPermitted("worldserver", []));
 
-    // ── Shell metacharacters ──────────────────────────────────────────────────
+    // -- Shell metacharacters --------------------------------------------------
 
     [Theory]
     [InlineData("/opt/trinitycore/worldserver", new[] { "; rm -rf /" })]
@@ -37,7 +37,7 @@ public sealed class CommandAllowlistTests
     public void MetacharactersInArguments_AreRejected(string path, string[] args)
         => Assert.False(_sut.IsPermitted(path, args));
 
-    // ── systemctl (Linux) ────────────────────────────────────────────────────
+    // -- systemctl (Linux) ----------------------------------------------------
     // [InlineData] cannot pass a string[] as the sole argument (CS0182);
     // use [MemberData] with TheoryData<string[]> instead.
 
@@ -66,7 +66,7 @@ public sealed class CommandAllowlistTests
     public void SystemctlWithInvalidArgs_IsRejected(string[] args)
         => Assert.False(_sut.IsPermitted("/usr/bin/systemctl", args));
 
-    // ── Client data extraction tools ──────────────────────────────────────────
+    // -- Client data extraction tools ------------------------------------------
 
     [Theory]
     [InlineData("/opt/trinitycore/tools/ad",                new string[0])]
@@ -78,7 +78,7 @@ public sealed class CommandAllowlistTests
     public void ExtractionTools_ArePermitted(string path, string[] args)
         => Assert.True(_sut.IsPermitted(path, args));
 
-    // ── git clone / fetch (URL allowlist) ────────────────────────────────────
+    // -- git clone / fetch (URL allowlist) ------------------------------------
 
     public static TheoryData<string[]> ValidGitArgs => new()
     {
@@ -111,7 +111,7 @@ public sealed class CommandAllowlistTests
         => Assert.False(_sut.IsPermitted("/usr/bin/git-wrapper",
             ["clone", "https://github.com/TrinityCore/TrinityCore.git"]));
 
-    // ── apt-get / dnf package installation ───────────────────────────────────
+    // -- apt-get / dnf package installation -----------------------------------
 
     [Theory]
     [InlineData("/usr/bin/apt-get", new[] { "install", "-y", "mysql-server" })]
@@ -127,7 +127,7 @@ public sealed class CommandAllowlistTests
     public void PackageManager_InvalidCommand_IsRejected(string path, string[] args)
         => Assert.False(_sut.IsPermitted(path, args));
 
-    // ── msiexec (Windows silent install) ─────────────────────────────────────
+    // -- msiexec (Windows silent install) -------------------------------------
     // [InlineData] cannot pass a string[] as the sole argument (CS0182);
     // use [MemberData] with TheoryData<string[]> instead.
 
@@ -156,7 +156,7 @@ public sealed class CommandAllowlistTests
     public void MsiExec_InvalidArgs_IsRejected(string[] args)
         => Assert.False(_sut.IsPermitted(@"C:\Windows\System32\msiexec.exe", args));
 
-    // ── Path traversal in executable path ────────────────────────────────────
+    // -- Path traversal in executable path ------------------------------------
 
     [Fact]
     public void PathTraversal_IsRejected()

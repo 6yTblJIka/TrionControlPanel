@@ -46,7 +46,7 @@ public sealed class LinuxDiskReaderTests : IDisposable
         var sut = new LinuxDiskReader(path);
         sut.GetDiskBytesDelta(); // seed
 
-        // sectors_read: 2000→4000 (+2000), sectors_written: 1000→2000 (+1000)
+        // sectors_read: 2000->4000 (+2000), sectors_written: 1000->2000 (+1000)
         File.WriteAllText(path,
             "   8       0 sda 200 0 4000 0 100 0 2000 0 0 0 0 0 0 0 0 0 0\n");
 

@@ -26,10 +26,10 @@ public sealed class ProcessLaunchHandler
 
     public Task<LaunchProcessResponse> HandleAsync(LaunchProcessCommand cmd, CancellationToken ct = default)
     {
-        // ── Security gate ────────────────────────────────────────────────────
+        // -- Security gate ----------------------------------------------------
         if (!_allowlist.IsPermitted(cmd.ExecutablePath, cmd.Arguments))
         {
-            _log.LogWarning("Launch rejected — not in allowlist: {Path}", cmd.ExecutablePath);
+            _log.LogWarning("Launch rejected -- not in allowlist: {Path}", cmd.ExecutablePath);
             return Task.FromResult(new LaunchProcessResponse(
                 Success: false, Pid: null, StartTime: null,
                 ErrorMessage: "Executable or arguments not permitted"));
@@ -49,7 +49,7 @@ public sealed class ProcessLaunchHandler
             RedirectStandardError  = true,
         };
 
-        // Use ArgumentList — never the single Arguments string — to avoid shell injection
+        // Use ArgumentList -- never the single Arguments string -- to avoid shell injection
         foreach (var arg in cmd.Arguments)
             psi.ArgumentList.Add(arg);
 
@@ -67,7 +67,7 @@ public sealed class ProcessLaunchHandler
                 ErrorMessage: ex.Message));
         }
 
-        // Relay stdout/stderr to logger — fire and forget
+        // Relay stdout/stderr to logger -- fire and forget
         var procName = Path.GetFileNameWithoutExtension(cmd.ExecutablePath);
         _ = RelayStreamAsync(process.StandardOutput, procName, isError: false);
         _ = RelayStreamAsync(process.StandardError,  procName, isError: true);

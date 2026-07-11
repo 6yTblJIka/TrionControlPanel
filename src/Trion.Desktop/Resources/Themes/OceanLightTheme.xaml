@@ -1,7 +1,7 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- ── Rose Light ────────────────────────────────────────────────── -->
+    <!-- Rose Light -->
     <SolidColorBrush x:Key="Background.Primary"   Color="#FFF5F7" />
     <SolidColorBrush x:Key="Background.Secondary" Color="#FFFFFF" />
     <SolidColorBrush x:Key="Background.Tertiary"  Color="#FDEEF1" />
@@ -12,44 +12,44 @@
     <SolidColorBrush x:Key="Foreground.Muted"     Color="#9A6070" />
     <SolidColorBrush x:Key="Foreground.Disabled"  Color="#C0A0A8" />
 
-    <!-- ── Accent — Rose (deepened for light bg readability) ─────────── -->
+    <!-- Accent - Rose (deepened for light bg readability) -->
     <SolidColorBrush x:Key="Accent.Primary"    Color="#BE123C" />
     <SolidColorBrush x:Key="Accent.Hover"      Color="#E11D48" />
     <SolidColorBrush x:Key="Accent.Pressed"    Color="#9F1239" />
     <SolidColorBrush x:Key="Accent.Foreground" Color="#FFFFFF" />
     <SolidColorBrush x:Key="Accent.Subtle"     Color="#14BE123C" />
 
-    <!-- ── Borders ───────────────────────────────────────────────────── -->
+    <!-- Borders -->
     <SolidColorBrush x:Key="Border.Default"    Color="#F0D0D8" />
     <SolidColorBrush x:Key="Border.Subtle"     Color="#F8E8EC" />
     <SolidColorBrush x:Key="Border.Focus"      Color="#BE123C" />
 
-    <!-- ── Status ────────────────────────────────────────────────────── -->
-    <SolidColorBrush x:Key="Status.Running"    Color="#16A34A" />
+    <!-- Status -->
+    <SolidColorBrush x:Key="Status.Running"    Color="#0D9488" />
     <SolidColorBrush x:Key="Status.Stopped"    Color="#D0B0B8" />
     <SolidColorBrush x:Key="Status.Warning"    Color="#D97706" />
-    <SolidColorBrush x:Key="Status.Error"      Color="#DC2626" />
+    <SolidColorBrush x:Key="Status.Error"      Color="#C2410C" />
 
-    <!-- ── Danger ────────────────────────────────────────────────────── -->
-    <SolidColorBrush x:Key="Danger.Primary"    Color="#DC2626" />
-    <SolidColorBrush x:Key="Danger.Hover"      Color="#B91C1C" />
+    <!-- Danger -->
+    <SolidColorBrush x:Key="Danger.Primary"    Color="#C2410C" />
+    <SolidColorBrush x:Key="Danger.Hover"      Color="#9A3412" />
 
-    <!-- ── Cards ─────────────────────────────────────────────────────── -->
+    <!-- Cards -->
     <SolidColorBrush x:Key="Card.Background"   Color="#FFFFFF" />
     <SolidColorBrush x:Key="Card.Border"       Color="#F0D0D8" />
 
-    <!-- ── Sidebar ───────────────────────────────────────────────────── -->
+    <!-- Sidebar -->
     <SolidColorBrush x:Key="Sidebar.Background"     Color="#F5E8EC" />
     <SolidColorBrush x:Key="Sidebar.Selected"       Color="#EDD0D8" />
     <SolidColorBrush x:Key="Sidebar.SelectedBorder" Color="#BE123C" />
     <SolidColorBrush x:Key="Sidebar.SelectedText"   Color="#BE123C" />
     <SolidColorBrush x:Key="Sidebar.HoverBg"        Color="#F0E0E8" />
 
-    <!-- ── Inputs ────────────────────────────────────────────────────── -->
+    <!-- Inputs -->
     <SolidColorBrush x:Key="Input.Background"  Color="#FFFFFF" />
     <SolidColorBrush x:Key="Input.Border"      Color="#E0C0C8" />
 
-    <!-- ── Misc ──────────────────────────────────────────────────────── -->
+    <!-- Misc -->
     <Color x:Key="Glow.Color">#BE123C</Color>
     <SolidColorBrush x:Key="ScrollBar.Thumb"   Color="#D0B0B8" />
     <SolidColorBrush x:Key="ScrollBar.Track"   Color="#FFF5F7" />

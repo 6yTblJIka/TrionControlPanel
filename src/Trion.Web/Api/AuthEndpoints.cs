@@ -34,7 +34,7 @@ public static class AuthEndpoints
         return app;
     }
 
-    // ── POST /api/auth/login ──────────────────────────────────────────────
+    // -- POST /api/auth/login ----------------------------------------------
 
     private static async Task<Results<Ok<LoginResponse>, UnauthorizedHttpResult, BadRequest<string>>> Login(
         [FromBody] LoginRequest      request,
@@ -64,7 +64,7 @@ public static class AuthEndpoints
         return TypedResults.Ok(new LoginResponse(tokens.AccessToken, tokens.ExpiresIn));
     }
 
-    // ── POST /api/auth/refresh ────────────────────────────────────────────
+    // -- POST /api/auth/refresh --------------------------------------------
 
     private static async Task<Results<Ok<LoginResponse>, UnauthorizedHttpResult>> Refresh(
         HttpContext  ctx,
@@ -87,7 +87,7 @@ public static class AuthEndpoints
         return TypedResults.Ok(new LoginResponse(tokens.AccessToken, tokens.ExpiresIn));
     }
 
-    // ── POST /api/auth/revoke ─────────────────────────────────────────────
+    // -- POST /api/auth/revoke ---------------------------------------------
 
     private static async Task<Ok> Revoke(
         HttpContext  ctx,
@@ -103,7 +103,7 @@ public static class AuthEndpoints
         return TypedResults.Ok();
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────
+    // -- Helpers -----------------------------------------------------------
 
     private static void SetRefreshCookie(HttpContext ctx, string value)
     {
@@ -136,14 +136,14 @@ public static class AuthEndpoints
 
     private static string GetClientIp(HttpContext ctx)
     {
-        // Use RemoteIpAddress only — X-Forwarded-For is not trusted without a configured proxy.
+        // Use RemoteIpAddress only -- X-Forwarded-For is not trusted without a configured proxy.
         // If the app runs behind a reverse proxy, enable UseForwardedHeaders with KnownProxies
         // in Program.cs instead of reading the header manually.
         return ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
     }
 }
 
-// ── Request / Response DTOs ───────────────────────────────────────────────
+// -- Request / Response DTOs -----------------------------------------------
 
 public sealed record LoginRequest(
     string Username,

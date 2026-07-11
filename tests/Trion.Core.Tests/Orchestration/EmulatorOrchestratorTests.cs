@@ -12,7 +12,7 @@ public sealed class EmulatorOrchestratorTests
             "/opt/trinitycore/worldserver", "/opt/trinitycore",
             AutoRestart: true, MaxRestartAttempts: 3);
 
-    // ── Start ──────────────────────────────────────────────────────────────────
+    // -- Start ------------------------------------------------------------------
 
     [Fact]
     public async Task StartAsync_SuccessfulLaunch_StateIsRunning()
@@ -55,7 +55,7 @@ public sealed class EmulatorOrchestratorTests
         Assert.Equal(1, client.LaunchCallCount);
     }
 
-    // ── Stop ───────────────────────────────────────────────────────────────────
+    // -- Stop -------------------------------------------------------------------
 
     [Fact]
     public async Task StopAsync_WhileRunning_StateIsStopped()
@@ -81,7 +81,7 @@ public sealed class EmulatorOrchestratorTests
         await sut.StopAsync("nonexistent");
     }
 
-    // ── GetStatus ──────────────────────────────────────────────────────────────
+    // -- GetStatus --------------------------------------------------------------
 
     [Fact]
     public async Task GetStatusAsync_UnknownProfile_ReturnsStopped()
@@ -94,7 +94,7 @@ public sealed class EmulatorOrchestratorTests
         Assert.Equal("ghost", status.ProfileId);
     }
 
-    // ── GetAllStatuses ─────────────────────────────────────────────────────────
+    // -- GetAllStatuses ---------------------------------------------------------
 
     [Fact]
     public void GetAllStatuses_EmptyOrchestrator_ReturnsEmptyList()
@@ -121,7 +121,7 @@ public sealed class EmulatorOrchestratorTests
         Assert.Contains(statuses, s => s.ProfileId == "beta");
     }
 
-    // ── Minimal fake ──────────────────────────────────────────────────────────
+    // -- Minimal fake ----------------------------------------------------------
 
     private sealed class FakeAgentClient : IAgentClient
     {

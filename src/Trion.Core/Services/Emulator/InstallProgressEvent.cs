@@ -2,6 +2,6 @@ namespace Trion.Core.Services.Emulator;
 
 public sealed record InstallProgressEvent(
     string StepName,
-    int    PercentComplete,      // 0–100
+    int    PercentComplete,      // 0-100
     string? Message  = null,
     bool    IsError  = false);

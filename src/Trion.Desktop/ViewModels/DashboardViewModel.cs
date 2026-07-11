@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
@@ -18,19 +19,25 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
     private readonly IMySqlSetupService    _mysql;
     private readonly INginxPhpSetupService _webServer;
     private readonly ISystemMetricsService _metrics;
+    private readonly IDonationGoalService  _donationGoal;
     private readonly ILocalizationService  _loc;
-    private readonly INewsService          _news;
     private readonly Timer                 _serverTimer;
     private readonly Timer                 _uptimeTimer;
 
     public ILocalizationService Loc => _loc;
 
-    // ── MySQL setup banner ────────────────────────────────────────────────────
+    // -- Donation goal ----------------------------------------------------------
+
+    [ObservableProperty] private bool    _isDonationGoalVisible;
+    [ObservableProperty] private string  _donationGoalText = string.Empty;
+    [ObservableProperty] private double  _donationGoalPercent;
+
+    // -- MySQL setup banner ----------------------------------------------------
 
     [ObservableProperty] private bool   _isSetupRunning;
     [ObservableProperty] private string _setupStatusMessage = string.Empty;
 
-    // ── Server status ────────────────────────────────────────────────────────
+    // -- Server status --------------------------------------------------------
 
     [ObservableProperty] private bool _isDatabaseRunning;
     [ObservableProperty] private bool _isWorldRunning;
@@ -47,21 +54,21 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
     [ObservableProperty] private int _logonPid;
     [ObservableProperty] private int _webServerPid;
 
-    // ── Machine metrics ───────────────────────────────────────────────────────
+    // -- Machine metrics -------------------------------------------------------
 
     public string CpuCores { get; } = $"{Environment.ProcessorCount} Cores";
 
     [ObservableProperty] private double _cpuPercent;
     [ObservableProperty] private double _ramPercent;
-    [ObservableProperty] private string _ramUsed   = "—";
-    [ObservableProperty] private string _ramTotal  = "—";
-    [ObservableProperty] private string _diskRead  = "—";
-    [ObservableProperty] private string _diskWrite = "—";
-    [ObservableProperty] private string _networkRx = "—";
-    [ObservableProperty] private string _networkTx = "—";
+    [ObservableProperty] private string _ramUsed   = "--";
+    [ObservableProperty] private string _ramTotal  = "--";
+    [ObservableProperty] private string _diskRead  = "--";
+    [ObservableProperty] private string _diskWrite = "--";
+    [ObservableProperty] private string _networkRx = "--";
+    [ObservableProperty] private string _networkTx = "--";
 
     // Sparkline history (newest value appended; oldest dropped when over capacity)
-    private const int HistoryCapacity = 60;   // 60 × 2 s = 2 min window
+    private const int HistoryCapacity = 60;   // 60 * 2 s = 2 min window
 
     private readonly List<double> _cpuBuf       = new(HistoryCapacity + 1);
     private readonly List<double> _ramBuf        = new(HistoryCapacity + 1);
@@ -77,7 +84,7 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
     [ObservableProperty] private double[] _netRecvHistory   = [];
     [ObservableProperty] private double[] _netSendHistory   = [];
 
-    // ── Loading state ─────────────────────────────────────────────────────────
+    // -- Loading state ---------------------------------------------------------
 
     [ObservableProperty] private bool _isLoading = true;
     private bool _metricsReady;
@@ -90,32 +97,26 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
             IsLoading = false;
     }
 
-    // ── News ─────────────────────────────────────────────────────────────────
-
-    [ObservableProperty] private bool _isNewsLoading = true;
-    [ObservableProperty] private bool _isNewsEmpty;
-    public ObservableCollection<NewsItem> NewsItems { get; } = [];
-
-    // ── Server process tracking ───────────────────────────────────────────────
+    // -- Server process tracking -----------------------------------------------
 
     private DateTime? _dbStartTime;
     private DateTime? _worldStartTime;
     private DateTime? _logonStartTime;
     private DateTime? _webServerStartTime;
 
-    // ── Construction ──────────────────────────────────────────────────────────
+    // -- Construction ----------------------------------------------------------
 
     public DashboardViewModel(ISettingsService settings, IMySqlSetupService mysql,
                               INginxPhpSetupService webServer,
-                              ISystemMetricsService metrics, ILocalizationService loc,
-                              INewsService news)
+                              ISystemMetricsService metrics, IDonationGoalService donationGoal,
+                              ILocalizationService loc)
     {
-        _settings  = settings;
-        _mysql     = mysql;
-        _webServer = webServer;
-        _metrics   = metrics;
-        _loc       = loc;
-        _news      = news;
+        _settings     = settings;
+        _mysql        = mysql;
+        _webServer    = webServer;
+        _metrics      = metrics;
+        _donationGoal = donationGoal;
+        _loc          = loc;
 
         // MySQL setup banner
         IsSetupRunning     = _mysql.IsRunning;
@@ -123,10 +124,10 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
         _mysql.ProgressChanged += OnMySqlProgress;
         _mysql.StatusChanged   += OnMySqlStatusChanged;
 
-        // Web server — sync initial state
+        // Web server -- sync initial state
         _webServer.StatusChanged += OnWebServerStatusChanged;
 
-        // Machine metrics — handle late subscription (first sample may already be ready)
+        // Machine metrics -- handle late subscription (first sample may already be ready)
         _metrics.Updated += OnMetricsUpdated;
         if (_metrics.Last is { } last)
             ApplyMetrics(last);
@@ -141,29 +142,45 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
         _uptimeTimer.Elapsed += (_, _) => TickUptime();
         _uptimeTimer.Start();
 
-        // Defer initial process scan to a background thread — Process.GetProcessesByName()
+        // Defer initial process scan to a background thread -- Process.GetProcessesByName()
         // can take 1-3 s on first call and would freeze the UI thread.
         _ = Task.Run(RefreshServerStatus);
-        _ = LoadNewsAsync();
+
+        _ = LoadDonationGoalAsync();
     }
 
-    // ── News loading ──────────────────────────────────────────────────────────
+    // -- Donation goal -----------------------------------------------------------
 
-    private async Task LoadNewsAsync()
+    private string _donationSupportUrl = AppLinks.DonationUrl;
+
+    private async Task LoadDonationGoalAsync()
     {
-        IsNewsLoading = true;
-        var items = await _news.GetLatestAsync(6);
+        var goal = await _donationGoal.GetAsync();
+        if (goal is null || !goal.IsConfigured)
+            return;
+
+        if (!string.IsNullOrWhiteSpace(goal.SupportUrl))
+            _donationSupportUrl = goal.SupportUrl;
+
         App.Current?.Dispatcher.InvokeAsync(() =>
         {
-            NewsItems.Clear();
-            foreach (var item in items)
-                NewsItems.Add(item);
-            IsNewsLoading = false;
-            IsNewsEmpty   = NewsItems.Count == 0;
+            DonationGoalText      = $"{goal.Raised:0.##} {goal.Currency} / {goal.Goal:0.##} {goal.Currency}";
+            DonationGoalPercent   = goal.Percent;
+            IsDonationGoalVisible = true;
         });
     }
 
-    // ── MySQL banner / status ─────────────────────────────────────────────────
+    [RelayCommand]
+    private void OpenDonationGoal()
+    {
+        Process.Start(new ProcessStartInfo
+        {
+            FileName        = _donationSupportUrl,
+            UseShellExecute = true
+        });
+    }
+
+    // -- MySQL banner / status -------------------------------------------------
 
     private void OnMySqlProgress(string message)
     {
@@ -196,7 +213,7 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
         });
     }
 
-    // ── Machine metrics ───────────────────────────────────────────────────────
+    // -- Machine metrics -------------------------------------------------------
 
     private void OnMetricsUpdated(MachineMetrics m)
         => App.Current?.Dispatcher.InvokeAsync(() => ApplyMetrics(m));
@@ -244,7 +261,7 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
             buf.RemoveAt(0);
     }
 
-    // ── Server status ─────────────────────────────────────────────────────────
+    // -- Server status ---------------------------------------------------------
 
     private void TickUptime()
     {
@@ -263,8 +280,6 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
 
     private void RefreshServerStatus()
     {
-        var cfg = _settings.Current;
-
         // Database: use the service (PID-based) to avoid false positives from any
         // system-installed mysqld that is unrelated to the one Trion launched.
         bool dbRunning = _mysql.IsProcessRunning;
@@ -287,10 +302,8 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
         bool    logonRunning = false;
         int     logonPid     = 0;
 
-        CheckProcess(cfg.WotLKWorldExeName.Length > 0 ? cfg.WotLKWorldExeName : "worldserver",
-            ref worldRunning, ref worldPid, ref _worldStartTime);
-        CheckProcess(cfg.WotLKLogonExeName.Length > 0 ? cfg.WotLKLogonExeName : "authserver",
-            ref logonRunning, ref logonPid, ref _logonStartTime);
+        CheckProcess("worldserver", ref worldRunning, ref worldPid, ref _worldStartTime);
+        CheckProcess("authserver",  ref logonRunning, ref logonPid, ref _logonStartTime);
 
         App.Current?.Dispatcher.InvokeAsync(() =>
         {
@@ -340,7 +353,7 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
         return (DateTime.Now - startTime.Value).ToString(@"hh\:mm\:ss");
     }
 
-    // ── Dispose ───────────────────────────────────────────────────────────────
+    // -- Dispose ---------------------------------------------------------------
 
     public void Dispose()
     {

@@ -7,4 +7,4 @@ public sealed record AccountRecord(
     int            GmLevel,
     DateTimeOffset CreatedAt,
     bool           IsLocked     = false,
-    string?        PasswordHash = null);   // raw stored hash — used by EmulatorAuthService for comparison
+    string?        PasswordHash = null);   // raw stored hash -- used by EmulatorAuthService for comparison

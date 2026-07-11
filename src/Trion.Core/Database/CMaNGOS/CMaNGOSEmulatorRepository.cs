@@ -9,7 +9,7 @@ namespace Trion.Core.Database.CMaNGOS;
 /// IEmulatorRepository for CMaNGOS (classic / TBC / WotLK variants).
 /// Key schema difference: gmlevel is stored directly in the account table,
 /// not in a separate account_access table.  Passwords use SRP6 (v/s fields);
-/// PasswordHash is returned as null — auth falls back to the local account.
+/// PasswordHash is returned as null -- auth falls back to the local account.
 /// </summary>
 internal sealed class CMaNGOSEmulatorRepository : IEmulatorRepository
 {
@@ -22,7 +22,7 @@ internal sealed class CMaNGOSEmulatorRepository : IEmulatorRepository
         _charCs = charCs;
     }
 
-    // ── Account ──────────────────────────────────────────────────────────────
+    // -- Account --------------------------------------------------------------
 
     public async Task<AccountRecord?> GetAccountAsync(string username, CancellationToken ct = default)
     {
@@ -44,7 +44,7 @@ internal sealed class CMaNGOSEmulatorRepository : IEmulatorRepository
             new CommandDefinition(sql, new { Username = username.ToUpperInvariant() }, cancellationToken: ct));
 
         if (row is null) return null;
-        // CMaNGOS uses SRP6 — no SHA1 hash to compare; return null so auth service
+        // CMaNGOS uses SRP6 -- no SHA1 hash to compare; return null so auth service
         // falls through to the local bootstrap account path
         return new AccountRecord(row.Id, row.Username, row.Email, row.GmLevel,
             new DateTimeOffset(row.CreatedAt, TimeSpan.Zero), row.IsLocked, PasswordHash: null);
@@ -121,7 +121,7 @@ internal sealed class CMaNGOSEmulatorRepository : IEmulatorRepository
             total, page, pageSize);
     }
 
-    // ── GM Level ─────────────────────────────────────────────────────────────
+    // -- GM Level -------------------------------------------------------------
 
     public async Task<int> GetGmLevelAsync(string username, CancellationToken ct = default)
     {
@@ -132,7 +132,7 @@ internal sealed class CMaNGOSEmulatorRepository : IEmulatorRepository
             new CommandDefinition(sql, new { Username = username.ToUpperInvariant() }, cancellationToken: ct));
     }
 
-    // ── Realms ───────────────────────────────────────────────────────────────
+    // -- Realms ---------------------------------------------------------------
 
     public async Task<IReadOnlyList<RealmRecord>> GetRealmsAsync(CancellationToken ct = default)
     {
@@ -164,7 +164,7 @@ internal sealed class CMaNGOSEmulatorRepository : IEmulatorRepository
         return affected > 0;
     }
 
-    // ── Characters ───────────────────────────────────────────────────────────
+    // -- Characters -----------------------------------------------------------
 
     public async Task<IReadOnlyList<CharacterSummary>> GetCharacterSummariesAsync(
         int accountId, CancellationToken ct = default)
@@ -190,7 +190,7 @@ internal sealed class CMaNGOSEmulatorRepository : IEmulatorRepository
         return rows.Select(r => new CharacterSummary(r.Id, r.Name, r.Level, r.Race, r.Class, r.AccountId)).ToList();
     }
 
-    // ── Sessions ─────────────────────────────────────────────────────────────
+    // -- Sessions -------------------------------------------------------------
 
     public async Task<int> GetOnlineCountAsync(CancellationToken ct = default)
     {
@@ -218,7 +218,7 @@ internal sealed class CMaNGOSEmulatorRepository : IEmulatorRepository
             r.Username, r.IpAddress, new DateTimeOffset(r.LoginTime, TimeSpan.Zero))).ToList();
     }
 
-    // ── GM Tickets ───────────────────────────────────────────────────────────
+    // -- GM Tickets -----------------------------------------------------------
     // CMaNGOS stores tickets in the world/character DB; not wired up here.
 
     public Task<IReadOnlyList<GmTicket>> ListGmTicketsAsync(CancellationToken ct = default)
@@ -227,7 +227,7 @@ internal sealed class CMaNGOSEmulatorRepository : IEmulatorRepository
     public Task<bool> CloseTicketAsync(int ticketId, CancellationToken ct = default)
         => Task.FromResult(false);
 
-    // ── Bans ─────────────────────────────────────────────────────────────────
+    // -- Bans -----------------------------------------------------------------
 
     public async Task<bool> BanAccountAsync(BanRecord ban, CancellationToken ct = default)
     {
@@ -275,7 +275,7 @@ internal sealed class CMaNGOSEmulatorRepository : IEmulatorRepository
         return affected > 0;
     }
 
-    // ── Dapper POCOs ─────────────────────────────────────────────────────────
+    // -- Dapper POCOs ---------------------------------------------------------
 
     private sealed class AccountRow
     {

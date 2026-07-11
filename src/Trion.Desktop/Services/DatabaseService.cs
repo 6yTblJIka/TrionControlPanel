@@ -12,26 +12,25 @@ namespace Trion.Desktop.Services;
 
 /// <summary>
 /// Real MySQL implementation of <see cref="IDatabaseService"/>.
-/// Supports AzerothCore (LegacySHA1 SRP6), TrinityCore 3.3.5a (sha_pass_hash),
-/// and CMaNGOS/VMaNGOS (CMaNGOS SRP6 with hex-encoded v/s columns).
 ///
 /// The active schema is determined by <see cref="AppSettings.SelectedDatabases"/>:
-///   0 = Custom      → AzerothCore schema (safe default for SPP)
-///   1 = TrinityCore → sha_pass_hash (TC 3.3.5a)
-///   2 = AzerothCore → LegacySHA1 SRP6 (binary salt + verifier columns)
-///   3 = CMaNGOS     → CMaNGOS SRP6 (hex v/s columns, realmbuilds column)
+///   0 = TrinityCore 3.3.5a : sha_pass_hash column
+///   1 = AzerothCore         : binary salt + verifier (LegacySHA1 SRP6)
+///   2 = CMaNGOS / VMaNGOS   : hex v + s columns, realmbuilds column
+///   3 = ArgusCore / TC-master (Legion+): battlenet_accounts + account (BNet SRP6v2)
+///   4 = TC-Cata / SkyFire MoP: binary salt + verifier (GruntSRP6, no BNet layer)
 ///
 /// All SQL strings are defined in <see cref="DbQueries"/>.
 /// </summary>
 public sealed class DatabaseService : IDatabaseService
 {
-    private enum CoreSchema { AzerothCore, TrinityCore335, CMaNGOS, TrinityCore4 }
+    private enum CoreSchema { AzerothCore, TrinityCore335, CMaNGOS, TrinityCore4, GruntSrp6Direct }
 
     private readonly ISettingsService _settings;
 
     public DatabaseService(ISettingsService settings) => _settings = settings;
 
-    // ── Connection strings ────────────────────────────────────────────────────
+    // -- Connection strings ----------------------------------------------------
 
     private string AuthConnectionString() =>
         BuildConnectionString(
@@ -59,13 +58,14 @@ public sealed class DatabaseService : IDatabaseService
 
     private CoreSchema ActiveSchema() => _settings.Current.SelectedDatabases switch
     {
-        0 => CoreSchema.TrinityCore335,  // 0 = TrinityCore 3.3.5a
-        2 => CoreSchema.CMaNGOS,         // 2 = CMaNGOS / VMaNGOS
-        3 => CoreSchema.TrinityCore4,    // 3 = TrinityCore 4.x / Latest (Battle.net auth)
-        _ => CoreSchema.AzerothCore,     // 1 = AzerothCore (default)
+        0 => CoreSchema.TrinityCore335,   // sha_pass_hash
+        2 => CoreSchema.CMaNGOS,          // hex v + s columns
+        3 => CoreSchema.TrinityCore4,     // BNet SRP6v2 (battlenet_accounts + account)
+        4 => CoreSchema.GruntSrp6Direct,  // GruntSRP6 binary SRP6, no BNet (TC-Cata / SkyFire)
+        _ => CoreSchema.AzerothCore,      // binary salt + verifier LegacySHA1 (default = 1)
     };
 
-    // ── PingAsync ─────────────────────────────────────────────────────────────
+    // -- PingAsync -------------------------------------------------------------
 
     public Task<(bool Success, string Message, TimeSpan Latency)> PingAsync(
         CancellationToken ct = default) =>
@@ -76,7 +76,7 @@ public sealed class DatabaseService : IDatabaseService
             MySqlInitSql.RootPassword,
             ct);
 
-    // ── TestConnectionAsync ───────────────────────────────────────────────────
+    // -- TestConnectionAsync ---------------------------------------------------
 
     public async Task<(bool Success, string Message, TimeSpan Latency)> TestConnectionAsync(
         string host, string port, string user, string password,
@@ -101,7 +101,7 @@ public sealed class DatabaseService : IDatabaseService
         }
     }
 
-    // ── GetRealmsAsync ────────────────────────────────────────────────────────
+    // -- GetRealmsAsync --------------------------------------------------------
 
     public async Task<List<RealmEntry>> GetRealmsAsync(CancellationToken ct = default)
     {
@@ -134,7 +134,7 @@ public sealed class DatabaseService : IDatabaseService
         return result;
     }
 
-    // ── SaveRealmAsync ────────────────────────────────────────────────────────
+    // -- SaveRealmAsync --------------------------------------------------------
 
     public async Task<(bool Ok, string Error)> SaveRealmAsync(
         RealmEntry realm, CancellationToken ct = default)
@@ -157,7 +157,7 @@ public sealed class DatabaseService : IDatabaseService
         catch (Exception ex) { return (false, ex.Message); }
     }
 
-    // ── CreateRealmAsync ──────────────────────────────────────────────────────
+    // -- CreateRealmAsync ---------------------- -------------------------------
 
     public async Task<(bool Ok, string Error)> CreateRealmAsync(
         RealmEntry realm, CancellationToken ct = default)
@@ -179,7 +179,7 @@ public sealed class DatabaseService : IDatabaseService
         catch (Exception ex) { return (false, ex.Message); }
     }
 
-    // ── DeleteRealmAsync ──────────────────────────────────────────────────────
+    // -- DeleteRealmAsync ------------------------------------------------------
 
     public async Task<(bool Ok, string Error)> DeleteRealmAsync(
         int realmId, CancellationToken ct = default)
@@ -197,7 +197,7 @@ public sealed class DatabaseService : IDatabaseService
         catch (Exception ex) { return (false, ex.Message); }
     }
 
-    // ── UpdateRealmAddressAsync ───────────────────────────────────────────────
+    // -- UpdateRealmAddressAsync -----------------------------------------------
 
     public async Task<(bool Ok, string Error)> UpdateRealmAddressAsync(
         int realmId, string address, CancellationToken ct = default)
@@ -216,7 +216,7 @@ public sealed class DatabaseService : IDatabaseService
         catch (Exception ex) { return (false, ex.Message); }
     }
 
-    // ── CreateAccountAsync ────────────────────────────────────────────────────
+    // -- CreateAccountAsync ----------------------------------------------------
 
     public async Task<(bool Ok, string Error)> CreateAccountAsync(
         string username, string password, string email, int expansion,
@@ -224,7 +224,8 @@ public sealed class DatabaseService : IDatabaseService
     {
         if (username.Length > 16) return (false, "Username too long (max 16 chars).");
         // TC4 BNet passwords have no 16-char limit; the game account password is auto-truncated.
-        if (password.Length > 16 && ActiveSchema() != CoreSchema.TrinityCore4)
+        var schema = ActiveSchema();
+        if (password.Length > 16 && schema != CoreSchema.TrinityCore4)
             return (false, "Password too long (max 16 chars).");
         if (email.Length > 64) return (false, "Email too long (max 64 chars).");
 
@@ -233,8 +234,8 @@ public sealed class DatabaseService : IDatabaseService
             await using var conn = new MySqlConnection(AuthConnectionString());
             await conn.OpenAsync(ct);
 
-            // TrinityCore 4.x uses a two-table BattleNet system — handled separately below.
-            if (ActiveSchema() == CoreSchema.TrinityCore4)
+            // TrinityCore 4.x uses a two-table BattleNet system -- handled separately below.
+            if (schema == CoreSchema.TrinityCore4)
                 return await CreateTc4AccountAsync(conn, password, email, ct);
 
             if (await UsernameExistsAsync(conn, username, ct))
@@ -244,7 +245,7 @@ public sealed class DatabaseService : IDatabaseService
 
             await using var cmd = conn.CreateCommand();
 
-            switch (ActiveSchema())
+            switch (schema)
             {
                 case CoreSchema.AzerothCore:
                 {
@@ -285,6 +286,23 @@ public sealed class DatabaseService : IDatabaseService
                     cmd.Parameters.AddWithValue("@JoinDate", DateTime.UtcNow);
                     break;
                 }
+
+                case CoreSchema.GruntSrp6Direct:
+                {
+                    // TC-Cata bnetserver and SkyFire MoP bnetserver both store GruntSRP6
+                    // credentials directly in the account table (big-endian x, same prime/g as AC).
+                    (byte[] salt, byte[] verifier) = Srp6.GruntSRP6.MakeRegistrationData(
+                        username.ToUpperInvariant(), password.ToUpperInvariant());
+                    cmd.CommandText = DbQueries.CreateAccountGruntSrp6;
+                    cmd.Parameters.AddWithValue("@Username",  username.ToUpperInvariant());
+                    cmd.Parameters.AddWithValue("@Salt",      salt);
+                    cmd.Parameters.AddWithValue("@Verifier",  verifier);
+                    cmd.Parameters.AddWithValue("@Email",     email);
+                    cmd.Parameters.AddWithValue("@RegMail",   email);
+                    cmd.Parameters.AddWithValue("@JoinDate",  DateTime.UtcNow);
+                    cmd.Parameters.AddWithValue("@Expansion", expansion);
+                    break;
+                }
             }
 
             await cmd.ExecuteNonQueryAsync(ct);
@@ -293,7 +311,7 @@ public sealed class DatabaseService : IDatabaseService
         catch (Exception ex) { return (false, ex.Message); }
     }
 
-    // ── SetGmLevelAsync ───────────────────────────────────────────────────────
+    // -- SetGmLevelAsync -------------------------------------------------------
 
     public async Task<(bool Ok, string Error)> SetGmLevelAsync(
         string username, int gmLevel, CancellationToken ct = default)
@@ -308,9 +326,14 @@ public sealed class DatabaseService : IDatabaseService
                 return (false, $"Account '{username}' not found.");
 
             await using var cmd = conn.CreateCommand();
-            cmd.CommandText = ActiveSchema() == CoreSchema.CMaNGOS
-                ? DbQueries.SetGmLevelCmangos
-                : DbQueries.SetGmLevelAcTc;
+            cmd.CommandText = ActiveSchema() switch
+            {
+                CoreSchema.CMaNGOS        => DbQueries.SetGmLevelCmangos,
+                // ArgusCore / TC-master and TC-Cata use AccountID + SecurityLevel
+                CoreSchema.TrinityCore4   => DbQueries.SetGmLevelModernTc,
+                CoreSchema.GruntSrp6Direct => DbQueries.SetGmLevelModernTc,
+                _                          => DbQueries.SetGmLevelAcTc,
+            };
             cmd.Parameters.AddWithValue("@Id",      accountId);
             cmd.Parameters.AddWithValue("@GmLevel", gmLevel);
             await cmd.ExecuteNonQueryAsync(ct);
@@ -319,13 +342,14 @@ public sealed class DatabaseService : IDatabaseService
         catch (Exception ex) { return (false, ex.Message); }
     }
 
-    // ── ChangePasswordAsync ───────────────────────────────────────────────────
+    // -- ChangePasswordAsync ---------------------------------------------------
 
     public async Task<(bool Ok, string Error)> ChangePasswordAsync(
         string username, string newPassword, CancellationToken ct = default)
     {
         // TC4 BNet passwords have no 16-char limit; the game account password is auto-truncated.
-        if (newPassword.Length > 16 && ActiveSchema() != CoreSchema.TrinityCore4)
+        var schema = ActiveSchema();
+        if (newPassword.Length > 16 && schema != CoreSchema.TrinityCore4)
             return (false, "Password too long (max 16 chars).");
 
         try
@@ -338,7 +362,7 @@ public sealed class DatabaseService : IDatabaseService
 
             await using var cmd = conn.CreateCommand();
 
-            switch (ActiveSchema())
+            switch (schema)
             {
                 case CoreSchema.AzerothCore:
                 {
@@ -367,6 +391,17 @@ public sealed class DatabaseService : IDatabaseService
                     cmd.CommandText = DbQueries.ChangePasswordCmangos;
                     cmd.Parameters.AddWithValue("@Verifier", Convert.ToHexString(verifier));
                     cmd.Parameters.AddWithValue("@Salt",     Convert.ToHexString(salt));
+                    cmd.Parameters.AddWithValue("@Username", username.ToUpperInvariant());
+                    break;
+                }
+
+                case CoreSchema.GruntSrp6Direct:
+                {
+                    (byte[] salt, byte[] verifier) = Srp6.GruntSRP6.MakeRegistrationData(
+                        username.ToUpperInvariant(), newPassword.ToUpperInvariant());
+                    cmd.CommandText = DbQueries.ChangePasswordGruntSrp6;
+                    cmd.Parameters.AddWithValue("@Salt",     salt);
+                    cmd.Parameters.AddWithValue("@Verifier", verifier);
                     cmd.Parameters.AddWithValue("@Username", username.ToUpperInvariant());
                     break;
                 }
@@ -411,7 +446,7 @@ public sealed class DatabaseService : IDatabaseService
         catch (Exception ex) { return (false, ex.Message); }
     }
 
-    // ── Private helpers ───────────────────────────────────────────────────────
+    // -- Private helpers -------------------------------------------------------
 
     private static void AddRealmParameters(MySqlCommand cmd, RealmEntry realm)
     {
@@ -453,17 +488,17 @@ public sealed class DatabaseService : IDatabaseService
         return result is null or DBNull ? 0 : Convert.ToInt32(result);
     }
 
-    // ── TrinityCore 4.x / CypherCore BattleNet account creation ─────────────
+    // -- TrinityCore 4.x / CypherCore BattleNet account creation -------------
 
     /// <summary>
     /// Creates a TrinityCore 4.x / CypherCore Battle.net account
     /// (battlenet_accounts row) and the linked in-game account (account row).
     ///
     /// Matches CypherCore BNetAccountManager.CreateBattlenetAccount exactly:
-    ///   • battlenet_accounts gets SRP6v2 credentials (PBKDF2-SHA512, 2048-bit prime)
-    ///   • account.username = "{bnetId}#1"
-    ///   • account salt/verifier = GruntSRP6 (SHA1, big-endian, 32-byte WoW prime)
-    ///   • game password = first 16 chars of the BNet password, uppercased
+    ///   * battlenet_accounts gets SRP6v2 credentials (PBKDF2-SHA512, 2048-bit prime)
+    ///   * account.username = "{bnetId}#1"
+    ///   * account salt/verifier = GruntSRP6 (SHA1, big-endian, 32-byte WoW prime)
+    ///   * game password = first 16 chars of the BNet password, uppercased
     /// </summary>
     private static async Task<(bool Ok, string Error)> CreateTc4AccountAsync(
         MySqlConnection conn,
@@ -505,7 +540,7 @@ public sealed class DatabaseService : IDatabaseService
         return (true, string.Empty);
     }
 
-    // ── Shared helpers ────────────────────────────────────────────────────────
+    // -- Shared helpers --------------------------------------------------------
 
     private static string Sha1HexPassHash(string username, string password)
     {
@@ -545,7 +580,7 @@ public sealed class DatabaseService : IDatabaseService
         return (reader.GetInt64(0), reader.GetString(1));
     }
 
-    // ── SRP6 crypto (ported from Desktop/SRP6Hashing.cs) ─────────────────────
+    // -- SRP6 crypto (ported from Desktop/SRP6Hashing.cs) ---------------------
 
 #pragma warning disable CA5350, CA5351  // SHA1/SHA256 used intentionally for SRP6 protocol
 
@@ -554,7 +589,7 @@ public sealed class DatabaseService : IDatabaseService
         public static byte[] GenerateSalt() => RandomNumberGenerator.GetBytes(32);
 
         /// <summary>
-        /// Legacy SHA-1 SRP6 — AzerothCore / TrinityCore 3.3.5a.
+        /// Legacy SHA-1 SRP6 -- AzerothCore / TrinityCore 3.3.5a.
         /// N is the 32-byte WoW safe prime, g = 7.
         /// </summary>
         public static class LegacySha1
@@ -578,7 +613,7 @@ public sealed class DatabaseService : IDatabaseService
         }
 
         /// <summary>
-        /// TrinityCore 4.x / CypherCore — Battle.net SRP6v2.
+        /// TrinityCore 4.x / CypherCore -- Battle.net SRP6v2.
         /// PBKDF2-HMAC-SHA512, 15 000 iterations, 2048-bit RFC 3526 prime, g=2.
         /// srpUsername = uppercase hex of SHA256(UPPER(email)).
         /// Mirrors CypherCore BNetAccountManager + SRP6/BnetSRP6v2Hash256.
@@ -598,7 +633,7 @@ public sealed class DatabaseService : IDatabaseService
                     "94B5C803D89F7AE435DE236D525F54759B65E372FCD68EF20FA7111F9E4AFF73"),
                 isUnsigned: true, isBigEndian: true);
 
-            /// <summary>Returns HEX(SHA256(UPPER(email))) — the SRP identity string.</summary>
+            /// <summary>Returns HEX(SHA256(UPPER(email))) -- the SRP identity string.</summary>
             public static string GetSrpUsername(string email) =>
                 Convert.ToHexString(SHA256.HashData(
                     Encoding.UTF8.GetBytes(email.ToUpperInvariant())));
@@ -635,7 +670,7 @@ public sealed class DatabaseService : IDatabaseService
         }
 
         /// <summary>
-        /// GruntSRP6 — TrinityCore 4.x / CypherCore in-game account SRP6.
+        /// GruntSRP6 -- TrinityCore 4.x / CypherCore in-game account SRP6.
         /// SHA1, big-endian x, 32-byte WoW prime, g=7.
         /// Used for game accounts linked to BNet accounts (username = "{bnetId}#1").
         /// Mirrors CypherCore SRP6.GruntSRP6.
@@ -654,7 +689,7 @@ public sealed class DatabaseService : IDatabaseService
                 byte[] salt = RandomNumberGenerator.GetBytes(32);
                 byte[] h = SHA1.HashData(Encoding.UTF8.GetBytes(
                     $"{username.ToUpperInvariant()}:{password.ToUpperInvariant()}"));
-                // CypherCore uses big-endian byte order for x — distinct from LegacySha1
+                // CypherCore uses big-endian byte order for x -- distinct from LegacySha1
                 BigInteger x = new(SHA1.HashData([..salt, ..h]),
                     isUnsigned: true, isBigEndian: true);
                 byte[] v = BigInteger.ModPow(G, x, N).ToByteArray(isUnsigned: true, isBigEndian: false);
@@ -664,7 +699,7 @@ public sealed class DatabaseService : IDatabaseService
         }
 
         /// <summary>
-        /// CMaNGOS SRP6 — little-endian byte ordering; v/s stored as uppercase hex strings.
+        /// CMaNGOS SRP6 -- little-endian byte ordering; v/s stored as uppercase hex strings.
         /// Uses the same 32-byte WoW prime as LegacySha1.
         /// </summary>
         public static class CMaNGos

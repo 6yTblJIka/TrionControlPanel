@@ -18,7 +18,7 @@ public sealed class WindowsMetricsProvider : IMachineMetricsProvider
     private volatile bool _initialized;
     private readonly object _initLock = new();
 
-    // ── CPU via GetSystemTimes ────────────────────────────────────────────
+    // -- CPU via GetSystemTimes --------------------------------------------
     private long _prevIdle;
     private long _prevTotal;
     private bool _sysTimesSeeded;
@@ -105,7 +105,7 @@ public sealed class WindowsMetricsProvider : IMachineMetricsProvider
 
         if (totalDelta <= 0) return 0.0;
 
-        // kernel time includes idle time → CPU% = (1 − idle/total) × 100
+        // kernel time includes idle time -> CPU% = (1 - idle/total) * 100
         return Math.Round(Math.Clamp((1.0 - (double)idleDelta / totalDelta) * 100.0, 0.0, 100.0), 1);
     }
 
@@ -119,7 +119,7 @@ public sealed class WindowsMetricsProvider : IMachineMetricsProvider
         catch { return 0; }
     }
 
-    // ── GetSystemTimes P/Invoke ───────────────────────────────────────────
+    // -- GetSystemTimes P/Invoke -------------------------------------------
 
     [StructLayout(LayoutKind.Sequential)]
     private struct FILETIME
@@ -137,7 +137,7 @@ public sealed class WindowsMetricsProvider : IMachineMetricsProvider
     private static long FileTimeToLong(FILETIME ft) =>
         ((long)ft.dwHighDateTime << 32) | ft.dwLowDateTime;
 
-    // ── GlobalMemoryStatusEx P/Invoke ─────────────────────────────────────
+    // -- GlobalMemoryStatusEx P/Invoke -------------------------------------
 
     [StructLayout(LayoutKind.Sequential)]
     private struct MEMORYSTATUSEX

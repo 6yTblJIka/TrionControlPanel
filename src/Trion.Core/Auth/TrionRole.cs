@@ -2,7 +2,7 @@ namespace Trion.Core.Auth;
 
 /// <summary>
 /// Trion-internal roles, mapped from emulator GM levels.
-/// GM level 0 = denied. Level 1–3 grant increasing Trion access.
+/// GM level 0 = denied. Level 1-3 grant increasing Trion access.
 /// </summary>
 public enum TrionRole
 {

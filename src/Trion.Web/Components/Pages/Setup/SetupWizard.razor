@@ -7,7 +7,7 @@
 @inject SetupService      Setup
 @inject NavigationManager Nav
 
-<PageTitle>Trion — Setup</PageTitle>
+<PageTitle>Trion -- Setup</PageTitle>
 
 <div class="login-bg">
     <div class="login-glow"></div>
@@ -69,7 +69,7 @@
                 <MudAlert Severity="Severity.Error" Dense="true" Class="mb-4">@_globalError</MudAlert>
             }
 
-            <!-- ── Step 0: Welcome ───────────────────────────────────────── -->
+            <!-- -- Step 0: Welcome ----------------------------------------- -->
             @if (_step == 0)
             {
                 <MudText Typo="Typo.h6" Class="mb-3" Style="font-weight:700;">Welcome</MudText>
@@ -88,7 +88,7 @@
                 </MudButton>
             }
 
-            <!-- ── Step 1: Storage ──────────────────────────────────────── -->
+            <!-- -- Step 1: Storage ---------------------------------------- -->
             @if (_step == 1)
             {
                 <MudText Typo="Typo.h6" Class="mb-1" Style="font-weight:700;">Settings Storage</MudText>
@@ -98,10 +98,10 @@
 
                 <MudRadioGroup @bind-Value="_dbChoice" Class="mb-4">
                     <MudRadio Value="@("sqlite")" Color="Color.Primary">
-                        <MudText><b>SQLite</b> — embedded, no extra software needed</MudText>
+                        <MudText><b>SQLite</b> -- embedded, no extra software needed</MudText>
                     </MudRadio>
                     <MudRadio Value="@("mysql")" Color="Color.Primary">
-                        <MudText><b>MySQL / MariaDB</b> — for multi-instance or production use</MudText>
+                        <MudText><b>MySQL / MariaDB</b> -- for multi-instance or production use</MudText>
                     </MudRadio>
                 </MudRadioGroup>
 
@@ -148,7 +148,7 @@
                 </div>
             }
 
-            <!-- ── Step 2: Admin Account ────────────────────────────────── -->
+            <!-- -- Step 2: Admin Account ---------------------------------- -->
             @if (_step == 2)
             {
                 <MudText Typo="Typo.h6" Class="mb-1" Style="font-weight:700;">Owner Account</MudText>
@@ -158,10 +158,10 @@
 
                 <MudRadioGroup @bind-Value="_accountChoice" Class="mb-4">
                     <MudRadio Value="@("local")" Color="Color.Primary">
-                        <MudText><b>Local account</b> — create a new panel-only account</MudText>
+                        <MudText><b>Local account</b> -- create a new panel-only account</MudText>
                     </MudRadio>
                     <MudRadio Value="@("phoenix_api")" Color="Color.Primary">
-                        <MudText><b>Phoenix account</b> — sign in with your flying-phoenix.dev account</MudText>
+                        <MudText><b>Phoenix account</b> -- sign in with your flying-phoenix.dev account</MudText>
                     </MudRadio>
                 </MudRadioGroup>
 
@@ -222,8 +222,8 @@
                 </div>
             }
 
-            <!-- ── Step 3: Finish ────────────────────────────────────────── -->
-            @if (_step == 3)
+            <!-- -- Step 3: Finish ------------------------------------------ -->
+            @if (_step == 3 && !_setupDone)
             {
                 <MudText Typo="Typo.h6" Class="mb-3" Style="font-weight:700;">Review &amp; Finish</MudText>
 
@@ -231,15 +231,15 @@
                     <MudListItem Icon="@Icons.Material.Filled.Storage" IconColor="Color.Primary">
                         <MudText Typo="Typo.body2">
                             <b>Storage:</b>
-                            @(_dbChoice == "mysql" ? $"MySQL — {TruncateConn(_mysqlConn)}" : "SQLite (embedded)")
+                            @(_dbChoice == "mysql" ? $"MySQL -- {TruncateConn(_mysqlConn)}" : "SQLite (embedded)")
                         </MudText>
                     </MudListItem>
                     <MudListItem Icon="@Icons.Material.Filled.Person" IconColor="Color.Primary">
                         <MudText Typo="Typo.body2">
                             <b>Account:</b>
                             @(_accountChoice == "local"
-                                ? $"Local — {_username}"
-                                : $"Phoenix — {_username}")
+                                ? $"Local -- {_username}"
+                                : $"Phoenix -- {_username}")
                         </MudText>
                     </MudListItem>
                 </MudList>
@@ -266,6 +266,25 @@
                 </div>
             }
 
+            <!-- -- Step 3: Done (restart required) -------------------------- -->
+            @if (_step == 3 && _setupDone)
+            {
+                <div class="d-flex flex-column align-center" style="gap:12px;">
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle"
+                             Style="font-size:56px;color:var(--mud-palette-success);" />
+                    <MudText Typo="Typo.h6" Style="font-weight:700;">Setup Complete</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
+                        A security key was generated and saved.
+                        <b>Restart Trion Web</b> to load it, then sign in.
+                    </MudText>
+                    <MudAlert Severity="Severity.Info" Dense="true" Class="mt-2" Style="width:100%;">
+                        <b>Why a restart?</b> The HMAC key that secures communication between
+                        Trion Web and the Agent daemon is loaded at startup.
+                        Restarting applies it without storing secrets in config files.
+                    </MudAlert>
+                </div>
+            }
+
         </div>
     </div>
 </div>
@@ -287,6 +306,7 @@
     private string? _accountError;
 
     private bool    _finishing   = false;
+    private bool    _setupDone   = false;
     private string? _finishError;
 
     private bool      _showPw      = false;
@@ -365,7 +385,8 @@
             else
                 await Setup.CompleteWithPhoenixApiAccountAsync(_username, useMySql, connStr);
 
-            Nav.NavigateTo("/login");
+            _setupDone = true;
+            _finishing = false;
         }
         catch (Exception ex)
         {
@@ -376,5 +397,5 @@
 
     private static string TruncateConn(string conn) =>
         string.IsNullOrWhiteSpace(conn) ? "(none)"
-        : conn.Length > 40 ? conn[..40] + "…" : conn;
+        : conn.Length > 40 ? conn[..40] + "..." : conn;
 }

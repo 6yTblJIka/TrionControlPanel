@@ -21,20 +21,22 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly IMySqlSetupService      _mysql;
     private readonly ServerControlViewModel  _serverControl;
     private readonly IAccountService         _account;
+    private readonly INewsService            _news;
+    private readonly ISettingsService        _settings;
 
     [ObservableProperty] private ObservableObject? _currentViewModel;
     [ObservableProperty] private bool              _isSidebarCollapsed = true;
 
-    // ── Download indicator ────────────────────────────────────────────────────
+    // -- Download indicator ----------------------------------------------------
 
     [ObservableProperty] private bool   _isDownloading;
     [ObservableProperty] private bool   _isDownloadPopupOpen;
     [ObservableProperty] private int    _downloadPercent;
-    [ObservableProperty] private string _downloadedSize = "—";
-    [ObservableProperty] private string _downloadSpeed  = "—";
-    [ObservableProperty] private string _downloadEta    = "—";
+    [ObservableProperty] private string _downloadedSize = "--";
+    [ObservableProperty] private string _downloadSpeed  = "--";
+    [ObservableProperty] private string _downloadEta    = "--";
 
-    // ── Notification state ────────────────────────────────────────────────────
+    // -- Notification state ----------------------------------------------------
 
     [ObservableProperty] private bool _isNotificationsPopupOpen;
 
@@ -45,7 +47,14 @@ public partial class MainWindowViewModel : ObservableObject
     /// <summary>Bound directly to the popup's ListBox (newest-first, up to 500 entries).</summary>
     public ObservableCollection<NotificationEntry> Notifications => _notifications.Entries;
 
-    // ── Theme picker state ─────────────────────────────────────────────────────
+    // -- Trion News state --------------------------------------------------------
+
+    [ObservableProperty] private bool _isNewsPopupOpen;
+    [ObservableProperty] private bool _isNewsLoading = true;
+    [ObservableProperty] private bool _hasUnreadNews;
+    public ObservableCollection<NewsItem> NewsItems { get; } = [];
+
+    // -- Theme picker state -----------------------------------------------------
 
     [ObservableProperty] private bool _isThemePopupOpen;
 
@@ -65,7 +74,7 @@ public partial class MainWindowViewModel : ObservableObject
     public bool IsOrangeSelected    => CurrentColor == "Orange";
     public bool IsLilaSelected      => CurrentColor == "Lila";
 
-    // ── Account state ──────────────────────────────────────────────────────────
+    // -- Account state ----------------------------------------------------------
 
     [ObservableProperty] private bool   _isAccountPopupOpen;
     [ObservableProperty] private string _accountUsername = string.Empty;
@@ -78,7 +87,7 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string _accountLastLogin = string.Empty;
     [ObservableProperty] private string _accountCreatedAt = string.Empty;
 
-    // ── Bottom bar server state ────────────────────────────────────────────────
+    // -- Bottom bar server state ------------------------------------------------
 
     [ObservableProperty] private bool _isDatabaseRunning;
     [ObservableProperty] private bool _isLogonRunning;
@@ -103,7 +112,9 @@ public partial class MainWindowViewModel : ObservableObject
                                INotificationService   notifications,
                                IMySqlSetupService     mysql,
                                ServerControlViewModel serverControl,
-                               IAccountService        account)
+                               IAccountService        account,
+                               INewsService           news,
+                               ISettingsService       settings)
     {
         _serviceProvider = serviceProvider;
         _loc             = loc;
@@ -112,15 +123,19 @@ public partial class MainWindowViewModel : ObservableObject
         _mysql           = mysql;
         _serverControl   = serverControl;
         _account         = account;
+        _news            = news;
+        _settings        = settings;
 
         RefreshAccountState();
         _account.SessionChanged += RefreshAccountState;
+
+        _ = LoadNewsAsync();
 
         _mysql.DownloadProgressChanged += OnDownloadProgress;
         if (_mysql.CurrentDownload is { } snap)
             ApplyDownloadProgress(snap);
 
-        // ── Sync bottom-bar state from the singleton ServerControlViewModel ────
+        // -- Sync bottom-bar state from the singleton ServerControlViewModel ----
         IsDatabaseRunning   = _serverControl.IsDatabaseRunning;
         IsWorldRunning      = _serverControl.IsWorldRunning;
         IsLogonRunning      = _serverControl.IsLogonRunning;
@@ -182,6 +197,7 @@ public partial class MainWindowViewModel : ObservableObject
         NavItems.Add(new NavigationItem(_loc) { IconKey = "Icon.Database",   LocKey = "NavDatabase", ViewModelType = typeof(DatabaseEditorViewModel) });
         NavItems.Add(new NavigationItem(_loc) { IconKey = "Icon.Ddns",       LocKey = "NavDdns",     ViewModelType = typeof(DdnsViewModel) });
         NavItems.Add(new NavigationItem(_loc) { IconKey = "Icon.Log",        LocKey = "NavEventLog",   ViewModelType = typeof(LogsViewModel) });
+        NavItems.Add(new NavigationItem(_loc) { IconKey = "Icon.Newspaper",  LocKey = "NavNews",       ViewModelType = typeof(NewsViewModel) });
         NavItems.Add(new NavigationItem(_loc) { IconKey = "Icon.Donate",    LocKey = "NavSupporters", ViewModelType = typeof(SupportersViewModel) });
     }
 
@@ -207,7 +223,7 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void ToggleSidebar() => IsSidebarCollapsed = !IsSidebarCollapsed;
 
-    // ── Notification popup ────────────────────────────────────────────────────
+    // -- Notification popup ----------------------------------------------------
 
     [RelayCommand]
     private void ShowNotifications()
@@ -217,7 +233,50 @@ public partial class MainWindowViewModel : ObservableObject
             _notifications.MarkAllRead();
     }
 
-    // ── Download indicator ─────────────────────────────────────────────────────
+    // -- Trion News popup --------------------------------------------------------
+
+    private async Task LoadNewsAsync()
+    {
+        IsNewsLoading = true;
+        var items = await _news.GetLatestAsync(6);
+        App.Current?.Dispatcher.InvokeAsync(() =>
+        {
+            NewsItems.Clear();
+            foreach (var item in items)
+                NewsItems.Add(item);
+            IsNewsLoading = false;
+
+            var latestId = items.Count > 0 ? items.Max(i => i.Id) : 0;
+            HasUnreadNews = latestId > _settings.Current.LastSeenNewsId;
+        });
+    }
+
+    [RelayCommand]
+    private void ShowNews()
+    {
+        IsNewsPopupOpen = !IsNewsPopupOpen;
+        if (!IsNewsPopupOpen || NewsItems.Count == 0) return;
+
+        HasUnreadNews = false;
+        var latestId = NewsItems.Max(i => i.Id);
+        if (latestId <= _settings.Current.LastSeenNewsId) return;
+
+        _settings.Current.LastSeenNewsId = latestId;
+        _settings.Save();
+    }
+
+    [RelayCommand]
+    private void ViewAllNews()
+    {
+        IsNewsPopupOpen = false;
+
+        // Navigate to the News nav item
+        var newsItem = NavItems.FirstOrDefault(n => n.ViewModelType == typeof(NewsViewModel));
+        if (newsItem is not null)
+            Navigate(newsItem);
+    }
+
+    // -- Download indicator -----------------------------------------------------
 
     [RelayCommand]
     private void ShowDownloadProgress() => IsDownloadPopupOpen = !IsDownloadPopupOpen;
@@ -232,9 +291,9 @@ public partial class MainWindowViewModel : ObservableObject
             IsDownloading       = false;
             IsDownloadPopupOpen = false;
             DownloadPercent     = 0;
-            DownloadedSize      = "—";
-            DownloadSpeed       = "—";
-            DownloadEta         = "—";
+            DownloadedSize      = "--";
+            DownloadSpeed       = "--";
+            DownloadEta         = "--";
             return;
         }
 
@@ -242,7 +301,7 @@ public partial class MainWindowViewModel : ObservableObject
         DownloadPercent = p.Percent;
         DownloadedSize  = FormatSize(p.DownloadedBytes, p.TotalBytes);
         DownloadSpeed   = $"{FormatBytes((long)p.SpeedBytesPerSec)}/s";
-        DownloadEta     = p.Eta.HasValue ? $"{p.Eta.Value:mm\\:ss}" : "—";
+        DownloadEta     = p.Eta.HasValue ? $"{p.Eta.Value:mm\\:ss}" : "--";
     }
 
     [RelayCommand]
@@ -266,7 +325,14 @@ public partial class MainWindowViewModel : ObservableObject
         });
     }
 
-    // ── Account commands ───────────────────────────────────────────────────────
+    [RelayCommand]
+    private void ShowBugReport()
+    {
+        var window = _serviceProvider.GetRequiredService<BugReportWindow>();
+        window.ShowDialog();
+    }
+
+    // -- Account commands -------------------------------------------------------
 
     [RelayCommand]
     private void ToggleAccountPopup() => IsAccountPopupOpen = !IsAccountPopupOpen;
@@ -310,7 +376,7 @@ public partial class MainWindowViewModel : ObservableObject
         AccountCreatedAt = _account.Profile?.CreatedAt ?? string.Empty;
     }
 
-    // ── Theme picker commands ──────────────────────────────────────────────────
+    // -- Theme picker commands --------------------------------------------------
 
     [RelayCommand]
     private void ToggleThemePopup() => IsThemePopupOpen = !IsThemePopupOpen;
@@ -331,7 +397,7 @@ public partial class MainWindowViewModel : ObservableObject
         CurrentColor = _themeService.CurrentColor;
     }
 
-    // ── Bottom bar toggle commands — delegate to ServerControlViewModel ────────
+    // -- Bottom bar toggle commands -- delegate to ServerControlViewModel --------
 
     [RelayCommand]
     private Task ToggleDatabaseServer() => _serverControl.ToggleDatabaseCommand.ExecuteAsync(null);

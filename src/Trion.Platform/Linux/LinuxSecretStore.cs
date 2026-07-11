@@ -57,11 +57,11 @@ public sealed class LinuxSecretStore : ISecretStore
         }
     }
 
-    // ── Machine-key derivation ────────────────────────────────────────────
+    // -- Machine-key derivation --------------------------------------------
 
     private static byte[] DeriveMachineKey()
     {
-        // Use /etc/machine-id as the base material — unique per Linux installation
+        // Use /etc/machine-id as the base material -- unique per Linux installation
         var machineId = File.Exists("/etc/machine-id")
             ? File.ReadAllText("/etc/machine-id").Trim()
             : Guid.NewGuid().ToString(); // fallback for containers
@@ -75,7 +75,7 @@ public sealed class LinuxSecretStore : ISecretStore
         return HKDF.Expand(HashAlgorithmName.SHA256, prk, AesKeySize, "AES-256-GCM-Key"u8.ToArray());
     }
 
-    // ── Encrypted file store ─────────────────────────────────────────────
+    // -- Encrypted file store ---------------------------------------------
 
     private Dictionary<string, string> LoadStore()
     {
@@ -83,7 +83,7 @@ public sealed class LinuxSecretStore : ISecretStore
 
         if (!File.Exists(FallbackPath))
         {
-            _log.LogWarning("Linux secret store file not found — starting empty.");
+            _log.LogWarning("Linux secret store file not found -- starting empty.");
             _cache = [];
             return _cache;
         }
@@ -96,7 +96,7 @@ public sealed class LinuxSecretStore : ISecretStore
         }
         catch (Exception ex)
         {
-            _log.LogWarning(ex, "Failed to load Linux secret store — starting empty.");
+            _log.LogWarning(ex, "Failed to load Linux secret store -- starting empty.");
             _cache = [];
         }
 
@@ -115,7 +115,7 @@ public sealed class LinuxSecretStore : ISecretStore
         var tmp = FallbackPath + ".tmp";
         File.WriteAllBytes(tmp, encrypted);
 
-        // Mode 0600 — owner read/write only
+        // Mode 0600 -- owner read/write only
         File.SetUnixFileMode(tmp,
             UnixFileMode.UserRead | UnixFileMode.UserWrite);
 

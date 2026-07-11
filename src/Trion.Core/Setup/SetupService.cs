@@ -26,7 +26,7 @@ public sealed class SetupService
         _settings = settings;
     }
 
-    // ── Setup state ──────────────────────────────────────────────────────
+    // -- Setup state ------------------------------------------------------
 
     /// <summary>
     /// Returns true when setup has been completed (or a legacy bootstrap account exists).
@@ -47,7 +47,7 @@ public sealed class SetupService
         return false;
     }
 
-    // ── Connection validation ────────────────────────────────────────────
+    // -- Connection validation --------------------------------------------
 
     public async Task<(bool Ok, string? Error)> TestMySqlAsync(
         string connStr, CancellationToken ct = default)
@@ -137,7 +137,7 @@ public sealed class SetupService
         bool useMySql, string? mysqlConnStr,
         CancellationToken ct = default)
     {
-        // Store only the username — no password hash.
+        // Store only the username -- no password hash.
         // Every login will re-verify live against the Phoenix API.
         await _settings.SetAsync("bootstrap_username",  username,      ct);
         await _settings.SetAsync(SetupKeys.AccountType, "phoenix_api", ct);
@@ -145,7 +145,7 @@ public sealed class SetupService
         await FinalizeAsync(useMySql, mysqlConnStr, ct);
     }
 
-    // ── Completion ───────────────────────────────────────────────────────
+    // -- Completion -------------------------------------------------------
 
     public async Task CompleteWithLocalAccountAsync(
         string username, string password,
@@ -167,7 +167,7 @@ public sealed class SetupService
         bool useMySql, string? mysqlConnStr,
         CancellationToken ct = default)
     {
-        // Store BCrypt of the Phoenix password — user logs into panel with their game password.
+        // Store BCrypt of the Phoenix password -- user logs into panel with their game password.
         var hash = BCrypt.Net.BCrypt.HashPassword(password, workFactor: 12);
 
         await _settings.SetAsync("bootstrap_username",    username,                  ct);
@@ -179,10 +179,24 @@ public sealed class SetupService
         await FinalizeAsync(useMySql, mysqlConnStr, ct);
     }
 
-    // ── Private helpers ──────────────────────────────────────────────────
+    // -- Private helpers --------------------------------------------------
 
     private async Task FinalizeAsync(bool useMySql, string? mysqlConnStr, CancellationToken ct)
     {
+        // Generate the HMAC shared key used between Trion.Web and Trion.Agent.
+        // Write it to the platform secrets file; also persist it in the settings DB as a backup.
+        var existingKey = await _settings.GetAsync<string>(SetupKeys.AgentHmacKey, ct);
+        if (string.IsNullOrWhiteSpace(existingKey))
+        {
+            var hmacKey = AgentSecretsFile.GenerateAndWrite();
+            await _settings.SetAsync(SetupKeys.AgentHmacKey, hmacKey, ct);
+        }
+        else if (!AgentSecretsFile.Exists)
+        {
+            // Secrets file was deleted but key is still in DB — restore the file.
+            AgentSecretsFile.Write(existingKey);
+        }
+
         if (useMySql && !string.IsNullOrWhiteSpace(mysqlConnStr))
         {
             // Run MySQL migrations and seed the completed flag there before writing config.
@@ -244,7 +258,7 @@ public sealed class SetupService
         return Convert.ToHexString(bytes);
     }
 
-    // ── DTOs ─────────────────────────────────────────────────────────────────
+    // -- DTOs -----------------------------------------------------------------
 
     private sealed record PhoenixLoginResponse(
         [property: JsonPropertyName("token")]      string  Token,

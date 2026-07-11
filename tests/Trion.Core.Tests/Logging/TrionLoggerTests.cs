@@ -80,7 +80,7 @@ public sealed class TrionLoggerTests : IAsyncDisposable
         await _sut.DisposeAsync();
 
         var files = Directory.GetFiles(_folder, "*.log");
-        if (files.Length == 0) return; // nothing written at all — correct
+        if (files.Length == 0) return; // nothing written at all -- correct
 
         var content = await File.ReadAllTextAsync(files[0]);
         Assert.DoesNotContain("This should be filtered", content);
@@ -106,7 +106,7 @@ public sealed class TrionLoggerTests : IAsyncDisposable
         Assert.Contains("Message from B", content);
     }
 
-    // ── Test helpers ─────────────────────────────────────────────────────────
+    // -- Test helpers ---------------------------------------------------------
 
     private sealed class TestOptionsMonitor : IOptionsMonitor<LoggerOptions>
     {

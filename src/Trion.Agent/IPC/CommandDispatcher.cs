@@ -40,11 +40,11 @@ public sealed class CommandDispatcher
 
     /// <summary>
     /// Deserializes, validates HMAC, dispatches to handler, returns JSON response.
-    /// Never throws — all errors are encoded in the returned <see cref="AgentResponse"/>.
+    /// Never throws -- all errors are encoded in the returned <see cref="AgentResponse"/>.
     /// </summary>
     public async Task<string> DispatchAsync(string requestJson, CancellationToken ct = default)
     {
-        // ── Deserialize envelope ─────────────────────────────────────────────
+        // -- Deserialize envelope ---------------------------------------------
         AgentCommand? command;
         try
         {
@@ -59,15 +59,32 @@ public sealed class CommandDispatcher
         if (command is null)
             return Fail("NULL_COMMAND");
 
-        // ── HMAC validation ──────────────────────────────────────────────────
-        var signedData = command.CommandType + command.Payload;
+        // -- HMAC validation --------------------------------------------------
+        // New clients include a Timestamp; legacy clients send Timestamp = 0.
+        // Signed data format: "{Timestamp}:{CommandType}{Payload}"
+        var signedData = $"{command.Timestamp}:{command.CommandType}{command.Payload}";
         if (!_hmac.Validate(signedData, command.Hmac, _sharedKey))
         {
             _log.LogWarning("HMAC validation failed for command type: {Type}", command.CommandType);
             return Fail("INVALID_HMAC");
         }
 
-        // ── Route ────────────────────────────────────────────────────────────
+        // -- Replay protection ------------------------------------------------
+        // Reject commands with a timestamp older than 30 seconds or more than
+        // 5 seconds in the future (clock skew tolerance).
+        // Commands with Timestamp = 0 are legacy clients — skip the window check.
+        if (command.Timestamp != 0)
+        {
+            var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            var age = now - command.Timestamp;
+            if (age > 30 || age < -5)
+            {
+                _log.LogWarning("Replay detected: command timestamp is {Age}s from now (type: {Type})", age, command.CommandType);
+                return Fail("REPLAY_DETECTED");
+            }
+        }
+
+        // -- Route ------------------------------------------------------------
         try
         {
             return command.CommandType switch
@@ -87,7 +104,7 @@ public sealed class CommandDispatcher
         }
     }
 
-    // ── Per-command dispatch ──────────────────────────────────────────────────
+    // -- Per-command dispatch --------------------------------------------------
 
     private async Task<string> LaunchAsync(string payload, CancellationToken ct)
     {
@@ -127,7 +144,7 @@ public sealed class CommandDispatcher
         return Succeed(JsonSerializer.Serialize(resp, AgentJsonContext.Default.PingResponse));
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // -- Helpers ---------------------------------------------------------------
 
     private static T? Deserialize<T>(string payload, System.Text.Json.Serialization.Metadata.JsonTypeInfo<T> info)
     {

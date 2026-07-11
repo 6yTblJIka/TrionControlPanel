@@ -9,9 +9,9 @@
 @inject ThemeState              ThemeState
 @inject GlobalLocalizer         L
 
-<PageTitle>@L["Page_Dashboard"] – Trion</PageTitle>
+<PageTitle>@L["Page_Dashboard"] - Trion</PageTitle>
 
-<!-- ── Page header ──────────────────────────────────────────────────── -->
+<!-- -- Page header ---------------------------------------------------- -->
 <div class="mb-6">
     <MudText Typo="Typo.h5" Style="font-weight:700;">@L["Page_Dashboard"]</MudText>
     <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">
@@ -19,7 +19,7 @@
     </MudText>
 </div>
 
-<!-- ── Infrastructure Services ──────────────────────────────────────── -->
+<!-- -- Infrastructure Services ---------------------------------------- -->
 <MudText Typo="Typo.overline" Color="Color.Secondary" Class="mb-3"
          Style="letter-spacing:1.5px;font-size:0.7rem;">
     @L["Section_ServiceStatus"]
@@ -63,7 +63,7 @@
     }
 </MudGrid>
 
-<!-- ── Machine Resources ─────────────────────────────────────────────── -->
+<!-- -- Machine Resources ----------------------------------------------- -->
 <MudText Typo="Typo.overline" Color="Color.Secondary" Class="mb-3"
          Style="letter-spacing:1.5px;font-size:0.7rem;">
     @L["Section_MachineResources"]
@@ -71,7 +71,7 @@
 
 <MudGrid Spacing="3">
 
-    <!-- CPU ──────────────────────────────────────────────────────────── -->
+    <!-- CPU ------------------------------------------------------------ -->
     <MudItem xs="12" sm="6">
         <div class="trion-card">
             <div class="trion-card-accent"></div>
@@ -104,7 +104,7 @@
         </div>
     </MudItem>
 
-    <!-- RAM ──────────────────────────────────────────────────────────── -->
+    <!-- RAM ------------------------------------------------------------ -->
     <MudItem xs="12" sm="6">
         <div class="trion-card">
             <div class="trion-card-accent"></div>
@@ -139,7 +139,7 @@
         </div>
     </MudItem>
 
-    <!-- Disk I/O ─────────────────────────────────────────────────────── -->
+    <!-- Disk I/O ------------------------------------------------------- -->
     <MudItem xs="12" sm="6">
         <div class="trion-card">
             <div class="trion-card-accent"></div>
@@ -168,7 +168,7 @@
         </div>
     </MudItem>
 
-    <!-- Network ──────────────────────────────────────────────────────── -->
+    <!-- Network -------------------------------------------------------- -->
     <MudItem xs="12" sm="6">
         <div class="trion-card">
             <div class="trion-card-accent"></div>
@@ -183,7 +183,7 @@
                         <MudText Typo="Typo.subtitle2" Style="font-weight:600;">Network</MudText>
                     </div>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">
-                        ↓ @_netRx &nbsp; ↑ @_netTx
+                        v @_netRx &nbsp; ^ @_netTx
                     </MudText>
                 </div>
                 <MudDivider Class="mb-2" />
@@ -202,22 +202,22 @@
 @code {
     private const int HistoryCap = 60;
 
-    // ── Infrastructure status ──────────────────────────────────────────
+    // -- Infrastructure status ------------------------------------------
     private InfraStatus[]            _infraStatuses = [];
     private System.Threading.Timer?  _infraTimer;
 
-    // ── Metric values ──────────────────────────────────────────────────
+    // -- Metric values --------------------------------------------------
     private double _cpu     = 0;
     private double _ramPct  = 0;
-    private string _ramUsed  = "—";
-    private string _ramTotal = "—";
-    private string _diskRead  = "—";
-    private string _diskWrite = "—";
-    private string _netRx = "—";
-    private string _netTx = "—";
+    private string _ramUsed  = "--";
+    private string _ramTotal = "--";
+    private string _diskRead  = "--";
+    private string _diskWrite = "--";
+    private string _netRx = "--";
+    private string _netTx = "--";
     private string _cpuCores = $"{Environment.ProcessorCount} Cores";
 
-    // ── History buffers ────────────────────────────────────────────────
+    // -- History buffers ------------------------------------------------
     private readonly List<double> _cpuBuf      = new(HistoryCap + 1);
     private readonly List<double> _ramBuf      = new(HistoryCap + 1);
     private readonly List<double> _diskReadBuf = new(HistoryCap + 1);
@@ -225,14 +225,14 @@
     private readonly List<double> _netRecvBuf  = new(HistoryCap + 1);
     private readonly List<double> _netSendBuf  = new(HistoryCap + 1);
 
-    // ── Chart series (rebuilt on every metrics tick) ───────────────────
+    // -- Chart series (rebuilt on every metrics tick) -------------------
     private List<MudBlazor.ChartSeries<double>> _cpuSeries  = [];
     private List<MudBlazor.ChartSeries<double>> _ramSeries  = [];
     private List<MudBlazor.ChartSeries<double>> _diskSeries = [];
     private List<MudBlazor.ChartSeries<double>> _netSeries  = [];
     private string[]          _xLabels    = [];
 
-    // ── Chart options — rebuilt whenever the theme changes ─────────────
+    // -- Chart options -- rebuilt whenever the theme changes -------------
     private LineChartOptions _chartOptsPct = new();
     private LineChartOptions _chartOptsRaw = new();
 
@@ -280,11 +280,11 @@
         };
     }
 
-    // ── Lifecycle ──────────────────────────────────────────────────────
+    // -- Lifecycle ------------------------------------------------------
 
     protected override void OnInitialized()
     {
-        // NaturalSpline requires ≥4 points — seed every buffer so charts
+        // NaturalSpline requires >=4 points -- seed every buffer so charts
         // are valid from the very first render before real data arrives.
         SeedBuffers();
         RebuildChartOptions();
@@ -376,8 +376,8 @@
 
         _netSeries =
         [
-            new MudBlazor.ChartSeries<double> { Name = "↓ Rx",  Data = ToChartData(_netRecvBuf) },
-            new MudBlazor.ChartSeries<double> { Name = "↑ Tx",  Data = ToChartData(_netSendBuf) },
+            new MudBlazor.ChartSeries<double> { Name = "v Rx",  Data = ToChartData(_netRecvBuf) },
+            new MudBlazor.ChartSeries<double> { Name = "^ Tx",  Data = ToChartData(_netSendBuf) },
         ];
     }
 
@@ -387,7 +387,7 @@
         if (buf.Count > HistoryCap) buf.RemoveAt(0);
     }
 
-    // ── Infra helpers ──────────────────────────────────────────────────
+    // -- Infra helpers --------------------------------------------------
 
     private static string InfraAccentColor(InfraServiceState state) => state switch
     {

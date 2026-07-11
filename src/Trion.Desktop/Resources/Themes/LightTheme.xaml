@@ -1,9 +1,7 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- ══════════════════════════════════════════════════════════
-         LIGHT THEME — Clean white with deep-blue accent
-         ══════════════════════════════════════════════════════════ -->
+    <!-- LIGHT THEME - Clean white with deep-blue accent -->
 
     <!-- Backgrounds -->
     <SolidColorBrush x:Key="Background.Primary"   Color="#F4F5FA" />
@@ -30,14 +28,14 @@
     <SolidColorBrush x:Key="Border.Focus"      Color="#0095C8" />
 
     <!-- Status -->
-    <SolidColorBrush x:Key="Status.Running"    Color="#00B86B" />
+    <SolidColorBrush x:Key="Status.Running"    Color="#1B8A4C" />
     <SolidColorBrush x:Key="Status.Stopped"    Color="#BBBBD4" />
     <SolidColorBrush x:Key="Status.Warning"    Color="#E08000" />
-    <SolidColorBrush x:Key="Status.Error"      Color="#D93025" />
+    <SolidColorBrush x:Key="Status.Error"      Color="#C4293A" />
 
     <!-- Danger -->
-    <SolidColorBrush x:Key="Danger.Primary"    Color="#D93025" />
-    <SolidColorBrush x:Key="Danger.Hover"      Color="#B71C1C" />
+    <SolidColorBrush x:Key="Danger.Primary"    Color="#C4293A" />
+    <SolidColorBrush x:Key="Danger.Hover"      Color="#A0202E" />
 
     <!-- Cards -->
     <SolidColorBrush x:Key="Card.Background"   Color="#FFFFFF" />

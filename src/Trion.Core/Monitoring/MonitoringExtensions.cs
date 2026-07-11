@@ -13,7 +13,7 @@ public static class MonitoringExtensions
     /// </summary>
     public static IServiceCollection AddMonitoringServices(this IServiceCollection services)
     {
-        // Options — defaults are suitable for Desktop; Web binds from appsettings.json separately.
+        // Options -- defaults are suitable for Desktop; Web binds from appsettings.json separately.
         services.AddOptions<ProcessMonitorOptions>();
 
         services.AddSingleton<MetricsChannelAccessor>();

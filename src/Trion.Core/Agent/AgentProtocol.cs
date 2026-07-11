@@ -2,20 +2,21 @@ using Trion.Core.Abstractions.Services;
 
 namespace Trion.Core.Agent;
 
-// ── Base command wrapper ──────────────────────────────────────────────────────
+// -- Base command wrapper ------------------------------------------------------
 
 public sealed record AgentCommand(
     string CommandType,
     string Payload,       // JSON-serialized command body
-    string Hmac,          // HMAC-SHA256 of (CommandType + Payload)
-    string? PnToken = null);
+    string Hmac,          // HMAC-SHA256 of (Timestamp + ":" + CommandType + Payload)
+    string? PnToken = null,
+    long Timestamp = 0);  // Unix epoch seconds; 0 = legacy (no replay protection)
 
 public sealed record AgentResponse(
     bool Success,
     string? Payload,      // JSON-serialized response body (null on failure)
     string? Error = null);
 
-// ── Command bodies ────────────────────────────────────────────────────────────
+// -- Command bodies ------------------------------------------------------------
 
 public sealed record LaunchProcessCommand(
     string ExecutablePath,
@@ -48,7 +49,7 @@ public sealed record PingCommand();
 
 public sealed record PingResponse(DateTimeOffset ServerTime);
 
-// ── Command type constants ────────────────────────────────────────────────────
+// -- Command type constants ----------------------------------------------------
 
 public static class AgentCommandType
 {

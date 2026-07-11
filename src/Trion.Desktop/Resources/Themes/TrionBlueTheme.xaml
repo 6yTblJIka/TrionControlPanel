@@ -1,9 +1,7 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- ══════════════════════════════════════════════════════════
-         TRION BLUE — Deep navy with Trion-cyan accent
-         ══════════════════════════════════════════════════════════ -->
+    <!-- TRION BLUE - Deep navy with Trion-cyan accent -->
 
     <!-- Backgrounds -->
     <SolidColorBrush x:Key="Background.Primary"   Color="#0E0E1A" />
@@ -17,7 +15,7 @@
     <SolidColorBrush x:Key="Foreground.Muted"     Color="#484870" />
     <SolidColorBrush x:Key="Foreground.Disabled"  Color="#30304E" />
 
-    <!-- Accent — Trion Cyan -->
+    <!-- Accent - Trion Cyan -->
     <SolidColorBrush x:Key="Accent.Primary"    Color="#00D4FF" />
     <SolidColorBrush x:Key="Accent.Hover"      Color="#33DBFF" />
     <SolidColorBrush x:Key="Accent.Pressed"    Color="#00AACC" />
@@ -30,14 +28,14 @@
     <SolidColorBrush x:Key="Border.Focus"      Color="#00D4FF" />
 
     <!-- Status -->
-    <SolidColorBrush x:Key="Status.Running"    Color="#00E676" />
+    <SolidColorBrush x:Key="Status.Running"    Color="#2BE0A8" />
     <SolidColorBrush x:Key="Status.Stopped"    Color="#404060" />
     <SolidColorBrush x:Key="Status.Warning"    Color="#FFB347" />
-    <SolidColorBrush x:Key="Status.Error"      Color="#FF4757" />
+    <SolidColorBrush x:Key="Status.Error"      Color="#FF5D73" />
 
     <!-- Danger -->
-    <SolidColorBrush x:Key="Danger.Primary"    Color="#FF4757" />
-    <SolidColorBrush x:Key="Danger.Hover"      Color="#FF6B78" />
+    <SolidColorBrush x:Key="Danger.Primary"    Color="#FF5D73" />
+    <SolidColorBrush x:Key="Danger.Hover"      Color="#FF7E90" />
 
     <!-- Cards -->
     <SolidColorBrush x:Key="Card.Background"   Color="#161624" />
@@ -54,7 +52,7 @@
     <SolidColorBrush x:Key="Input.Background"  Color="#1E1E35" />
     <SolidColorBrush x:Key="Input.Border"      Color="#2A2A46" />
 
-    <!-- Focus glow (Color scalar — used in DropShadowEffect) -->
+    <!-- Focus glow (Color scalar - used in DropShadowEffect) -->
     <Color x:Key="Glow.Color">#00D4FF</Color>
 
     <!-- Scrollbar -->

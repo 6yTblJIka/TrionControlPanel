@@ -18,7 +18,7 @@ public sealed class AccountProfile
     public string? LastLogin { get; init; }
     public string? CreatedAt { get; init; }
 
-    /// <summary>64-character API key (fp_supp_… prefix).</summary>
+    /// <summary>64-character API key (fp_supp_... prefix).</summary>
     public string  ApiKey    { get; init; } = "";
 
     /// <summary>free | support | guardian | champion | legend</summary>

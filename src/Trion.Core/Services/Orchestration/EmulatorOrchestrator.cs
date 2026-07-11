@@ -26,7 +26,7 @@ public sealed class EmulatorOrchestrator : BackgroundService, IEmulatorOrchestra
         _log   = trionLogger.CreateLogger(nameof(EmulatorOrchestrator));
     }
 
-    // ── IEmulatorOrchestrator ──────────────────────────────────────────────────
+    // -- IEmulatorOrchestrator --------------------------------------------------
 
     public async Task StartAsync(EmulatorProfile profile, CancellationToken ct = default)
     {
@@ -126,7 +126,7 @@ public sealed class EmulatorOrchestrator : BackgroundService, IEmulatorOrchestra
     public IReadOnlyList<OrchestratorStatus> GetAllStatuses() =>
         _entries.Values.Select(e => e.ToStatus()).ToList();
 
-    // ── Background health-check loop ───────────────────────────────────────────
+    // -- Background health-check loop -------------------------------------------
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -164,7 +164,7 @@ public sealed class EmulatorOrchestrator : BackgroundService, IEmulatorOrchestra
                 if (alive)
                     continue;
 
-                // Process has gone away — decide whether to restart or mark crashed
+                // Process has gone away -- decide whether to restart or mark crashed
                 bool shouldRestart = false;
 
                 await entry.Lock.WaitAsync(stoppingToken);
@@ -219,7 +219,7 @@ public sealed class EmulatorOrchestrator : BackgroundService, IEmulatorOrchestra
         _log.LogInformation("Emulator orchestrator health-check loop stopped.");
     }
 
-    // ── Private state holder ───────────────────────────────────────────────────
+    // -- Private state holder ---------------------------------------------------
 
     private sealed class ProfileEntry(EmulatorProfile profile)
     {

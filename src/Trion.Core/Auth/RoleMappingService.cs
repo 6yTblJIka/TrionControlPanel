@@ -5,7 +5,7 @@ namespace Trion.Core.Auth;
 
 /// <summary>
 /// Maps panel accounts to <see cref="TrionRole"/> with a 5-minute memory-cache TTL.
-/// The web panel only supports the owner account — the owner always gets <see cref="TrionRole.Owner"/>.
+/// The web panel only supports the owner account -- the owner always gets <see cref="TrionRole.Owner"/>.
 /// </summary>
 public sealed class RoleMappingService
 {

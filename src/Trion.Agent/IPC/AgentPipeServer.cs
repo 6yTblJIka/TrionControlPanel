@@ -11,12 +11,12 @@ namespace Trion.Agent.IPC;
 
 /// <summary>
 /// Listens for IPC connections from Trion.Web:
-///   • Windows — named pipe  (<see cref="AgentOptions.PipeName"/>)
-///   • Linux   — Unix domain socket  (<see cref="AgentOptions.SocketPath"/>)
+///   * Windows -- named pipe  (<see cref="AgentOptions.PipeName"/>)
+///   * Linux   -- Unix domain socket  (<see cref="AgentOptions.SocketPath"/>)
 ///
 /// Wire protocol (per connection):
-///   → 4-byte little-endian message length + UTF-8 JSON (AgentCommand)
-///   ← 4-byte little-endian message length + UTF-8 JSON (AgentResponse)
+///   -> 4-byte little-endian message length + UTF-8 JSON (AgentCommand)
+///   <- 4-byte little-endian message length + UTF-8 JSON (AgentResponse)
 ///
 /// Each connection is handled in its own Task.
 /// </summary>
@@ -44,11 +44,11 @@ public sealed class AgentPipeServer : BackgroundService
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             return RunLinuxSocketAsync(stoppingToken);
 
-        _log.LogError("AgentPipeServer: unsupported platform — agent will not accept connections");
+        _log.LogError("AgentPipeServer: unsupported platform -- agent will not accept connections");
         return Task.Delay(Timeout.Infinite, stoppingToken);
     }
 
-    // ── Windows: named pipe ───────────────────────────────────────────────────
+    // -- Windows: named pipe ---------------------------------------------------
 
     private async Task RunWindowsPipeAsync(CancellationToken ct)
     {
@@ -97,7 +97,7 @@ public sealed class AgentPipeServer : BackgroundService
         }
     }
 
-    // ── Linux: Unix domain socket ─────────────────────────────────────────────
+    // -- Linux: Unix domain socket ---------------------------------------------
 
     private async Task RunLinuxSocketAsync(CancellationToken ct)
     {
@@ -116,7 +116,7 @@ public sealed class AgentPipeServer : BackgroundService
         server.Bind(new UnixDomainSocketEndPoint(socketPath));
         server.Listen(backlog: 10);
 
-        // Allow group read/write (0660) — both agent and web service share a group in production
+        // Allow group read/write (0660) -- both agent and web service share a group in production
 #pragma warning disable CA1416  // This method is only called on Linux (see ExecuteAsync)
         File.SetUnixFileMode(socketPath,
             UnixFileMode.UserRead  | UnixFileMode.UserWrite |
@@ -164,7 +164,7 @@ public sealed class AgentPipeServer : BackgroundService
         catch (Exception ex) { _log.LogError(ex, "Error handling socket connection"); }
     }
 
-    // ── Wire-protocol helpers ─────────────────────────────────────────────────
+    // -- Wire-protocol helpers -------------------------------------------------
 
     private const int MaxMessageBytes = 4 * 1024 * 1024; // 4 MB safety cap
 

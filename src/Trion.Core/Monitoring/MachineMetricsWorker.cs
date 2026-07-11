@@ -35,7 +35,7 @@ public sealed class MachineMetricsWorker : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         // Yield immediately so BackgroundService.StartAsync() returns before we do any
-        // work — this ensures PDH counter init runs on the thread pool, not the UI thread.
+        // work -- this ensures PDH counter init runs on the thread pool, not the UI thread.
         await Task.Yield();
 
         _log.LogInformation("MachineMetricsWorker started.");
@@ -47,6 +47,8 @@ public sealed class MachineMetricsWorker : BackgroundService
                 var snapshot = _provider.GetSnapshot() with { Timestamp = DateTimeOffset.UtcNow };
                 _accessor.MachineWriter.TryWrite(snapshot);
                 _accessor.SetLastMachine(snapshot);
+
+                await Task.Delay(_opts.CurrentValue.RefreshInterval, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -54,12 +56,10 @@ public sealed class MachineMetricsWorker : BackgroundService
             }
             catch (Exception ex)
             {
-                _log.LogError(ex, "MachineMetricsWorker poll failed — retrying in {Delay}s.", RetryDelay.TotalSeconds);
-                await Task.Delay(RetryDelay, stoppingToken);
-                continue;
+                _log.LogError(ex, "MachineMetricsWorker poll failed -- retrying in {Delay}s.", RetryDelay.TotalSeconds);
+                try { await Task.Delay(RetryDelay, stoppingToken); }
+                catch (OperationCanceledException) { break; }
             }
-
-            await Task.Delay(_opts.CurrentValue.RefreshInterval, stoppingToken);
         }
 
         _log.LogInformation("MachineMetricsWorker stopped.");

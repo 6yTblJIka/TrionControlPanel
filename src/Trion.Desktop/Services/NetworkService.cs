@@ -10,7 +10,7 @@ public sealed class NetworkService : INetworkService
 {
     private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-    // ── Internal IPs ─────────────────────────────────────────────────────────
+    // -- Internal IPs ---------------------------------------------------------
 
     /// <inheritdoc />
     public IReadOnlyList<string> GetInternalIpv4Addresses()
@@ -46,7 +46,7 @@ public sealed class NetworkService : INetworkService
         return results.Count > 0 ? results : ["0.0.0.0"];
     }
 
-    // ── Public IP ─────────────────────────────────────────────────────────────
+    // -- Public IP -------------------------------------------------------------
 
     /// <inheritdoc />
     public async Task<string> GetPublicIpv4Async(CancellationToken ct = default)

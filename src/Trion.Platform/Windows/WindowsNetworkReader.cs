@@ -10,7 +10,7 @@ public sealed class WindowsNetworkReader : IDisposable
 {
     private readonly ILogger _log;
 
-    // Cached per-interface counter pairs — created once, reused on every poll
+    // Cached per-interface counter pairs -- created once, reused on every poll
     private readonly List<(PerformanceCounter Rx, PerformanceCounter Tx)> _counters = [];
     private bool _initialized;
 

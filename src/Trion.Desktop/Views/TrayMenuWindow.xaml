@@ -10,7 +10,7 @@
         ResizeMode="NoResize">
 
     <Window.Resources>
-        <!-- Themed item button — hover uses Sidebar.HoverBg + Accent.Primary text -->
+        <!-- Themed item button - hover uses Sidebar.HoverBg + Accent.Primary text -->
         <Style x:Key="TrayItemStyle" TargetType="Button">
             <Setter Property="Background"                 Value="Transparent"/>
             <Setter Property="Foreground"                 Value="{DynamicResource Foreground.Primary}"/>
@@ -66,7 +66,7 @@
             <StackPanel MinWidth="190" Margin="5">
 
                 <!-- App name header -->
-                <TextBlock Text="Trion Control Panel"
+                <TextBlock x:Name="AppTitleText"
                            Foreground="{DynamicResource Foreground.Secondary}"
                            FontFamily="Segoe UI"
                            FontSize="10"
@@ -76,7 +76,7 @@
                         Background="{DynamicResource Border.Default}"
                         Margin="8,0,8,4"/>
 
-                <Button Content="Open Trion"
+                <Button x:Name="OpenButton"
                         Style="{StaticResource TrayItemStyle}"
                         Click="OpenButton_Click"
                         Margin="4,0"/>
@@ -85,7 +85,7 @@
                         Background="{DynamicResource Border.Default}"
                         Margin="8,4"/>
 
-                <Button Content="Exit"
+                <Button x:Name="ExitButton"
                         Style="{StaticResource TrayItemStyle}"
                         Click="ExitButton_Click"
                         Margin="4,0,4,4"/>

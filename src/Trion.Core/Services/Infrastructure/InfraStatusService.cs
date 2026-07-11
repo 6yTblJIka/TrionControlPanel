@@ -27,7 +27,7 @@ public sealed class InfraStatusService
         return await Task.WhenAll(tasks);
     }
 
-    // ── Helpers ─────────────────────────────────────────────────────────────
+    // -- Helpers -------------------------------------------------------------
 
     private static async Task<InfraStatus> ProbeAsync(string name, Task<(bool ok, string detail)> probe)
     {

@@ -8,7 +8,7 @@ namespace Trion.Desktop.Services;
 /// </summary>
 public interface IDatabaseService
 {
-    // ── Connectivity ──────────────────────────────────────────────────────────
+    // -- Connectivity ----------------------------------------------------------
 
     /// <summary>
     /// Pings the MySQL server using the well-known <c>root</c> account
@@ -22,13 +22,13 @@ public interface IDatabaseService
     /// <summary>
     /// Opens a connection to <c>information_schema</c> and runs <c>SELECT 1</c>.
     /// Returns success flag, a human-readable message, and the round-trip latency.
-    /// The provided credentials are used directly — nothing is read from settings.
+    /// The provided credentials are used directly -- nothing is read from settings.
     /// </summary>
     Task<(bool Success, string Message, TimeSpan Latency)> TestConnectionAsync(
         string host, string port, string user, string password,
         CancellationToken ct = default);
 
-    // ── RealmList ─────────────────────────────────────────────────────────────
+    // -- RealmList -------------------------------------------------------------
 
     /// <summary>Returns up to 10 realms from the auth database realmlist table.</summary>
     Task<List<RealmEntry>> GetRealmsAsync(CancellationToken ct = default);
@@ -46,7 +46,7 @@ public interface IDatabaseService
     Task<(bool Ok, string Error)> UpdateRealmAddressAsync(int realmId, string address,
         CancellationToken ct = default);
 
-    // ── Accounts ──────────────────────────────────────────────────────────────
+    // -- Accounts --------------------------------------------------------------
 
     /// <summary>
     /// Creates a game account with the correct SRP6 hashing for the active core.

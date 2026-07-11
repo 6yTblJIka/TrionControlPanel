@@ -2,7 +2,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:conv="clr-namespace:Trion.Desktop.Infrastructure.Converters">
 
-    <!-- ── Global converters ── -->
+    <!-- Global converters -->
     <conv:BoolToVisibilityConverter        x:Key="BoolToVisibility" />
     <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility" />
     <conv:NullToVisibilityConverter        x:Key="NullToVisibility" />
@@ -11,9 +11,7 @@
     <conv:EnumToVisibilityConverter        x:Key="EnumToVisibility" />
     <conv:ResourceKeyConverter             x:Key="ResourceKey" />
 
-    <!-- ══════════════════════════════════════════════════════════
-         WINDOW / ROOT
-         ══════════════════════════════════════════════════════════ -->
+    <!-- WINDOW / ROOT -->
     <Style TargetType="Window">
         <Setter Property="Background"         Value="{DynamicResource Background.Primary}" />
         <Setter Property="Foreground"         Value="{DynamicResource Foreground.Primary}" />
@@ -31,9 +29,7 @@
         <Setter Property="FontSize"   Value="13" />
     </Style>
 
-    <!-- ══════════════════════════════════════════════════════════
-         SEPARATOR
-         ══════════════════════════════════════════════════════════ -->
+    <!-- SEPARATOR -->
     <Style TargetType="Separator">
         <Setter Property="Background" Value="{DynamicResource Border.Default}" />
         <Setter Property="Height"     Value="1" />
@@ -48,12 +44,7 @@
         </Setter>
     </Style>
 
-    <!-- ══════════════════════════════════════════════════════════
-         SCROLLVIEWER + SCROLLBAR
-         · Rest:  thin thumb (4 px), track invisible
-         · Hover: thumb expands to 8 px + Accent colour, track fades in
-         · Drag:  Accent colour, fully expanded
-         ══════════════════════════════════════════════════════════ -->
+    <!-- SCROLLVIEWER + SCROLLBAR · Rest: thin thumb (4 px), track invisible · Hover: thumb expands to 8 px + Accent colour, track fades in · Drag: Accent colour, fully expanded -->
 
     <!-- Thumb -->
     <Style x:Key="ThinScrollBarThumb" TargetType="Thumb">
@@ -81,7 +72,7 @@
         </Setter>
     </Style>
 
-    <!-- ScrollBar (vertical only — horizontal is disabled in the ScrollViewer template) -->
+    <!-- ScrollBar (vertical only - horizontal is disabled in the ScrollViewer template) -->
     <Style x:Key="ThinScrollBarStyle" TargetType="ScrollBar">
         <Setter Property="OverridesDefaultStyle" Value="True" />
         <Setter Property="Width"    Value="12" />
@@ -90,7 +81,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="ScrollBar">
                     <Grid>
-                        <!-- Track background — invisible at rest, fades in on hover -->
+                        <!-- Track background - invisible at rest, fades in on hover -->
                         <Border x:Name="TrackBg"
                                 Background="{DynamicResource ScrollBar.Track}"
                                 CornerRadius="6"
@@ -157,10 +148,7 @@
         </Setter>
     </Style>
 
-    <!-- ══════════════════════════════════════════════════════════
-         TEXTBOX  (with optional Tag-based placeholder)
-         Usage: Tag="Placeholder text…"
-         ══════════════════════════════════════════════════════════ -->
+    <!-- TEXTBOX (with optional Tag-based placeholder) Usage: Tag="Placeholder text…" -->
     <Style x:Key="InputStyle" TargetType="TextBox">
         <Setter Property="Background"               Value="{DynamicResource Input.Background}" />
         <Setter Property="Foreground"               Value="{DynamicResource Foreground.Primary}" />
@@ -237,9 +225,7 @@
         </Setter>
     </Style>
 
-    <!-- ══════════════════════════════════════════════════════════
-         PASSWORDBOX
-         ══════════════════════════════════════════════════════════ -->
+    <!-- PASSWORDBOX -->
     <Style x:Key="PasswordInputStyle" TargetType="PasswordBox">
         <Setter Property="Background"               Value="{DynamicResource Input.Background}" />
         <Setter Property="Foreground"               Value="{DynamicResource Foreground.Primary}" />
@@ -291,9 +277,7 @@
         </Setter>
     </Style>
 
-    <!-- ══════════════════════════════════════════════════════════
-         COMBOBOX
-         ══════════════════════════════════════════════════════════ -->
+    <!-- COMBOBOX -->
     <ControlTemplate x:Key="ComboBoxToggleTemplate" TargetType="ToggleButton">
         <Border x:Name="Root"
                 Background="{TemplateBinding Background}"
@@ -427,10 +411,7 @@
         </Setter>
     </Style>
 
-    <!-- ══════════════════════════════════════════════════════════
-         TOGGLE SWITCH (styled CheckBox)
-         Binds IsChecked normally; Content is the label (shown left).
-         ══════════════════════════════════════════════════════════ -->
+    <!-- TOGGLE SWITCH (styled CheckBox) Binds IsChecked normally; Content is the label (shown left). -->
     <Style x:Key="ToggleSwitchStyle" TargetType="CheckBox">
         <Setter Property="Foreground"       Value="{DynamicResource Foreground.Primary}" />
         <Setter Property="FontSize"         Value="13" />
@@ -521,9 +502,7 @@
     <Style x:Key="ToggleCheckStyle" TargetType="CheckBox"
            BasedOn="{StaticResource ToggleSwitchStyle}" />
 
-    <!-- ══════════════════════════════════════════════════════════
-         PROGRESSBAR
-         ══════════════════════════════════════════════════════════ -->
+    <!-- PROGRESSBAR -->
     <Style x:Key="ModernProgressBarStyle" TargetType="ProgressBar">
         <Setter Property="Height"     Value="6" />
         <Setter Property="Background" Value="{DynamicResource Background.Elevated}" />
@@ -546,9 +525,7 @@
         </Setter>
     </Style>
 
-    <!-- ══════════════════════════════════════════════════════════
-         LISTBOX — transparent, borderless
-         ══════════════════════════════════════════════════════════ -->
+    <!-- LISTBOX - transparent, borderless -->
     <Style TargetType="ListBox">
         <Setter Property="Background"     Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
@@ -568,9 +545,7 @@
         </Setter>
     </Style>
 
-    <!-- ══════════════════════════════════════════════════════════
-         TOOLTIP
-         ══════════════════════════════════════════════════════════ -->
+    <!-- TOOLTIP -->
     <Style TargetType="ToolTip">
         <Setter Property="Background"     Value="{DynamicResource Background.Elevated}" />
         <Setter Property="Foreground"     Value="{DynamicResource Foreground.Primary}" />

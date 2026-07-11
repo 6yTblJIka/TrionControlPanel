@@ -18,7 +18,7 @@ public sealed class ServiceControlHandlerTests
                 TestLogger.Instance),
             TestLogger.Instance);
 
-    // ── Action routing ────────────────────────────────────────────────────────
+    // -- Action routing --------------------------------------------------------
 
     [Theory]
     [InlineData("start")]
@@ -31,7 +31,7 @@ public sealed class ServiceControlHandlerTests
         var cmd  = new ServiceControlCommand("worldserver", action);
         var resp = await sut.HandleAsync(cmd);
 
-        // Should not produce an "Unknown action" error — routing worked
+        // Should not produce an "Unknown action" error -- routing worked
         Assert.DoesNotContain("Unknown action", resp.ErrorMessage ?? "",
             StringComparison.OrdinalIgnoreCase);
     }
@@ -48,7 +48,7 @@ public sealed class ServiceControlHandlerTests
             StringComparison.OrdinalIgnoreCase);
     }
 
-    // ── Service name passed through to systemctl args ─────────────────────────
+    // -- Service name passed through to systemctl args -------------------------
     // On Linux, systemctl is at /usr/bin/systemctl which is in the allowlist.
     // The handler will fail with an OS error (binary not found or access denied
     // in the test environment) but NOT with a "not permitted" allowlist error,

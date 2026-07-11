@@ -110,7 +110,7 @@ public sealed class SettingsRepositoryTests : IAsyncLifetime
     }
 }
 
-// Minimal Dapper shim for the test — avoids adding Dapper to the test project directly
+// Minimal Dapper shim for the test -- avoids adding Dapper to the test project directly
 file static class SqliteConnectionExtensions
 {
     public static async Task<T> QuerySingleAsync<T>(

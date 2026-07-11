@@ -24,7 +24,7 @@ public sealed class AuditLogger : IAsyncDisposable
 
     public void Record(AuditEvent evt)
     {
-        // Fire-and-forget — audit writes must not block callers
+        // Fire-and-forget -- audit writes must not block callers
         _ = WriteAsync(evt);
     }
 

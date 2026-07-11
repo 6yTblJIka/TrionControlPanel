@@ -5,12 +5,12 @@ namespace Trion.Desktop.Controls;
 
 /// <summary>
 /// Lightweight filled-area sparkline chart rendered via WPF DrawingContext.
-/// Assign a new <c>double[]</c> to <see cref="Values"/> on each data update —
+/// Assign a new <c>double[]</c> to <see cref="Values"/> on each data update --
 /// the control invalidates automatically via the DependencyProperty framework.
 /// </summary>
 public sealed class SparklineChart : FrameworkElement
 {
-    // ── Dependency Properties ─────────────────────────────────────────────────
+    // -- Dependency Properties -------------------------------------------------
 
     public static readonly DependencyProperty ValuesProperty =
         DependencyProperty.Register(nameof(Values), typeof(double[]),
@@ -31,7 +31,7 @@ public sealed class SparklineChart : FrameworkElement
                 FrameworkPropertyMetadataOptions.AffectsRender));
 
     /// <summary>
-    /// Fixed Y-axis maximum. If ≤ 0 the chart auto-scales to the window's peak value.
+    /// Fixed Y-axis maximum. If <= 0 the chart auto-scales to the window's peak value.
     /// </summary>
     public static readonly DependencyProperty MaxValueProperty =
         DependencyProperty.Register(nameof(MaxValue), typeof(double),
@@ -49,7 +49,7 @@ public sealed class SparklineChart : FrameworkElement
             new FrameworkPropertyMetadata(false,
                 FrameworkPropertyMetadataOptions.AffectsRender));
 
-    // ── CLR wrappers ──────────────────────────────────────────────────────────
+    // -- CLR wrappers ----------------------------------------------------------
 
     public double[]? Values
     {
@@ -81,7 +81,7 @@ public sealed class SparklineChart : FrameworkElement
         set => SetValue(ShowMaxLineProperty, value);
     }
 
-    // ── Rendering ─────────────────────────────────────────────────────────────
+    // -- Rendering -------------------------------------------------------------
 
     protected override void OnRender(DrawingContext dc)
     {
@@ -91,7 +91,7 @@ public sealed class SparklineChart : FrameworkElement
 
         var values = Values;
 
-        // No data yet — just draw a subtle baseline
+        // No data yet -- just draw a subtle baseline
         if (values == null || values.Length < 2)
         {
             var baselinePen = new Pen(Stroke, 1.0);
@@ -101,7 +101,7 @@ public sealed class SparklineChart : FrameworkElement
             return;
         }
 
-        // ── Y-axis scale ──────────────────────────────────────────────────────
+        // -- Y-axis scale ------------------------------------------------------
 
         double max = MaxValue > 0 ? MaxValue : 0;
         if (max <= 0)
@@ -112,11 +112,11 @@ public sealed class SparklineChart : FrameworkElement
         double xStep  = (w - 1.0) / Math.Max(count - 1, 1);
         double yScale = h - 2.0;   // leave 1 px top/bottom breathing room
 
-        // ── Helper: Y coordinate for a value ─────────────────────────────────
+        // -- Helper: Y coordinate for a value ---------------------------------
 
         double Y(double v) => h - 1.0 - Math.Clamp(v / max, 0.0, 1.0) * yScale;
 
-        // ── Optional horizontal grid lines (25 %, 50 %, 75 %) ─────────────────
+        // -- Optional horizontal grid lines (25 %, 50 %, 75 %) -----------------
 
         if (Fill is SolidColorBrush || Fill != Brushes.Transparent)
         {
@@ -129,17 +129,17 @@ public sealed class SparklineChart : FrameworkElement
             }
         }
 
-        // ── Max / ceiling reference line ──────────────────────────────────────
+        // -- Max / ceiling reference line --------------------------------------
 
         if (ShowMaxLine && MaxValue > 0)
         {
-            double yCeil = Y(max);   // top of scale — y ≈ 1 px
+            double yCeil = Y(max);   // top of scale -- y ~= 1 px
             var ceilPen = new Pen(Stroke, 1.0) { DashStyle = DashStyles.Dash };
             ceilPen.Freeze();
             dc.DrawLine(ceilPen, new Point(0, yCeil), new Point(w, yCeil));
         }
 
-        // ── Filled area geometry ──────────────────────────────────────────────
+        // -- Filled area geometry ----------------------------------------------
 
         var fillGeo = new StreamGeometry();
         using (var ctx = fillGeo.Open())
@@ -155,7 +155,7 @@ public sealed class SparklineChart : FrameworkElement
         fillGeo.Freeze();
         dc.DrawGeometry(Fill, null, fillGeo);
 
-        // ── Stroke line ───────────────────────────────────────────────────────
+        // -- Stroke line -------------------------------------------------------
 
         var lineGeo = new StreamGeometry();
         using (var ctx = lineGeo.Open())
@@ -170,7 +170,7 @@ public sealed class SparklineChart : FrameworkElement
         pen.Freeze();
         dc.DrawGeometry(null, pen, lineGeo);
 
-        // ── Current-value dot at the rightmost point ──────────────────────────
+        // -- Current-value dot at the rightmost point --------------------------
 
         double dotX = (count - 1) * xStep;
         double dotY = Y(values[count - 1]);

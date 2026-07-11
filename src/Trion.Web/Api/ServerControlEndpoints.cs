@@ -11,7 +11,7 @@ public static class ServerControlEndpoints
             .WithTags("Server Control")
             .RequireAuthorization("RequireGmLevel2");
 
-        // POST /api/server/{id}/start  — body: EmulatorProfile JSON
+        // POST /api/server/{id}/start  -- body: EmulatorProfile JSON
         group.MapPost("/{id}/start", StartServer)
             .WithName("StartServer")
             .WithSummary("Registers and starts an emulator profile.")

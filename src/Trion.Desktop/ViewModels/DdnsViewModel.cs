@@ -23,9 +23,9 @@ public partial class DdnsViewModel : ObservableObject, IDisposable
     [ObservableProperty] private string _password        = string.Empty;
     [ObservableProperty] private int    _interval        = 300;
     [ObservableProperty] private bool   _runOnStartup;
-    [ObservableProperty] private string _publicIp        = "—";
+    [ObservableProperty] private string _publicIp        = "--";
     [ObservableProperty] private bool   _isIpVisible;
-    [ObservableProperty] private string _timerDisplay    = "—";
+    [ObservableProperty] private string _timerDisplay    = "--";
     [ObservableProperty] private bool   _isTimerRunning;
     [ObservableProperty] private string _statusMessage   = string.Empty;
 
@@ -33,7 +33,7 @@ public partial class DdnsViewModel : ObservableObject, IDisposable
     [NotifyCanExecuteChangedFor(nameof(UpdateNowCommand))]
     private bool _isUpdating;
 
-    [ObservableProperty] private string _lastUpdated  = "—";
+    [ObservableProperty] private string _lastUpdated  = "--";
     [ObservableProperty] private bool   _lastUpdateOk;
 
     public static IReadOnlyList<string> Services { get; } =
@@ -81,12 +81,12 @@ public partial class DdnsViewModel : ObservableObject, IDisposable
         PublicIp = await _network.GetPublicIpv4Async().ConfigureAwait(false);
     }
 
-    // ── IP visibility toggle ──────────────────────────────────────────────────
+    // -- IP visibility toggle --------------------------------------------------
 
     [RelayCommand]
     private void ToggleIpVisibility() => IsIpVisible = !IsIpVisible;
 
-    // ── Save settings ─────────────────────────────────────────────────────────
+    // -- Save settings ---------------------------------------------------------
 
     [RelayCommand]
     private void SaveSettings()
@@ -102,7 +102,7 @@ public partial class DdnsViewModel : ObservableObject, IDisposable
         StatusMessage = _loc["DdnsSettingsSaved"];
     }
 
-    // ── Countdown timer ───────────────────────────────────────────────────────
+    // -- Countdown timer -------------------------------------------------------
 
     [RelayCommand(CanExecute = nameof(CanStartTimer))]
     private void StartTimer()
@@ -125,7 +125,7 @@ public partial class DdnsViewModel : ObservableObject, IDisposable
         _countdownTimer?.Dispose();
         _countdownTimer = null;
         IsTimerRunning  = false;
-        TimerDisplay    = "—";
+        TimerDisplay    = "--";
         StatusMessage   = _loc["DdnsTimerStopped"];
         StartTimerCommand.NotifyCanExecuteChanged();
         StopTimerCommand.NotifyCanExecuteChanged();
@@ -145,13 +145,13 @@ public partial class DdnsViewModel : ObservableObject, IDisposable
         }
     }
 
-    // ── Manual "Update Now" ───────────────────────────────────────────────────
+    // -- Manual "Update Now" ---------------------------------------------------
 
     [RelayCommand(CanExecute = nameof(CanUpdateNow))]
     private Task UpdateNowAsync() => PerformUpdateAsync(force: true);
     private bool CanUpdateNow() => !IsUpdating;
 
-    // ── Core update logic ─────────────────────────────────────────────────────
+    // -- Core update logic -----------------------------------------------------
 
     private async Task PerformUpdateAsync(bool force)
     {
@@ -187,7 +187,7 @@ public partial class DdnsViewModel : ObservableObject, IDisposable
 
             // 4. Send update to provider
             await App.Current.Dispatcher.InvokeAsync(() =>
-                StatusMessage = $"{_loc["DdnsUpdating"]} {SelectedService}…");
+                StatusMessage = $"{_loc["DdnsUpdating"]} {SelectedService}...");
 
             var result = await _ddns
                 .UpdateAsync(SelectedService, Domain, Username, Password, newIp)
@@ -205,7 +205,7 @@ public partial class DdnsViewModel : ObservableObject, IDisposable
                 LastUpdateOk  = result.Success;
                 LastUpdated   = DateTime.Now.ToString("HH:mm:ss");
                 StatusMessage = result.Success
-                    ? $"{_loc["DdnsUpdatedSuccess"]} → {newIp}"
+                    ? $"{_loc["DdnsUpdatedSuccess"]} -> {newIp}"
                     : $"{_loc["DdnsUpdateFailed"]}: {result.Message}";
             });
         }

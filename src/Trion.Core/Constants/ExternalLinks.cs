@@ -6,40 +6,40 @@ namespace Trion.Core.Constants;
 /// </summary>
 public static class ExternalLinks
 {
-    // ── Trion / Flying-Phoenix ────────────────────────────────────────────────
+    // -- Trion / Flying-Phoenix ------------------------------------------------
 
     /// <summary>Default API host. Loaded into AppLinks.ApiBaseUrl on startup.</summary>
     public const string ApiDefaultHost = "https://flying-phoenix.dev";
 
     public const string WebSite  = "https://flying-phoenix.dev/";
-    public const string Support  = "https://flying-phoenix.dev/support.php";
+    public const string Support  = "https://flying-phoenix.dev/support";
     public const string Discord  = "https://discord.gg/By4nkETRXS";
-    public const string Donation = "https://github.com/sponsors/TrionControlPanel";
+    public const string Donation = "https://flying-phoenix.dev/support";
 
     /// <summary>Dev / local fallback when the main API host is unreachable.</summary>
     public const string ApiBackupHost = "http://localhost:5000";
 
-    // ── Third-party services ──────────────────────────────────────────────────
+    // -- Third-party services --------------------------------------------------
 
-    /// <summary>Plain-text public IPv4 lookup — returns the raw IP string.</summary>
+    /// <summary>Plain-text public IPv4 lookup -- returns the raw IP string.</summary>
     public const string PublicIpFallback = "https://api.ipify.org";
 
-    // ── MySQL portable package ────────────────────────────────────────────────
+    // -- MySQL portable package ------------------------------------------------
     // Update both MySqlVersion and MySqlCdnDownload together whenever upgrading MySQL.
 
     /// <summary>MySQL version served by the Trion API and used for the local cache filename.</summary>
     public const string MySqlVersion = "8.4.8";
 
     /// <summary>
-    /// Direct CDN fallback — only used when the Trion API download fails.
+    /// Direct CDN fallback -- only used when the Trion API download fails.
     /// </summary>
     public const string MySqlCdnDownload =
         "https://cdn.mysql.com//Downloads/MySQL-8.4/mysql-8.4.8-winx64.zip";
 
-    // ── Web server package (nginx + PHP combined) ────────────────────────────
+    // -- Web server package (nginx + PHP combined) ----------------------------
     // The combined webserver.zip is uploaded via the admin panel and served from the
     // Trion API only (no CDN fallback). Update NginxVersion and PhpVersion here
-    // whenever nginx or PHP is upgraded — these are used for display and php.ini / nginx.conf.
+    // whenever nginx or PHP is upgraded -- these are used for display and php.ini / nginx.conf.
 
     /// <summary>nginx version bundled inside the web server package. Used for display and config generation.</summary>
     public const string NginxVersion = "1.28.2";
@@ -47,7 +47,7 @@ public static class ExternalLinks
     /// <summary>PHP version bundled inside the web server package. Used for display and config generation.</summary>
     public const string PhpVersion = "8.3.20";
 
-    // ── Emulator repositories ─────────────────────────────────────────────────
+    // -- Emulator repositories -------------------------------------------------
 
     public static class Emulators
     {
@@ -59,7 +59,7 @@ public static class ExternalLinks
         public const string VMaNGOS     = "https://github.com/vmangos/";
     }
 
-    // ── DDNS provider sign-up / management websites ───────────────────────────
+    // -- DDNS provider sign-up / management websites ---------------------------
 
     public static class DdnsWebsites
     {

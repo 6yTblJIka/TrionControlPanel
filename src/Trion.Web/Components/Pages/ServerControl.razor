@@ -4,7 +4,7 @@
 
 @inject IEmulatorOrchestrator Orchestrator
 
-<PageTitle>Server Control – Trion</PageTitle>
+<PageTitle>Server Control - Trion</PageTitle>
 
 <MudText Typo="Typo.h5" Class="mb-4">Server Control</MudText>
 
@@ -33,8 +33,8 @@ else
                     @context.State
                 </MudChip>
             </MudTd>
-            <MudTd DataLabel="PID">@(context.Pid?.ToString() ?? "—")</MudTd>
-            <MudTd DataLabel="Started">@(context.StartedAt?.ToString("HH:mm:ss") ?? "—")</MudTd>
+            <MudTd DataLabel="PID">@(context.Pid?.ToString() ?? "--")</MudTd>
+            <MudTd DataLabel="Started">@(context.StartedAt?.ToString("HH:mm:ss") ?? "--")</MudTd>
             <MudTd DataLabel="Restarts">@context.RestartCount</MudTd>
             <MudTd DataLabel="Actions">
                 <MudIconButton Icon="@Icons.Material.Filled.Stop"

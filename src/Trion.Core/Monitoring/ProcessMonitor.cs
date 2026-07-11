@@ -12,7 +12,7 @@ namespace Trion.Core.Monitoring;
 /// Background service that tracks a set of processes and writes
 /// <see cref="ProcessMetrics"/> arrays into <see cref="MetricsChannelAccessor"/>.
 /// PIDs are tracked at runtime via <see cref="Track"/>/<see cref="Untrack"/>.
-/// No event Action callbacks — channel-only writes.
+/// No event Action callbacks -- channel-only writes.
 /// </summary>
 public sealed class ProcessMonitor : BackgroundService, IProcessMonitor
 {
@@ -22,14 +22,14 @@ public sealed class ProcessMonitor : BackgroundService, IProcessMonitor
     private readonly IOptionsMonitor<ProcessMonitorOptions> _opts;
     private readonly ILogger                             _log;
 
-    // Runtime-tracked PIDs — replaces the config-level ExplicitPids array
+    // Runtime-tracked PIDs -- replaces the config-level ExplicitPids array
     private readonly ConcurrentDictionary<int, byte> _trackedPids = new();
 
     // Previous snapshot per PID
     private readonly ConcurrentDictionary<int, ProcessMetricsSnapshot> _previous = new();
 
     /// <summary>
-    /// Raised when a tracked process exits. Low-frequency event — OK to use here.
+    /// Raised when a tracked process exits. Low-frequency event -- OK to use here.
     /// </summary>
     public event Action<int>? OnProcessExited;
 
@@ -56,14 +56,14 @@ public sealed class ProcessMonitor : BackgroundService, IProcessMonitor
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         // Yield immediately so BackgroundService.StartAsync() returns before we do any
-        // work — keeps Process.GetProcesses() off the UI thread on first poll.
+        // work -- keeps Process.GetProcesses() off the UI thread on first poll.
         await Task.Yield();
 
         var opts = _opts.CurrentValue;
 
         if (opts.ProcessNameFilter.Length == 0 && _trackedPids.IsEmpty)
             _log.LogWarning(
-                "ProcessMonitor: ProcessNameFilter is empty and no PIDs tracked — " +
+                "ProcessMonitor: ProcessNameFilter is empty and no PIDs tracked -- " +
                 "no processes will be monitored until Track() is called.");
 
         _log.LogInformation("ProcessMonitor started.");
@@ -75,6 +75,8 @@ public sealed class ProcessMonitor : BackgroundService, IProcessMonitor
                 var metrics = Poll(stoppingToken);
                 _accessor.ProcessWriter.TryWrite(metrics);
                 _accessor.SetLastProcess(metrics);
+
+                await Task.Delay(_opts.CurrentValue.RefreshInterval, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -82,12 +84,10 @@ public sealed class ProcessMonitor : BackgroundService, IProcessMonitor
             }
             catch (Exception ex)
             {
-                _log.LogError(ex, "ProcessMonitor poll failed — retrying in {Delay}s.", RetryDelay.TotalSeconds);
-                await Task.Delay(RetryDelay, stoppingToken);
-                continue;
+                _log.LogError(ex, "ProcessMonitor poll failed -- retrying in {Delay}s.", RetryDelay.TotalSeconds);
+                try { await Task.Delay(RetryDelay, stoppingToken); }
+                catch (OperationCanceledException) { break; }
             }
-
-            await Task.Delay(_opts.CurrentValue.RefreshInterval, stoppingToken);
         }
 
         _log.LogInformation("ProcessMonitor stopped.");
@@ -131,7 +131,7 @@ public sealed class ProcessMonitor : BackgroundService, IProcessMonitor
             {
                 if (_previous.TryGetValue(p.Id, out var prev))
                 {
-                    // PID reuse guard — if start time changed, treat as new process
+                    // PID reuse guard -- if start time changed, treat as new process
                     DateTime startTime;
                     try { startTime = p.StartTime; }
                     catch { startTime = prev.StartTime; }
@@ -217,7 +217,7 @@ public sealed class ProcessMonitor : BackgroundService, IProcessMonitor
 
     private static (long Read, long Write) ReadProcIo(int pid)
     {
-        // Linux: /proc/{pid}/io  (no-op on Windows — returns zeros)
+        // Linux: /proc/{pid}/io  (no-op on Windows -- returns zeros)
         try
         {
             var path = $"/proc/{pid}/io";

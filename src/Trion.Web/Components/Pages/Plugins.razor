@@ -1,0 +1,139 @@
+@page "/plugins"
+@inject Trion.Core.Plugins.PluginLoader         PluginLoader
+@inject Trion.Core.Plugins.PluginApprovalStore  ApprovalStore
+
+<PageTitle>Plugins</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Plugins</MudText>
+<MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">
+    Drop plugin DLLs into the <code>plugins/</code> folder next to the executable, then restart Trion.Web to load them.
+    When <strong>Strict Mode</strong> is enabled (via <code>Plugins:StrictMode</code> in appsettings.json),
+    only plugins whose SHA-256 hash you have explicitly approved will be loaded.
+</MudText>
+
+@if (_manifests.Count == 0)
+{
+    <MudAlert Severity="Severity.Info">
+        No plugins found. Place a plugin <code>.dll</code> in
+        <code>@System.IO.Path.Combine(AppContext.BaseDirectory, "plugins")</code> and restart.
+    </MudAlert>
+}
+else
+{
+    <MudGrid>
+        @foreach (var m in _manifests)
+        {
+            <MudItem xs="12" sm="6" lg="4">
+                <MudCard Outlined="true">
+                    <MudCardHeader>
+                        <CardHeaderAvatar>
+                            <MudIcon Icon="@Icons.Material.Filled.Extension"
+                                     Color="@IconColor(m)" />
+                        </CardHeaderAvatar>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">@m.Name</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                v@m.Version &bull; @m.Author
+                            </MudText>
+                        </CardHeaderContent>
+                        <CardHeaderActions>
+                            <MudChip T="string" Color="@ChipColor(m)" Size="Size.Small">
+                                @StatusLabel(m)
+                            </MudChip>
+                        </CardHeaderActions>
+                    </MudCardHeader>
+
+                    <MudCardContent>
+                        @if (m.LoadError is not null)
+                        {
+                            <MudAlert Severity="Severity.Error" Dense="true" Class="mb-2">
+                                @m.LoadError
+                            </MudAlert>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2" Class="mb-2">@m.Description</MudText>
+                        }
+
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            <strong>SHA-256:</strong>
+                            <code title="@m.Hash">@(m.Hash[..16])...</code>
+                        </MudText>
+                        <br />
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Style="word-break:break-all">
+                            @System.IO.Path.GetFileName(m.AssemblyPath)
+                        </MudText>
+                    </MudCardContent>
+
+                    <MudCardActions>
+                        @if (!m.IsApproved)
+                        {
+                            <MudButton Color="Color.Success"
+                                       StartIcon="@Icons.Material.Filled.CheckCircle"
+                                       Size="Size.Small"
+                                       OnClick="() => Approve(m.Hash)">
+                                Approve
+                            </MudButton>
+                        }
+                        else
+                        {
+                            <MudButton Color="Color.Error"
+                                       StartIcon="@Icons.Material.Filled.RemoveCircle"
+                                       Size="Size.Small"
+                                       OnClick="() => Revoke(m.Hash)">
+                                Revoke
+                            </MudButton>
+                        }
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+}
+
+<MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-8 d-block">
+    Plugins folder: <code>@System.IO.Path.Combine(AppContext.BaseDirectory, "plugins")</code>
+</MudText>
+
+@code {
+    private List<Trion.Core.Plugins.PluginManifest> _manifests = [];
+
+    protected override void OnInitialized() =>
+        _manifests = [.. PluginLoader.Manifests];
+
+    private void Approve(string hash)
+    {
+        ApprovalStore.Approve(hash);
+        RefreshApproval();
+    }
+
+    private void Revoke(string hash)
+    {
+        ApprovalStore.Revoke(hash);
+        RefreshApproval();
+    }
+
+    private void RefreshApproval()
+    {
+        // Rebuild manifest list with updated approval state from DB
+        _manifests = [.. PluginLoader.Manifests.Select(m => m with
+        {
+            IsApproved = ApprovalStore.IsApproved(m.Hash)
+        })];
+    }
+
+    private static Color IconColor(Trion.Core.Plugins.PluginManifest m) =>
+        m.LoadError is not null ? Color.Error :
+        m.IsApproved            ? Color.Primary :
+                                  Color.Warning;
+
+    private static Color ChipColor(Trion.Core.Plugins.PluginManifest m) =>
+        m.LoadError is not null ? Color.Error :
+        m.IsApproved            ? Color.Success :
+                                  Color.Warning;
+
+    private static string StatusLabel(Trion.Core.Plugins.PluginManifest m) =>
+        m.LoadError is not null ? "Error" :
+        m.IsApproved            ? "Loaded" :
+                                  "Not Approved";
+}

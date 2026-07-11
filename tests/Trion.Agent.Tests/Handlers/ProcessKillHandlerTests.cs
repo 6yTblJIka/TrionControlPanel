@@ -10,7 +10,7 @@ public sealed class ProcessKillHandlerTests
     private readonly ProcessKillHandler _sut =
         new(TestLogger.Instance);
 
-    // ── Kill: PID not found ───────────────────────────────────────────────────
+    // -- Kill: PID not found ---------------------------------------------------
 
     [Fact]
     public async Task Kill_InvalidPid_ReturnsFailure()
@@ -23,12 +23,12 @@ public sealed class ProcessKillHandlerTests
         Assert.NotNull(resp.ErrorMessage);
     }
 
-    // ── Kill: wrong start time ────────────────────────────────────────────────
+    // -- Kill: wrong start time ------------------------------------------------
 
     [Fact]
     public async Task Kill_WrongStartTime_ReturnsFailure()
     {
-        // Use the current process — it definitely exists, but we supply a bogus start time
+        // Use the current process -- it definitely exists, but we supply a bogus start time
         var self = Process.GetCurrentProcess();
         var cmd  = new KillProcessCommand(
             Pid:               self.Id,
@@ -40,7 +40,7 @@ public sealed class ProcessKillHandlerTests
         Assert.Contains("mismatch", resp.ErrorMessage ?? "", StringComparison.OrdinalIgnoreCase);
     }
 
-    // ── IsAlive: invalid PID ──────────────────────────────────────────────────
+    // -- IsAlive: invalid PID --------------------------------------------------
 
     [Fact]
     public async Task IsAlive_InvalidPid_ReturnsFalse()
@@ -51,7 +51,7 @@ public sealed class ProcessKillHandlerTests
         Assert.False(resp.Alive);
     }
 
-    // ── IsAlive: current process, correct start time ──────────────────────────
+    // -- IsAlive: current process, correct start time --------------------------
 
     [Fact]
     public async Task IsAlive_CurrentProcess_CorrectStartTime_ReturnsTrue()
@@ -65,7 +65,7 @@ public sealed class ProcessKillHandlerTests
         Assert.True(resp.Alive);
     }
 
-    // ── IsAlive: current process, wrong start time ────────────────────────────
+    // -- IsAlive: current process, wrong start time ----------------------------
 
     [Fact]
     public async Task IsAlive_CurrentProcess_WrongStartTime_ReturnsFalse()

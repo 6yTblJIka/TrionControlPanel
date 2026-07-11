@@ -22,7 +22,7 @@ public partial class DatabaseEditorViewModel : ObservableObject
     [ObservableProperty] private bool   _isBusy        = false;
     [ObservableProperty] private bool   _isDetecting   = false;
 
-    // ── RealmList ─────────────────────────────────────────────────────────────
+    // -- RealmList -------------------------------------------------------------
 
     /// <summary>Loaded realm entries from the database.</summary>
     public ObservableCollection<RealmEntry> Realms { get; } = [];
@@ -61,7 +61,7 @@ public partial class DatabaseEditorViewModel : ObservableObject
     [ObservableProperty] private string _publicIp    = string.Empty;
     [ObservableProperty] private bool   _isIpVisible = false;
 
-    // ── Account ───────────────────────────────────────────────────────────────
+    // -- Account ---------------------------------------------------------------
 
     [ObservableProperty] private string _createUsername  = string.Empty;
     [ObservableProperty] private string _createPassword  = string.Empty;
@@ -119,13 +119,13 @@ public partial class DatabaseEditorViewModel : ObservableObject
     [RelayCommand]
     private void ToggleIpVisibility() => IsIpVisible = !IsIpVisible;
 
-    // ── Network Detection ─────────────────────────────────────────────────────
+    // -- Network Detection -----------------------------------------------------
 
     [RelayCommand(CanExecute = nameof(CanDetect))]
     private async Task DetectNetworkAsync()
     {
         IsDetecting   = true;
-        StatusMessage = "Detecting network addresses…";
+        StatusMessage = "Detecting network addresses...";
 
         var internalAddrs = _network.GetInternalIpv4Addresses();
         InternalIps.Clear();
@@ -142,13 +142,13 @@ public partial class DatabaseEditorViewModel : ObservableObject
     }
     private bool CanDetect() => !IsDetecting && !IsBusy;
 
-    // ── RealmList Commands ────────────────────────────────────────────────────
+    // -- RealmList Commands ----------------------------------------------------
 
     [RelayCommand(CanExecute = nameof(CanEdit))]
     private async Task RefreshRealmAsync()
     {
         IsBusy        = true;
-        StatusMessage = "Loading realm list…";
+        StatusMessage = "Loading realm list...";
         NotifyRealmCommandsChanged();
         try
         {
@@ -180,7 +180,7 @@ public partial class DatabaseEditorViewModel : ObservableObject
     private async Task SaveRealmAsync()
     {
         IsBusy        = true;
-        StatusMessage = "Saving realm…";
+        StatusMessage = "Saving realm...";
         NotifyRealmCommandsChanged();
         try
         {
@@ -211,7 +211,7 @@ public partial class DatabaseEditorViewModel : ObservableObject
         if (SelectedRealm is null) return;
 
         IsBusy        = true;
-        StatusMessage = $"Deleting realm '{SelectedRealm.Name}'…";
+        StatusMessage = $"Deleting realm '{SelectedRealm.Name}'...";
         NotifyRealmCommandsChanged();
         try
         {
@@ -241,7 +241,7 @@ public partial class DatabaseEditorViewModel : ObservableObject
         if (SelectedRealm is null || string.IsNullOrWhiteSpace(PublicIp)) return;
 
         IsBusy        = true;
-        StatusMessage = $"Setting realm to public IP ({PublicIp})…";
+        StatusMessage = $"Setting realm to public IP ({PublicIp})...";
         NotifyRealmCommandsChanged();
         try
         {
@@ -283,7 +283,7 @@ public partial class DatabaseEditorViewModel : ObservableObject
         }
 
         IsBusy        = true;
-        StatusMessage = $"Setting realm to local ({target})…";
+        StatusMessage = $"Setting realm to local ({target})...";
         NotifyRealmCommandsChanged();
         try
         {
@@ -310,13 +310,13 @@ public partial class DatabaseEditorViewModel : ObservableObject
         }
     }
 
-    // ── Account Commands ──────────────────────────────────────────────────────
+    // -- Account Commands ------------------------------------------------------
 
     [RelayCommand(CanExecute = nameof(CanCreateAccount))]
     private async Task CreateAccountAsync()
     {
         IsBusy        = true;
-        StatusMessage = $"Creating account '{CreateUsername}'…";
+        StatusMessage = $"Creating account '{CreateUsername}'...";
         CreateAccountCommand.NotifyCanExecuteChanged();
         try
         {
@@ -355,7 +355,7 @@ public partial class DatabaseEditorViewModel : ObservableObject
         }
 
         IsBusy        = true;
-        StatusMessage = $"Setting GM level {GmLevel} for '{GmUsername}'…";
+        StatusMessage = $"Setting GM level {GmLevel} for '{GmUsername}'...";
         SetGmAccessCommand.NotifyCanExecuteChanged();
         try
         {
@@ -385,7 +385,7 @@ public partial class DatabaseEditorViewModel : ObservableObject
         }
 
         IsBusy        = true;
-        StatusMessage = $"Changing password for '{PassUsername}'…";
+        StatusMessage = $"Changing password for '{PassUsername}'...";
         ChangePasswordCommand.NotifyCanExecuteChanged();
         try
         {
@@ -412,7 +412,7 @@ public partial class DatabaseEditorViewModel : ObservableObject
         !string.IsNullOrWhiteSpace(PassUsername) &&
         !string.IsNullOrWhiteSpace(PassNewPassword);
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // -- Helpers ---------------------------------------------------------------
 
     private bool CanEdit()            => !IsBusy;
     private bool CanEditSelectedRealm() => !IsBusy && SelectedRealm is not null;

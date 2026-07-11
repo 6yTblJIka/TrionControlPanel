@@ -11,7 +11,7 @@ public class LocalizationService : ILocalizationService
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    // ── Available languages ───────────────────────────────────────────────────
+    // -- Available languages ---------------------------------------------------
 
     public IReadOnlyList<string> AvailableLanguages => ScanAvailableLanguages();
 
@@ -34,8 +34,9 @@ public class LocalizationService : ILocalizationService
                 return dot >= 0 ? stem[(dot + 1)..] : null;
             })
             .Where(l => !string.IsNullOrEmpty(l))
+            .Select(l => l!)
             .Order()
-            .ToList()!;
+            .ToList();
 
         // en-US is always present and always first
         locales.Remove("en-US");
@@ -44,7 +45,7 @@ public class LocalizationService : ILocalizationService
         return locales.AsReadOnly();
     }
 
-    // ── Indexer: locale string with en-US fallback ────────────────────────────
+    // -- Indexer: locale string with en-US fallback ----------------------------
 
     public string this[string key]
     {
@@ -56,7 +57,7 @@ public class LocalizationService : ILocalizationService
         }
     }
 
-    // ── LoadLanguage ──────────────────────────────────────────────────────────
+    // -- LoadLanguage ----------------------------------------------------------
 
     public void LoadLanguage(string locale)
     {
@@ -74,7 +75,7 @@ public class LocalizationService : ILocalizationService
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Item[]"));
     }
 
-    // ── Internal helpers ──────────────────────────────────────────────────────
+    // -- Internal helpers ------------------------------------------------------
 
     private static Dictionary<string, string> LoadFile(string locale)
     {

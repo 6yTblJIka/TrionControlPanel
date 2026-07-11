@@ -4,7 +4,7 @@ using Trion.Core.Agent;
 namespace Trion.Agent.Json;
 
 /// <summary>
-/// Source-generated JSON serializer context — required for AOT (Release) builds.
+/// Source-generated JSON serializer context -- required for AOT (Release) builds.
 /// All protocol types used in serialise/deserialise paths must be listed here.
 /// </summary>
 [JsonSerializable(typeof(AgentCommand))]

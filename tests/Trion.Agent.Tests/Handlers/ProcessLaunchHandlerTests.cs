@@ -10,7 +10,7 @@ public sealed class ProcessLaunchHandlerTests
     private readonly ProcessLaunchHandler _sut =
         new(new CommandAllowlist(), TestLogger.Instance);
 
-    // ── Allowlist enforcement ──────────────────────────────────────────────────
+    // -- Allowlist enforcement --------------------------------------------------
 
     [Fact]
     public async Task NonAllowlistedPath_ReturnsFailure()
@@ -45,7 +45,7 @@ public sealed class ProcessLaunchHandlerTests
         Assert.False(resp.Success);
     }
 
-    // ── Allowlisted path with non-existent binary ─────────────────────────────
+    // -- Allowlisted path with non-existent binary -----------------------------
     // The allowlist check passes; the OS then rejects the missing file.
 
     [Fact]
@@ -55,7 +55,7 @@ public sealed class ProcessLaunchHandlerTests
         var cmd = new LaunchProcessCommand("/opt/trinitycore/worldserver", [], null);
         var resp = await _sut.HandleAsync(cmd);
 
-        // Must NOT return "not permitted" — the allowlist passed
+        // Must NOT return "not permitted" -- the allowlist passed
         Assert.DoesNotContain("permitted", resp.ErrorMessage ?? "", StringComparison.OrdinalIgnoreCase);
         // Must fail because the binary doesn't exist
         Assert.False(resp.Success);

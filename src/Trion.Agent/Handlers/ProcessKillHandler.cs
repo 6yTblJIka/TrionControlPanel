@@ -19,7 +19,7 @@ public sealed class ProcessKillHandler
         _log = trionLogger.CreateLogger(nameof(ProcessKillHandler));
     }
 
-    // ── Kill ─────────────────────────────────────────────────────────────────
+    // -- Kill -----------------------------------------------------------------
 
     public Task<KillProcessResponse> HandleAsync(KillProcessCommand cmd, CancellationToken ct = default)
     {
@@ -57,7 +57,7 @@ public sealed class ProcessKillHandler
                     "PID {Pid} start-time mismatch: expected {Expected}, actual {Actual}",
                     cmd.Pid, cmd.ExpectedStartTime, actualStart);
                 return Task.FromResult(new KillProcessResponse(
-                    Success: false, ErrorMessage: "PID start time mismatch — possible PID reuse"));
+                    Success: false, ErrorMessage: "PID start time mismatch -- possible PID reuse"));
             }
 
             try
@@ -74,7 +74,7 @@ public sealed class ProcessKillHandler
         }
     }
 
-    // ── Is-alive probe ────────────────────────────────────────────────────────
+    // -- Is-alive probe --------------------------------------------------------
 
     public Task<IsProcessAliveResponse> IsAliveAsync(IsProcessAliveCommand cmd, CancellationToken ct = default)
     {

@@ -15,7 +15,15 @@ public static class AgentIntegrityGuard
         return;
 #else
         if (string.IsNullOrEmpty(ExpectedSha256))
+        {
+            // CI must patch ExpectedSha256 before publishing a Release build.
+            // An empty constant means the build pipeline was not run correctly — refuse to start
+            // rather than silently running with no integrity protection.
+            Console.Error.WriteLine("[Agent] Integrity check not configured (ExpectedSha256 is empty). " +
+                                    "Ensure the CI pipeline patches this constant before release. Exiting.");
+            Environment.Exit(1);
             return;
+        }
 
         var processPath = Environment.ProcessPath;
         if (processPath is null)
@@ -33,7 +41,7 @@ public static class AgentIntegrityGuard
 
             if (!CryptographicOperations.FixedTimeEquals(hashBytes, expectedBytes))
             {
-                // Silent exit — give no information to attacker
+                // Silent exit -- give no information to attacker
                 Environment.Exit(0);
             }
         }

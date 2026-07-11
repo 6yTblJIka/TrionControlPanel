@@ -4,7 +4,7 @@ using Trion.Core.Abstractions.Monitoring;
 namespace Trion.Core.Monitoring;
 
 /// <summary>
-/// Singleton that owns two bounded <see cref="Channel{T}"/> instances —
+/// Singleton that owns two bounded <see cref="Channel{T}"/> instances --
 /// one for machine metrics and one for process snapshots.
 /// Background services write; Blazor components / API endpoints read.
 /// </summary>
@@ -20,7 +20,7 @@ public sealed class MetricsChannelAccessor
     private readonly Channel<MachineMetrics>  _machine  = Channel.CreateBounded<MachineMetrics>(ChannelOpts);
     private readonly Channel<ProcessMetrics[]> _process = Channel.CreateBounded<ProcessMetrics[]>(ChannelOpts);
 
-    // Writers — only used by MachineMetricsWorker / ProcessMonitor
+    // Writers -- only used by MachineMetricsWorker / ProcessMonitor
     internal ChannelWriter<MachineMetrics>   MachineWriter => _machine.Writer;
     internal ChannelWriter<ProcessMetrics[]> ProcessWriter => _process.Writer;
 

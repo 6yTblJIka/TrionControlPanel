@@ -12,7 +12,7 @@ public sealed class ProcessMonitorTests
     [Fact]
     public async Task EmptyFilter_LogsWarning_DoesNotThrow()
     {
-        // ProcessMonitor with empty filter and no tracked PIDs should not throw —
+        // ProcessMonitor with empty filter and no tracked PIDs should not throw --
         // it logs a warning and runs without polling anything.
         var accessor = new MetricsChannelAccessor();
         var monitor  = new ProcessMonitor(
@@ -45,7 +45,7 @@ public sealed class ProcessMonitorTests
         var currentPid = Environment.ProcessId;
         monitor.Track(currentPid);
 
-        // No easy way to read _trackedPids without reflection —
+        // No easy way to read _trackedPids without reflection --
         // verify indirectly: Untrack does not throw
         monitor.Untrack(currentPid);
         Assert.True(true);
@@ -87,7 +87,7 @@ public sealed class ProcessMonitorTests
     [Fact]
     public async Task ExceptionInPollLoop_DoesNotStopService()
     {
-        // ProcessMonitor with a name filter that returns no processes — no exception
+        // ProcessMonitor with a name filter that returns no processes -- no exception
         // but we still verify the service stays alive across poll cycles.
         var accessor = new MetricsChannelAccessor();
         var monitor  = new ProcessMonitor(

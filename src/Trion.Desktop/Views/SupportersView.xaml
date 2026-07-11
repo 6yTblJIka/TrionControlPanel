@@ -4,12 +4,14 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:Trion.Desktop.ViewModels"
+             xmlns:conv="clr-namespace:Trion.Desktop.Infrastructure.Converters"
              mc:Ignorable="d"
              Background="{DynamicResource Background.Primary}">
 
     <UserControl.Resources>
+        <conv:ColorToGradientBrushConverter x:Key="GlowToGradient" />
 
-        <!-- ── Supporter card inside a tier group ──────────────────────────── -->
+        <!-- Supporter card inside a tier group -->
         <DataTemplate x:Key="SupporterCardTemplate">
             <Border Width="140" Height="70"
                     CornerRadius="8"
@@ -41,7 +43,7 @@
             </Border>
         </DataTemplate>
 
-        <!-- ── Tier group (header + wrap of cards) ─────────────────────────── -->
+        <!-- Tier group (header + wrap of cards) -->
         <DataTemplate x:Key="TierGroupTemplate">
             <StackPanel Margin="0,0,0,32">
 
@@ -95,17 +97,8 @@
                 <Border Height="2"
                         Margin="0,0,0,14"
                         CornerRadius="1"
-                        Visibility="{Binding IsRoyalty,
-                                     Converter={StaticResource BoolToVisibility}}">
-                    <Border.Background>
-                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                            <GradientStop Offset="0"   Color="Transparent"/>
-                            <GradientStop Offset="0.3" Color="{Binding GlowColor}"/>
-                            <GradientStop Offset="0.7" Color="{Binding GlowColor}"/>
-                            <GradientStop Offset="1"   Color="Transparent"/>
-                        </LinearGradientBrush>
-                    </Border.Background>
-                </Border>
+                        Background="{Binding GlowColor, Converter={StaticResource GlowToGradient}}"
+                        Visibility="{Binding IsRoyalty, Converter={StaticResource BoolToVisibility}}" />
 
                 <!-- Member cards in a wrapping panel -->
                 <ItemsControl ItemsSource="{Binding Members}"
@@ -127,7 +120,7 @@
         <!-- Loading spinner -->
         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
                     Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}">
-            <TextBlock Text="Loading supporters…"
+            <TextBlock Text="{Binding Loc[LBLLoadingSupporters]}"
                        Style="{StaticResource SmallStyle}"
                        HorizontalAlignment="Center"/>
         </StackPanel>
@@ -139,7 +132,7 @@
                        Style="{StaticResource SmallStyle}"
                        HorizontalAlignment="Center"
                        Margin="0,0,0,12"/>
-            <Button Content="Retry"
+            <Button Content="{Binding Loc[BtnRetry]}"
                     Command="{Binding RefreshCommand}"
                     Style="{StaticResource PrimaryButtonStyle}"
                     HorizontalAlignment="Center"/>
@@ -159,9 +152,9 @@
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="Supporters" Style="{StaticResource H1Style}"/>
+                        <TextBlock Text="{Binding Loc[NavSupporters]}" Style="{StaticResource H1Style}"/>
                         <TextBlock Style="{StaticResource CaptionStyle}" Margin="0,3,0,0">
-                            <Run Text="The people who keep Trion alive — "/>
+                            <Run Text="The people who keep Trion alive  -  "/>
                             <Run Text="{Binding TotalCount, StringFormat='{}{0} total'}"
                                  FontWeight="SemiBold"
                                  Foreground="{DynamicResource Accent.Primary}"/>
@@ -182,7 +175,7 @@
                                   Fill="{DynamicResource Foreground.Secondary}"
                                   Width="14" Height="14" Stretch="Uniform"
                                   Margin="0,0,6,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="Refresh"
+                            <TextBlock Text="{Binding Loc[BtnRefresh]}"
                                        Foreground="{DynamicResource Foreground.Secondary}"
                                        FontSize="12"/>
                         </StackPanel>
@@ -202,11 +195,11 @@
                           Fill="{DynamicResource Foreground.Muted}"
                           Width="48" Height="48" Stretch="Uniform"
                           HorizontalAlignment="Center" Margin="0,0,0,12"/>
-                    <TextBlock Text="No supporters yet"
+                    <TextBlock Text="{Binding Loc[LBLNoSupportersYet]}"
                                Style="{StaticResource H3Style}"
                                HorizontalAlignment="Center"
                                Foreground="{DynamicResource Foreground.Muted}"/>
-                    <TextBlock Text="Be the first to support the project!"
+                    <TextBlock Text="{Binding Loc[LBLBeSupporterFirst]}"
                                Style="{StaticResource SmallStyle}"
                                HorizontalAlignment="Center"
                                Margin="0,4,0,0"/>

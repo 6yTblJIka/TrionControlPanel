@@ -10,12 +10,18 @@ public record DownloadProgress(
 
 public interface IMySqlSetupService
 {
-    // ── Installation state ────────────────────────────────────────────────────
+    // -- Installation state ----------------------------------------------------
 
-    /// <summary>True when the MySQL binaries are present on this machine.</summary>
+    /// <summary>True when the Trion-managed portable MySQL binaries are present.</summary>
     bool IsInstalled { get; }
 
-    // ── Setup operation state ─────────────────────────────────────────────────
+    /// <summary>
+    /// True when Trion has detected and configured an existing system MySQL installation
+    /// instead of managing its own portable copy.
+    /// </summary>
+    bool IsUsingSystemMySQL { get; }
+
+    // -- Setup operation state -------------------------------------------------
 
     /// <summary>True while RunStartupCheckAsync is executing (download / extract / init).</summary>
     bool IsRunning { get; }
@@ -29,7 +35,7 @@ public interface IMySqlSetupService
     /// </summary>
     DownloadProgress? CurrentDownload { get; }
 
-    // ── Process state ─────────────────────────────────────────────────────────
+    // -- Process state ---------------------------------------------------------
 
     /// <summary>True when the mysqld process / systemd service is alive.</summary>
     bool IsProcessRunning { get; }
@@ -43,7 +49,7 @@ public interface IMySqlSetupService
     /// <summary>How long MySQL has been running. Zero when not running.</summary>
     TimeSpan Uptime { get; }
 
-    // ── Events ────────────────────────────────────────────────────────────────
+    // -- Events ----------------------------------------------------------------
 
     /// <summary>
     /// Raised on every progress step and once more when the setup operation finishes.
@@ -60,7 +66,7 @@ public interface IMySqlSetupService
     /// <summary>Raised when mysqld starts (<c>true</c>) or stops / crashes (<c>false</c>).</summary>
     event Action<bool>? StatusChanged;
 
-    // ── Setup ─────────────────────────────────────────────────────────────────
+    // -- Setup -----------------------------------------------------------------
 
     /// <summary>
     /// Called once at startup.
@@ -75,7 +81,7 @@ public interface IMySqlSetupService
     /// </summary>
     void GenerateMyIni();
 
-    // ── Lifecycle ─────────────────────────────────────────────────────────────
+    // -- Lifecycle -------------------------------------------------------------
 
     /// <summary>Starts MySQL. No-op if already running.</summary>
     Task StartAsync(bool? hideConsole = null, CancellationToken ct = default);

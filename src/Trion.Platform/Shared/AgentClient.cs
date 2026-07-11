@@ -34,7 +34,7 @@ public sealed class AgentClient : IAgentClient, IDisposable
         _log  = trionLogger.CreateLogger(nameof(AgentClient));
     }
 
-    // ── IAgentClient ──────────────────────────────────────────────────────────
+    // -- IAgentClient ----------------------------------------------------------
 
     public async Task<LaunchResult> LaunchProcessAsync(
         LaunchRequest request, string? pnToken = null, CancellationToken ct = default)
@@ -113,7 +113,7 @@ public sealed class AgentClient : IAgentClient, IDisposable
         return resp is not null;
     }
 
-    // ── Core send/receive ─────────────────────────────────────────────────────
+    // -- Core send/receive -----------------------------------------------------
 
     private async Task<TResponse?> SendAsync<TCommand, TResponse>(
         string commandType,
@@ -123,9 +123,10 @@ public sealed class AgentClient : IAgentClient, IDisposable
         where TCommand  : class
         where TResponse : class
     {
-        var payload = JsonSerializer.Serialize(body);
-        var hmac    = Sign(commandType + payload, _opts.HmacSharedKey);
-        var command = new AgentCommand(commandType, payload, hmac, pnToken);
+        var payload    = JsonSerializer.Serialize(body);
+        var timestamp  = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var hmac       = Sign($"{timestamp}:{commandType}{payload}", _opts.HmacSharedKey);
+        var command    = new AgentCommand(commandType, payload, hmac, pnToken, timestamp);
         var request = JsonSerializer.Serialize(command);
 
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -189,7 +190,7 @@ public sealed class AgentClient : IAgentClient, IDisposable
         return await SendViaSocketAsync(requestBytes, ct);
     }
 
-    // ── Windows transport ─────────────────────────────────────────────────────
+    // -- Windows transport -----------------------------------------------------
 
     private async Task<string> SendViaPipeAsync(byte[] requestBytes, CancellationToken ct)
     {
@@ -203,7 +204,7 @@ public sealed class AgentClient : IAgentClient, IDisposable
         return Encoding.UTF8.GetString(responseBytes);
     }
 
-    // ── Linux transport ───────────────────────────────────────────────────────
+    // -- Linux transport -------------------------------------------------------
 
     private async Task<string> SendViaSocketAsync(byte[] requestBytes, CancellationToken ct)
     {
@@ -218,7 +219,7 @@ public sealed class AgentClient : IAgentClient, IDisposable
         return Encoding.UTF8.GetString(responseBytes);
     }
 
-    // ── Wire-protocol helpers ─────────────────────────────────────────────────
+    // -- Wire-protocol helpers -------------------------------------------------
 
     private const int MaxMessageBytes = 4 * 1024 * 1024;
 
@@ -243,7 +244,7 @@ public sealed class AgentClient : IAgentClient, IDisposable
         return buffer;
     }
 
-    // ── HMAC (inlined to avoid referencing Trion.Agent from Trion.Platform) ──
+    // -- HMAC (inlined to avoid referencing Trion.Agent from Trion.Platform) --
 
     private static string Sign(string payload, string key)
     {

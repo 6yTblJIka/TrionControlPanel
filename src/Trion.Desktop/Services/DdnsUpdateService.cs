@@ -39,7 +39,7 @@ public sealed class DdnsUpdateService : IDdnsUpdateService
         }
     }
 
-    // ── Standard GET-based providers ─────────────────────────────────────────
+    // -- Standard GET-based providers -----------------------------------------
 
     private async Task<DdnsResult> UpdateStandardAsync(
         string service, string domain, string username, string password, string ip,
@@ -51,17 +51,17 @@ public sealed class DdnsUpdateService : IDdnsUpdateService
         return new DdnsResult(response.IsSuccessStatusCode, body);
     }
 
-    // ── Cloudflare REST API (PUT + JSON) ──────────────────────────────────────
+    // -- Cloudflare REST API (PUT + JSON) --------------------------------------
     // username = Zone ID  |  password = API Token (Bearer)
     //
-    // Step 1 — GET list of A records to resolve the record ID by domain name.
-    // Step 2 — PUT the updated IP to that specific record.
+    // Step 1 -- GET list of A records to resolve the record ID by domain name.
+    // Step 2 -- PUT the updated IP to that specific record.
 
     private async Task<DdnsResult> UpdateCloudflareAsync(
         string domain, string zoneId, string apiToken, string ip,
         CancellationToken ct)
     {
-        // ── Step 1: resolve the record ID ────────────────────────────────────
+        // -- Step 1: resolve the record ID ------------------------------------
         using var listReq = new HttpRequestMessage(
             HttpMethod.Get,
             DdnsProviderUrls.CloudflareListRecords(zoneId, domain));
@@ -82,7 +82,7 @@ public sealed class DdnsUpdateService : IDdnsUpdateService
 
         string recordId = records[0].GetProperty("id").GetString()!;
 
-        // ── Step 2: update the record ─────────────────────────────────────────
+        // -- Step 2: update the record -----------------------------------------
         string body = JsonSerializer.Serialize(new
         {
             type    = "A",
@@ -104,10 +104,10 @@ public sealed class DdnsUpdateService : IDdnsUpdateService
         using var putDoc = JsonDocument.Parse(putJson);
         bool success = putDoc.RootElement.TryGetProperty("success", out var putOk) && putOk.GetBoolean();
         return new DdnsResult(success,
-            success ? $"Record updated → {ip}" : "Cloudflare: update request failed.");
+            success ? $"Record updated -> {ip}" : "Cloudflare: update request failed.");
     }
 
-    // ── URL dispatch for GET-based providers ──────────────────────────────────
+    // -- URL dispatch for GET-based providers ----------------------------------
 
     private static string BuildUrl(
         string service, string domain, string username, string password, string ip) =>

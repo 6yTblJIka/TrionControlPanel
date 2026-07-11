@@ -1,7 +1,12 @@
+using System.Globalization;
+using System.Net.Http.Json;
+using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Caching.Memory;
 using Trion.API.Data;
+using Trion.API.Models;
 using Trion.API.Utilities;
 
 namespace Trion.API.Endpoints;
@@ -15,6 +20,7 @@ public static class PackageEndpoints
         g.MapGet("Ping", Ping);
         g.MapGet("GetExternalIPv4", GetExternalIPv4);
         g.MapGet("GetFileVersion",  GetFileVersion);
+        g.MapGet("catalog",         GetPackageCatalogAsync);
         g.MapGet("DownloadFile",    DownloadFileGet).RequireRateLimiting("download").RequireRateLimiting("downloads-ip");
         g.MapPost("DownloadFile",   DownloadFilePost).RequireRateLimiting("download").RequireRateLimiting("downloads-ip");
         g.MapPost("RepairSPP",      RepairSpp);
@@ -23,7 +29,7 @@ public static class PackageEndpoints
         return app;
     }
 
-    // ── Ping ──────────────────────────────────────────────────────────────────
+    // -- Ping ------------------------------------------------------------------
 
     private static IResult Ping(HttpContext ctx)
     {
@@ -31,7 +37,7 @@ public static class PackageEndpoints
         return Results.Ok();
     }
 
-    // ── External IP ───────────────────────────────────────────────────────────
+    // -- External IP -----------------------------------------------------------
 
     private static IResult GetExternalIPv4(HttpContext ctx)
     {
@@ -45,13 +51,13 @@ public static class PackageEndpoints
             : Results.Ok(new { iPv4Address = ipStr });
     }
 
-    // ── File versions ─────────────────────────────────────────────────────────
+    // -- File versions ---------------------------------------------------------
 
     private static async Task<IResult> GetFileVersion(
-        [FromQuery] string? key,
-        IConfiguration      cfg,
-        TrionDbAccess       db,
-        IMemoryCache        cache)
+        [FromHeader(Name = "X-API-Key")] string? key,
+        IConfiguration                           cfg,
+        TrionDbAccess                            db,
+        IMemoryCache                             cache)
     {
         var isEarly = await VerifyKeyAsync(key, db, cache);
         var tier    = isEarly ? "EarlyAccess" : "Default";
@@ -68,15 +74,15 @@ public static class PackageEndpoints
         });
     }
 
-    // ── Download ZIP (GET) ────────────────────────────────────────────────────
+    // -- Download ZIP (GET) ----------------------------------------------------
 
     private static async Task<IResult> DownloadFileGet(
-        [FromQuery] string  emulator,
-        [FromQuery] string? key,
-        IConfiguration      cfg,
-        TrionDbAccess       db,
-        IMemoryCache        cache,
-        ILogger<Program>    log)
+        [FromQuery]                      string  emulator,
+        [FromHeader(Name = "X-API-Key")] string? key,
+        IConfiguration                           cfg,
+        TrionDbAccess                            db,
+        IMemoryCache                             cache,
+        ILogger<Program>                         log)
     {
         if (string.IsNullOrWhiteSpace(emulator))
             return Results.BadRequest(new { message = "emulator parameter is required." });
@@ -94,13 +100,13 @@ public static class PackageEndpoints
         }
 
         var fullPath = Path.GetFullPath(zipPath);
-        log.LogInformation("Streaming '{File}' ({Tier}) — {Bytes:N0} bytes",
+        log.LogInformation("Streaming '{File}' ({Tier}) -- {Bytes:N0} bytes",
             Path.GetFileName(fullPath), tier, new FileInfo(fullPath).Length);
 
         return Results.File(File.OpenRead(fullPath), "application/zip", Path.GetFileName(fullPath));
     }
 
-    // ── Download single file (POST, repair) ───────────────────────────────────
+    // -- Download single file (POST, repair) -----------------------------------
 
     private static async Task<IResult> DownloadFilePost(
         [FromBody]                       DownloadFileRequest req,
@@ -147,7 +153,7 @@ public static class PackageEndpoints
         return Results.File(File.OpenRead(fullPath), "application/octet-stream", Path.GetFileName(fullPath));
     }
 
-    // ── Repair manifest ───────────────────────────────────────────────────────
+    // -- Repair manifest -------------------------------------------------------
 
     private static async Task<IResult> RepairSpp(
         [FromBody]                       RepairSppRequest req,
@@ -187,7 +193,7 @@ public static class PackageEndpoints
         return Results.Content(json!, "application/json");
     }
 
-    // ── Speed test ────────────────────────────────────────────────────────────
+    // -- Speed test ------------------------------------------------------------
 
     private static IResult DownloadSpeedTest([FromQuery] int sizeInMB = 100)
     {
@@ -199,7 +205,84 @@ public static class PackageEndpoints
             enableRangeProcessing: false);
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // -- GET /Trion/catalog -- dynamic repack catalog (anonymous, JWT optional) --
+
+    /// <summary>
+    /// Returns a PackageCatalogResponse built from the RepackService /api/repacks feed.
+    /// Version is derived from lastBuiltAt so the catalog updates automatically after each build.
+    /// Availability is determined by the caller's api_tier JWT claim vs each entry's accessType.
+    /// </summary>
+    private static async Task<IResult> GetPackageCatalogAsync(
+        HttpContext        ctx,
+        IConfiguration     cfg,
+        TrionDbAccess      db,
+        IHttpClientFactory httpFactory,
+        IMemoryCache       cache,
+        CancellationToken  ct)
+    {
+        var tier    = ctx.User.FindFirstValue("api_tier") ?? "guest";
+        var isAdmin = ctx.User.IsInRole("admin");
+        var apiKey  = ctx.Request.Headers["X-API-Key"].FirstOrDefault();
+        var isEarly = await VerifyKeyAsync(apiKey, db, cache);
+
+        var svc    = await db.QuerySingleAsync<RepackServiceInstance>(TrionSql.SelectLeastLoadedRepackService);
+        var svcUrl = svc is not null
+            ? svc.Url.TrimEnd('/')
+            : (cfg["Repack:ServiceUrl"] ?? "").TrimEnd('/');
+
+        List<JsonElement> repacks = [];
+        if (!string.IsNullOrEmpty(svcUrl))
+        {
+            try
+            {
+                var http = httpFactory.CreateClient("repack");
+                var resp = await http.GetAsync($"{svcUrl}/api/repacks", ct);
+                if (resp.IsSuccessStatusCode)
+                    repacks = await resp.Content.ReadFromJsonAsync<List<JsonElement>>(
+                        cancellationToken: ct) ?? [];
+            }
+            catch { }
+        }
+
+        var callerRank = TierRank(tier);
+        var isTester   = string.Equals(tier, "tester", StringComparison.OrdinalIgnoreCase);
+        var catalog    = repacks.Select(r =>
+        {
+            var expansion  = RepackStr(r, "expansion").ToLowerInvariant();
+            var baseType   = RepackStr(r, "baseType") is { Length: > 0 } bt ? bt : RepackStr(r, "emulatorId");
+            var accessType = RepackStr(r, "accessType", "free");
+            var name       = RepackStr(r, "name") is { Length: > 0 } n ? n : RepackStr(r, "slug");
+            var isTesterOnly = string.Equals(accessType, "tester", StringComparison.OrdinalIgnoreCase);
+            var available  = isAdmin || isEarly
+                || (isTesterOnly ? isTester : callerRank >= TierRank(accessType));
+            return (object) new
+            {
+                emulator         = expansion,
+                displayName      = name,
+                description      = "",
+                baseType,
+                expansion,
+                version          = RepackStr(r, "buildVersion") is { Length: > 0 } bv
+                                       ? bv
+                                       : FormatRepackVersion(RepackStr(r, "lastBuiltAt")),
+                available,
+                minTier          = accessType,
+                autoDbImport     = baseType.Contains("azerothcore", StringComparison.OrdinalIgnoreCase),
+                serverExecutable  = RepackStr(r, "serverExecutable", "worldserver.exe"),
+                authExecutable    = RepackStr(r, "authExecutable",   "authserver.exe"),
+                worldConf         = RepackStr(r, "worldConf",        "worldserver.conf"),
+                authConf          = RepackStr(r, "authConf",         "authserver.conf"),
+                requiredDatabases = r.TryGetProperty("requiredDatabases", out var dbsProp)
+                    ? dbsProp.EnumerateArray().Select(x => x.GetString() ?? "").ToArray()
+                    : new[] { "auth", "world", "characters" },
+                repackSlug        = RepackStr(r, "slug"),
+            };
+        }).ToList();
+
+        return Results.Ok(new { tier, earlyAccess = isEarly, catalog });
+    }
+
+    // -- Helpers ---------------------------------------------------------------
 
     private static async Task<bool> VerifyKeyAsync(string? key, TrionDbAccess db, IMemoryCache cache)
     {
@@ -216,12 +299,12 @@ public static class PackageEndpoints
     private static string ReadVersion(IConfiguration cfg, string emulator, string tier)
     {
         var value = cfg[$"{emulator}:Version:{tier}"];
-        if (string.IsNullOrEmpty(value)) return "—";
+        if (string.IsNullOrEmpty(value)) return "--";
         try
         {
             return File.Exists(value) ? File.ReadAllText(value).Trim() : value;
         }
-        catch { return "—"; }
+        catch { return "--"; }
     }
 
     private static string NormalizeEmulatorName(string emulator) =>
@@ -234,6 +317,27 @@ public static class PackageEndpoints
             "mop"     => "mopSPP",
             var other => other   // "trion", "database", "mysql"
         };
+
+    // Tier hierarchy used by GetPackageCatalogAsync
+    private static readonly string[] TierOrder =
+        ["guest", "free", "support", "guardian", "champion", "legend"];
+
+    private static int TierRank(string t)
+    {
+        var i = Array.IndexOf(TierOrder, t.ToLowerInvariant().Trim());
+        return i < 0 ? 0 : i;
+    }
+
+    private static string FormatRepackVersion(string iso) =>
+        !string.IsNullOrEmpty(iso)
+        && DateTime.TryParse(iso, null, DateTimeStyles.RoundtripKind, out var dt)
+            ? dt.ToString("yyyy.MM.dd")
+            : "--";
+
+    private static string RepackStr(JsonElement e, string key, string fallback = "") =>
+        e.TryGetProperty(key, out var v) && v.ValueKind == JsonValueKind.String
+            ? v.GetString() ?? fallback
+            : fallback;
 }
 
 public sealed record DownloadFileRequest(string Emulator, string FilePath);

@@ -65,7 +65,7 @@ public sealed class MachineMetricsWorkerTests
         Assert.NotNull(accessor.LastMachine);
     }
 
-    // ── Fakes ────────────────────────────────────────────────────────────────
+    // -- Fakes ----------------------------------------------------------------
 
     private sealed class FakeMetricsProvider : IMachineMetricsProvider
     {

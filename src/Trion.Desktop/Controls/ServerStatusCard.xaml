@@ -20,12 +20,12 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <!-- ── Left accent strip (always the server-type colour) ── -->
+            <!-- Left accent strip (always the server-type colour) -->
             <Border Grid.Column="0"
                     Background="{Binding IconAccent, RelativeSource={RelativeSource AncestorType=UserControl}}"
                     CornerRadius="10,0,0,10" />
 
-            <!-- ── Content ── -->
+            <!-- Content -->
             <StackPanel Grid.Column="1" Margin="18,20,20,20">
 
                 <!-- Header: icon square + title + pulse dot -->
@@ -120,7 +120,7 @@
                                 <Binding Path="IsRunning"
                                          RelativeSource="{RelativeSource AncestorType=UserControl}">
                                     <Binding.Converter>
-                                        <conv:BoolToStringConverter TrueValue="● RUNNING" FalseValue="● OFFLINE" />
+                                        <conv:BoolToStringConverter TrueValue="RUNNING" FalseValue="OFFLINE" />
                                     </Binding.Converter>
                                 </Binding>
                             </TextBlock.Text>
@@ -153,13 +153,13 @@
                 <Separator />
                 <Rectangle Height="14" Fill="Transparent" />
 
-                <!-- Uptime (large monospace number — the hero metric) -->
+                <!-- Uptime (large monospace number - the hero metric) -->
                 <TextBlock Text="{Binding Uptime, RelativeSource={RelativeSource AncestorType=UserControl}}"
                            FontFamily="Cascadia Code, Consolas, Courier New"
                            FontSize="28"
                            FontWeight="Light"
                            Foreground="{Binding IconAccent, RelativeSource={RelativeSource AncestorType=UserControl}}" />
-                <TextBlock Text="Uptime"
+                <TextBlock Text="{Binding UptimeLabelText, RelativeSource={RelativeSource AncestorType=UserControl}}"
                            Style="{StaticResource CaptionStyle}"
                            Margin="0,4,0,0" />
 

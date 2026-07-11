@@ -12,7 +12,7 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- ── Page header ── -->
+        <!-- Page header -->
         <Grid Grid.Row="0" Margin="28,24,28,16">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
@@ -33,7 +33,7 @@
                     VerticalAlignment="Center" />
         </Grid>
 
-        <!-- ── Log list ── -->
+        <!-- Log list -->
         <Border Grid.Row="1"
                 Margin="28,0,28,28"
                 Style="{StaticResource ElevatedCardStyle}"

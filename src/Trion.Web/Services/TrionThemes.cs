@@ -2,13 +2,13 @@ using MudBlazor;
 
 namespace Trion.Web.Services;
 
-// ── Per-color accent (dark and light accent hex + contrast foreground) ────────
+// -- Per-color accent (dark and light accent hex + contrast foreground) --------
 
 public sealed record TrionColorAccent(
     string Primary,       // Accent.Primary
     string Foreground);   // Text on an accent-colored button
 
-// ── One color entry — only accent changes, base backgrounds are shared ────────
+// -- One color entry -- only accent changes, base backgrounds are shared --------
 
 public sealed record TrionColorEntry(
     string Id,
@@ -17,7 +17,7 @@ public sealed record TrionColorEntry(
     TrionColorAccent Dark,
     TrionColorAccent Light);
 
-// ── Theme registry ────────────────────────────────────────────────────────────
+// -- Theme registry ------------------------------------------------------------
 
 public static class TrionThemes
 {
@@ -62,7 +62,7 @@ public static class TrionThemes
         };
     }
 
-    // ── Shared dark base — from DarkTheme.xaml ────────────────────────────────
+    // -- Shared dark base -- from DarkTheme.xaml --------------------------------
     // Background.Primary #13131F | .Secondary #1A1A28 | Sidebar #0F0F1A
     // Border.Default #282840
     // Foreground.Primary #E4E4F0 | .Secondary #8888A8 | .Muted #505070
@@ -100,7 +100,7 @@ public static class TrionThemes
         Info                     = "#4A86FF",
     };
 
-    // ── Shared light base — neutral light (all color light XAMLs share this) ──
+    // -- Shared light base -- neutral light (all color light XAMLs share this) --
     // Background.Primary #F5F5F5 | .Secondary #FFFFFF | Sidebar #EBEBEB
     // Border.Default #E0E0E0
     // Foreground.Primary #1A1A1A | .Secondary #616161 | .Disabled #C0C0C0

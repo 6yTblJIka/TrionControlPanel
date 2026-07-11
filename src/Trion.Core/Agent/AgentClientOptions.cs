@@ -2,7 +2,7 @@ namespace Trion.Core.Agent;
 
 /// <summary>
 /// Configuration for <c>AgentClient</c> (the Trion.Web side of the IPC channel).
-/// Bind from the <c>"Agent"</c> configuration section — same section the agent
+/// Bind from the <c>"Agent"</c> configuration section -- same section the agent
 /// reads its own <c>AgentOptions</c> from, so a single config block is shared.
 /// </summary>
 public sealed class AgentClientOptions

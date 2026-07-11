@@ -17,10 +17,11 @@ public sealed class LinuxMySqlService : IMySqlSetupService
     private readonly ILogger<LinuxMySqlService> _log;
     private readonly DistroProfile              _profile;
 
-    // ── State ─────────────────────────────────────────────────────────────────
+    // -- State -----------------------------------------------------------------
 
-    public bool      IsInstalled     => CheckInstalled();
-    public bool      IsRunning       { get; private set; }
+    public bool      IsInstalled        => CheckInstalled();
+    public bool      IsUsingSystemMySQL => false;   // Linux always uses the system package
+    public bool      IsRunning          { get; private set; }
     public string    LastMessage     { get; private set; } = string.Empty;
     public DownloadProgress? CurrentDownload => null;  // package manager handles downloads
     public bool      IsProcessRunning => CheckServiceActive();
@@ -30,7 +31,7 @@ public sealed class LinuxMySqlService : IMySqlSetupService
         ? DateTime.UtcNow - StartTime.Value
         : TimeSpan.Zero;
 
-    // ── Events ────────────────────────────────────────────────────────────────
+    // -- Events ----------------------------------------------------------------
 
     public event Action<string>?            ProgressChanged;
 #pragma warning disable CS0067 // interface requires the event; package manager never raises download progress
@@ -38,7 +39,7 @@ public sealed class LinuxMySqlService : IMySqlSetupService
 #pragma warning restore CS0067
     public event Action<bool>?              StatusChanged;
 
-    // ── Construction ──────────────────────────────────────────────────────────
+    // -- Construction ----------------------------------------------------------
 
     public LinuxMySqlService(ILogger<LinuxMySqlService> logger)
     {
@@ -46,7 +47,7 @@ public sealed class LinuxMySqlService : IMySqlSetupService
         _profile = DistroProfile.Detect();
     }
 
-    // ── RunStartupCheckAsync ──────────────────────────────────────────────────
+    // -- RunStartupCheckAsync --------------------------------------------------
 
     public async Task RunStartupCheckAsync(CancellationToken ct = default)
     {
@@ -57,7 +58,7 @@ public sealed class LinuxMySqlService : IMySqlSetupService
         {
             if (!IsInstalled)
             {
-                Report($"MySQL/MariaDB not found — installing '{_profile.PackageName}' via {_profile.Manager}...");
+                Report($"MySQL/MariaDB not found -- installing '{_profile.PackageName}' via {_profile.Manager}...");
                 await InstallPackageAsync(ct);
 
                 Report($"Enabling {_profile.ServiceName} service on boot...");
@@ -91,13 +92,13 @@ public sealed class LinuxMySqlService : IMySqlSetupService
         }
     }
 
-    // ── GenerateMyIni — no-op on Linux ────────────────────────────────────────
+    // -- GenerateMyIni -- no-op on Linux ----------------------------------------
 
     /// <inheritdoc/>
     /// <remarks>No-op on Linux. MySQL uses /etc/mysql/conf.d/ or /etc/my.cnf.</remarks>
     public void GenerateMyIni() { }
 
-    // ── Lifecycle ─────────────────────────────────────────────────────────────
+    // -- Lifecycle -------------------------------------------------------------
 
     public async Task StartAsync(bool? hideConsole = null, CancellationToken ct = default)
     {
@@ -159,7 +160,7 @@ public sealed class LinuxMySqlService : IMySqlSetupService
         await RunStartupCheckAsync(ct);
     }
 
-    // ── Package installation ──────────────────────────────────────────────────
+    // -- Package installation --------------------------------------------------
 
     private async Task InstallPackageAsync(CancellationToken ct)
     {
@@ -216,7 +217,7 @@ public sealed class LinuxMySqlService : IMySqlSetupService
             : $"yum install -y \"{rpmUrl}\"";
         await RunShellAsync(addRepoCmd, ct);
 
-        // RHEL 8+ has a conflicting 'mysql' module in AppStream — disable it
+        // RHEL 8+ has a conflicting 'mysql' module in AppStream -- disable it
         if (el >= 8 && _profile.Manager == PackageManager.Dnf)
         {
             Report("Disabling conflicting AppStream MySQL module...");
@@ -238,10 +239,10 @@ public sealed class LinuxMySqlService : IMySqlSetupService
             }
         }
         catch { /* ignored */ }
-        return 9; // safe default — el9 is the current mainstream
+        return 9; // safe default -- el9 is the current mainstream
     }
 
-    // ── First-time database setup ─────────────────────────────────────────────
+    // -- First-time database setup ---------------------------------------------
 
     /// <summary>
     /// Returns true when the 'phoenix' application user already exists
@@ -285,7 +286,7 @@ public sealed class LinuxMySqlService : IMySqlSetupService
             var (code, _, err) = await RunShellCaptureAsync(
                 $"mysql -u root -h 127.0.0.1 -P 3306 < \"{tmpSql}\"", ct);
 
-            // Strategy 2: connect via Unix socket (Ubuntu/Debian — root uses auth_socket plugin)
+            // Strategy 2: connect via Unix socket (Ubuntu/Debian -- root uses auth_socket plugin)
             if (code != 0)
                 (code, _, err) = await RunShellCaptureAsync(
                     $"mysql -u root --socket=\"{_profile.SocketPath}\" < \"{tmpSql}\"", ct);
@@ -295,7 +296,7 @@ public sealed class LinuxMySqlService : IMySqlSetupService
                 (code, _, err) = await RunShellCaptureAsync(
                     $"sudo mysql < \"{tmpSql}\"", ct);
 
-            // Strategy 4: RHEL MySQL Community Server — temporary root password in log
+            // Strategy 4: RHEL MySQL Community Server -- temporary root password in log
             if (code != 0)
             {
                 string tempPwd = ReadTempPassword(_profile.LogFile);
@@ -336,7 +337,7 @@ public sealed class LinuxMySqlService : IMySqlSetupService
         catch { return string.Empty; }
     }
 
-    // ── Status helpers ────────────────────────────────────────────────────────
+    // -- Status helpers --------------------------------------------------------
 
     private bool CheckInstalled()
     {
@@ -393,7 +394,7 @@ public sealed class LinuxMySqlService : IMySqlSetupService
             $"MySQL service '{_profile.ServiceName}' did not become active within {timeoutSec} s.");
     }
 
-    // ── Shell execution ───────────────────────────────────────────────────────
+    // -- Shell execution -------------------------------------------------------
 
     private async Task RunShellAsync(string command, CancellationToken ct)
     {
@@ -438,7 +439,7 @@ public sealed class LinuxMySqlService : IMySqlSetupService
         ProgressChanged?.Invoke(message);
     }
 
-    // ── Distro detection ──────────────────────────────────────────────────────
+    // -- Distro detection ------------------------------------------------------
 
     private enum PackageManager { Apt, Dnf, Yum }
 
@@ -452,11 +453,11 @@ public sealed class LinuxMySqlService : IMySqlSetupService
     {
         /// <summary>
         /// Auto-detects the package manager and returns the appropriate profile.
-        /// Detection order: apt-get → dnf → yum.
+        /// Detection order: apt-get -> dnf -> yum.
         /// </summary>
         internal static DistroProfile Detect()
         {
-            // Debian / Ubuntu — MySQL 8
+            // Debian / Ubuntu -- MySQL 8
             if (File.Exists("/usr/bin/apt-get") || File.Exists("/bin/apt-get"))
                 return new(
                     Manager:     PackageManager.Apt,
@@ -466,7 +467,7 @@ public sealed class LinuxMySqlService : IMySqlSetupService
                     SocketPath:  "/run/mysqld/mysqld.sock",
                     LogFile:     "/var/log/mysql/error.log");
 
-            // RHEL 8/9 / CentOS Stream / AlmaLinux / Rocky — MySQL Community Server
+            // RHEL 8/9 / CentOS Stream / AlmaLinux / Rocky -- MySQL Community Server
             // (repo added automatically by EnsureMySqlRepoAsync if not present)
             if (File.Exists("/usr/bin/dnf"))
                 return new(
@@ -477,7 +478,7 @@ public sealed class LinuxMySqlService : IMySqlSetupService
                     SocketPath:  "/var/lib/mysql/mysql.sock",
                     LogFile:     "/var/log/mysqld.log");
 
-            // Older RHEL / CentOS 7 — MySQL Community Server via yum
+            // Older RHEL / CentOS 7 -- MySQL Community Server via yum
             if (File.Exists("/usr/bin/yum"))
                 return new(
                     Manager:     PackageManager.Yum,

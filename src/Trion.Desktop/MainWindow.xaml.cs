@@ -22,7 +22,7 @@ public partial class MainWindow : Window
         Loaded += Window_Loaded;
     }
 
-    // ── Tray: hide instead of close when StayInTray is enabled ───────────────
+    // -- Tray: hide instead of close when StayInTray is enabled ---------------
 
     protected override void OnClosing(CancelEventArgs e)
     {
@@ -41,7 +41,7 @@ public partial class MainWindow : Window
         base.OnClosing(e);
     }
 
-    // ── DWM rounded corners (Windows 11+) ────────────────────────────────────
+    // -- DWM rounded corners (Windows 11+) ------------------------------------
 
     [DllImport("dwmapi.dll", PreserveSig = true)]
     private static extern int DwmSetWindowAttribute(
@@ -61,11 +61,11 @@ public partial class MainWindow : Window
         }
         catch
         {
-            // Not on Windows 11 — corners stay square, no action needed
+            // Not on Windows 11 -- corners stay square, no action needed
         }
     }
 
-    // ── Maximize fix — constrain to work area so bottom bar stays visible ─────
+    // -- Maximize fix -- constrain to work area so bottom bar stays visible -----
     //
     // WindowStyle.None + WindowChrome extends the window slightly beyond screen
     // edges when maximized (to hide the resize hit-test border). Without this
@@ -141,7 +141,7 @@ public partial class MainWindow : Window
         public WINPOINT(int x, int y) { this.x = x; this.y = y; }
     }
 
-    // ── Title-bar interaction ─────────────────────────────────────────────────
+    // -- Title-bar interaction -------------------------------------------------
 
     private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
@@ -151,8 +151,20 @@ public partial class MainWindow : Window
             DragMove();
     }
 
-    private void MinimizeButton_Click(object sender, RoutedEventArgs e) =>
-        WindowState = WindowState.Minimized;
+    private void MinimizeButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_settings.Current.StayInTray)
+            Hide();
+        else
+            WindowState = WindowState.Minimized;
+    }
+
+    protected override void OnStateChanged(EventArgs e)
+    {
+        base.OnStateChanged(e);
+        if (WindowState == WindowState.Minimized && _settings.Current.StayInTray)
+            Hide();
+    }
 
     private void MaximizeButton_Click(object sender, RoutedEventArgs e) =>
         ToggleMaximize();

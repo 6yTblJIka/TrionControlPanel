@@ -22,7 +22,7 @@ internal class TrinityEmulatorRepository : IEmulatorRepository
         _worldCs = worldCs;
     }
 
-    // ── Account ──────────────────────────────────────────────────────────────
+    // -- Account --------------------------------------------------------------
 
     public async Task<AccountRecord?> GetAccountAsync(string username, CancellationToken ct = default)
     {
@@ -138,7 +138,7 @@ internal class TrinityEmulatorRepository : IEmulatorRepository
         return new Page<AccountRecord>(rows.Select(MapAccount).ToList(), total, page, pageSize);
     }
 
-    // ── GM Level ─────────────────────────────────────────────────────────────
+    // -- GM Level -------------------------------------------------------------
 
     public async Task<int> GetGmLevelAsync(string username, CancellationToken ct = default)
     {
@@ -156,7 +156,7 @@ internal class TrinityEmulatorRepository : IEmulatorRepository
             new CommandDefinition(sql, new { Username = username.ToUpperInvariant() }, cancellationToken: ct));
     }
 
-    // ── Realms ───────────────────────────────────────────────────────────────
+    // -- Realms ---------------------------------------------------------------
 
     public async Task<IReadOnlyList<RealmRecord>> GetRealmsAsync(CancellationToken ct = default)
     {
@@ -189,7 +189,7 @@ internal class TrinityEmulatorRepository : IEmulatorRepository
         return affected > 0;
     }
 
-    // ── Characters ───────────────────────────────────────────────────────────
+    // -- Characters -----------------------------------------------------------
 
     public async Task<IReadOnlyList<CharacterSummary>> GetCharacterSummariesAsync(
         int accountId, CancellationToken ct = default)
@@ -215,7 +215,7 @@ internal class TrinityEmulatorRepository : IEmulatorRepository
         return rows.Select(r => new CharacterSummary(r.Id, r.Name, r.Level, r.Race, r.Class, r.AccountId)).ToList();
     }
 
-    // ── Sessions ─────────────────────────────────────────────────────────────
+    // -- Sessions -------------------------------------------------------------
 
     public async Task<int> GetOnlineCountAsync(CancellationToken ct = default)
     {
@@ -243,7 +243,7 @@ internal class TrinityEmulatorRepository : IEmulatorRepository
             r.Username, r.IpAddress, new DateTimeOffset(r.LoginTime, TimeSpan.Zero))).ToList();
     }
 
-    // ── GM Tickets ───────────────────────────────────────────────────────────
+    // -- GM Tickets -----------------------------------------------------------
 
     public async Task<IReadOnlyList<GmTicket>> ListGmTicketsAsync(CancellationToken ct = default)
     {
@@ -290,7 +290,7 @@ internal class TrinityEmulatorRepository : IEmulatorRepository
         return affected > 0;
     }
 
-    // ── Bans ─────────────────────────────────────────────────────────────────
+    // -- Bans -----------------------------------------------------------------
 
     public async Task<bool> BanAccountAsync(BanRecord ban, CancellationToken ct = default)
     {
@@ -338,14 +338,14 @@ internal class TrinityEmulatorRepository : IEmulatorRepository
         return affected > 0;
     }
 
-    // ── Private helpers ───────────────────────────────────────────────────────
+    // -- Private helpers -------------------------------------------------------
 
     private static AccountRecord MapAccount(AccountRow r) =>
         new(r.Id, r.Username, r.Email, r.GmLevel,
             new DateTimeOffset(r.CreatedAt, TimeSpan.Zero),
             r.IsLocked, r.PasswordHash);
 
-    // ── Dapper POCOs ─────────────────────────────────────────────────────────
+    // -- Dapper POCOs ---------------------------------------------------------
 
     private sealed class AccountRow
     {

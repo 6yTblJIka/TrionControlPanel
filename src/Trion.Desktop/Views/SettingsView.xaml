@@ -16,7 +16,7 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- ── Sub-tab bar ── -->
+        <!-- Sub-tab bar -->
         <Border Grid.Row="0"
                 Background="{DynamicResource Background.Secondary}"
                 BorderBrush="{DynamicResource Border.Default}"
@@ -64,7 +64,7 @@
                         </Style>
                     </Button.Style>
                 </Button>
-                <Button Content="Web Server"
+                <Button Content="{Binding Loc[TabWebServer]}"
                         Command="{Binding SwitchTabCommand}"
                         CommandParameter="{x:Static vm:SettingsTab.WebServer}">
                     <Button.Style>
@@ -78,16 +78,28 @@
                         </Style>
                     </Button.Style>
                 </Button>
+                <Button Content="{Binding Loc[TabGameClient]}"
+                        Command="{Binding SwitchTabCommand}"
+                        CommandParameter="{x:Static vm:SettingsTab.GameClient}">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource SubTabStyle}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ActiveTab}" Value="{x:Static vm:SettingsTab.GameClient}">
+                                    <Setter Property="BorderBrush" Value="{DynamicResource Tab.Underline}" />
+                                    <Setter Property="Foreground"  Value="{DynamicResource Foreground.Primary}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
             </StackPanel>
         </Border>
 
-        <!-- ── Tab content ── -->
+        <!-- Tab content -->
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="28,24,28,16">
 
-                <!-- ══════════════════════════════════════════════════════════════
-                     TRION TAB
-                     ══════════════════════════════════════════════════════════════ -->
+                <!-- TRION TAB -->
                 <StackPanel Visibility="{Binding ActiveTab,
                                 Converter={StaticResource EnumToVisibility},
                                 ConverterParameter={x:Static vm:SettingsTab.Trion}}">
@@ -99,7 +111,7 @@
                                    Style="{StaticResource CaptionStyle}" Margin="0,3,0,0" />
                     </StackPanel>
 
-                    <!-- ── BEHAVIOR ── -->
+                    <!-- BEHAVIOR -->
                     <Border Style="{StaticResource ElevatedCardStyle}" Padding="0" Margin="0,0,0,12">
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -238,11 +250,32 @@
                                               Content="" VerticalAlignment="Center" />
                                 </Grid>
                             </Border>
+                            <Separator Margin="20,0" />
+
+                            <!-- Share hardware info (opt-in telemetry) -->
+                            <Border Padding="20,11">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Loc[TGLShareHardwareInfo]}"
+                                                   Foreground="{DynamicResource Foreground.Primary}" FontSize="13" />
+                                        <TextBlock Text="{Binding Loc[DescShareHardwareInfo]}"
+                                                   Style="{StaticResource CaptionStyle}" Margin="0,2,0,0" />
+                                    </StackPanel>
+                                    <CheckBox Grid.Column="1"
+                                              IsChecked="{Binding HardwareInfoOptIn, Mode=TwoWay}"
+                                              Style="{StaticResource ToggleSwitchStyle}"
+                                              Content="" VerticalAlignment="Center" />
+                                </Grid>
+                            </Border>
                             </StackPanel>
                         </Grid>
                     </Border>
 
-                    <!-- ── APPEARANCE ── -->
+                    <!-- APPEARANCE -->
                     <Border Style="{StaticResource ElevatedCardStyle}" Padding="0" Margin="0,0,0,12">
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -282,7 +315,7 @@
                         </Grid>
                     </Border>
 
-                    <!-- ── AUTO-UPDATE ── -->
+                    <!-- AUTO-UPDATE -->
                     <Border Style="{StaticResource ElevatedCardStyle}" Padding="0" Margin="0,0,0,12">
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -362,7 +395,7 @@
                         </Grid>
                     </Border>
 
-                    <!-- ── API &amp; NETWORK ── -->
+                    <!-- API &amp; NETWORK -->
                     <Border Style="{StaticResource ElevatedCardStyle}" Padding="0">
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -408,9 +441,7 @@
 
                 </StackPanel>
 
-                <!-- ══════════════════════════════════════════════════════════════
-                     CUSTOM REPACKS TAB
-                     ══════════════════════════════════════════════════════════════ -->
+                <!-- CUSTOM REPACKS TAB -->
                 <StackPanel Visibility="{Binding ActiveTab,
                                 Converter={StaticResource EnumToVisibility},
                                 ConverterParameter={x:Static vm:SettingsTab.Custom}}">
@@ -422,7 +453,7 @@
                                    Style="{StaticResource CaptionStyle}" Margin="0,3,0,0" />
                     </StackPanel>
 
-                    <!-- ── CUSTOM EMULATOR ── -->
+                    <!-- CUSTOM EMULATOR -->
                     <Border Style="{StaticResource ElevatedCardStyle}" Padding="0">
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -540,9 +571,7 @@
 
                 </StackPanel>
 
-                <!-- ══════════════════════════════════════════════════════════════
-                     DATABASE TAB
-                     ══════════════════════════════════════════════════════════════ -->
+                <!-- DATABASE TAB -->
                 <StackPanel Visibility="{Binding ActiveTab,
                                 Converter={StaticResource EnumToVisibility},
                                 ConverterParameter={x:Static vm:SettingsTab.Database}}">
@@ -561,7 +590,7 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
-                        <!-- ── CONNECTION ── -->
+                        <!-- CONNECTION -->
                         <Border Grid.Column="0" Style="{StaticResource ElevatedCardStyle}" Padding="0">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -645,7 +674,7 @@
                             </Grid>
                         </Border>
 
-                        <!-- ── DATABASE NAMES ── -->
+                        <!-- DATABASE NAMES -->
                         <Border Grid.Column="2" Style="{StaticResource ElevatedCardStyle}" Padding="0">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -685,7 +714,7 @@
 
                     </Grid>
 
-                    <!-- ── MySQL ENGINE ── -->
+                    <!-- MySQL ENGINE -->
                     <Border Style="{StaticResource ElevatedCardStyle}" Padding="0" Margin="0,12,0,0">
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -696,7 +725,7 @@
                                     Background="{DynamicResource Accent.Primary}" />
                             <StackPanel Grid.Column="1">
                                 <Border Padding="20,16,20,14">
-                                    <TextBlock Text="MySQL Engine" Style="{StaticResource H4Style}" />
+                                    <TextBlock Text="{Binding Loc[LBLMySqlEngine]}" Style="{StaticResource H4Style}" />
                                 </Border>
                                 <Separator />
 
@@ -761,7 +790,7 @@
                                 </Grid>
                             </Border>
 
-                            <!-- Progress bar — visible while an operation is running -->
+                            <!-- Progress bar - visible while an operation is running -->
                             <Border Padding="20,0,20,12"
                                     Visibility="{Binding IsMySqlBusy, Converter={StaticResource BoolToVisibility}}">
                                 <StackPanel>
@@ -780,21 +809,21 @@
                             <!-- Action buttons -->
                             <Border Padding="20,12">
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                    <Button Content="Repair config"
+                                    <Button Content="{Binding Loc[BtnRepairConfig]}"
                                             Command="{Binding RepairMySqlCommand}"
                                             Style="{StaticResource SecondaryButtonStyle}"
                                             Width="120" Margin="0,0,8,0"
-                                            ToolTip="Regenerate my.ini for current hardware and restart MySQL" />
-                                    <Button Content="Reinstall"
+                                            ToolTip="{Binding Loc[TooltipRepairMySql]}" />
+                                    <Button Content="{Binding Loc[BtnRepair]}"
                                             Command="{Binding ReinstallMySqlCommand}"
                                             Style="{StaticResource SecondaryButtonStyle}"
                                             Width="100" Margin="0,0,8,0"
-                                            ToolTip="Delete current installation and download a fresh copy" />
-                                    <Button Content="Uninstall"
+                                            ToolTip="{Binding Loc[TooltipReinstallMySql]}" />
+                                    <Button Content="{Binding Loc[BtnUninstall]}"
                                             Command="{Binding UninstallMySqlCommand}"
                                             Style="{StaticResource DangerButtonStyle}"
                                             Width="100"
-                                            ToolTip="Stop MySQL and permanently delete all database files" />
+                                            ToolTip="{Binding Loc[TooltipUninstallMySql]}" />
                                 </StackPanel>
                             </Border>
                             </StackPanel>
@@ -803,21 +832,19 @@
 
                 </StackPanel>
 
-                <!-- ══════════════════════════════════════════════════════════════
-                     WEB SERVER TAB
-                     ══════════════════════════════════════════════════════════════ -->
+                <!-- WEB SERVER TAB -->
                 <StackPanel Visibility="{Binding ActiveTab,
                                 Converter={StaticResource EnumToVisibility},
                                 ConverterParameter={x:Static vm:SettingsTab.WebServer}}">
 
                     <!-- Page header -->
                     <StackPanel Margin="0,0,0,20">
-                        <TextBlock Text="Web Server" Style="{StaticResource H1Style}" />
-                        <TextBlock Text="nginx + PHP-CGI portable web server settings"
+                        <TextBlock Text="{Binding Loc[TabWebServer]}" Style="{StaticResource H1Style}" />
+                        <TextBlock Text="{Binding Loc[SettingsWebServerCaption]}"
                                    Style="{StaticResource CaptionStyle}" Margin="0,3,0,0" />
                     </StackPanel>
 
-                    <!-- ── CONFIGURATION ── -->
+                    <!-- CONFIGURATION -->
                     <Border Style="{StaticResource ElevatedCardStyle}" Padding="0" Margin="0,0,0,12">
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -828,13 +855,13 @@
                                     Background="{DynamicResource Accent.Primary}" />
                             <StackPanel Grid.Column="1">
                                 <Border Padding="20,16,20,14">
-                                    <TextBlock Text="Configuration" Style="{StaticResource H4Style}" />
+                                    <TextBlock Text="{Binding Loc[LBLWebServerConfig]}" Style="{StaticResource H4Style}" />
                                 </Border>
                                 <Separator />
 
                             <!-- HTTP Port -->
                             <StackPanel Margin="20,14">
-                                <TextBlock Text="HTTP Port" Style="{StaticResource CaptionStyle}" />
+                                <TextBlock Text="{Binding Loc[LBLHttpPort]}" Style="{StaticResource CaptionStyle}" />
                                 <TextBox Text="{Binding WebServerPort, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource InputStyle}"
                                          Tag="80"
@@ -851,9 +878,9 @@
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                        <TextBlock Text="Enable HTTPS"
+                                        <TextBlock Text="{Binding Loc[TGLEnableHttps]}"
                                                    Foreground="{DynamicResource Foreground.Primary}" FontSize="13" />
-                                        <TextBlock Text="Serve over TLS — HTTP redirects to HTTPS automatically"
+                                        <TextBlock Text="{Binding Loc[DescEnableHttps]}"
                                                    Style="{StaticResource CaptionStyle}" Margin="0,2,0,0" />
                                     </StackPanel>
                                     <CheckBox Grid.Column="1"
@@ -863,14 +890,14 @@
                                 </Grid>
                             </Border>
 
-                            <!-- HTTPS settings — only visible when HTTPS is on -->
+                            <!-- HTTPS settings - only visible when HTTPS is on -->
                             <StackPanel Visibility="{Binding EnableHttps, Converter={StaticResource BoolToVisibility}}">
 
                                 <Separator Margin="20,0" />
 
                                 <!-- HTTPS Port -->
                                 <StackPanel Margin="20,14">
-                                    <TextBlock Text="HTTPS Port" Style="{StaticResource CaptionStyle}" />
+                                    <TextBlock Text="{Binding Loc[LBLHttpsPort]}" Style="{StaticResource CaptionStyle}" />
                                     <TextBox Text="{Binding HttpsPort, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                              Style="{StaticResource InputStyle}"
                                              Tag="443"
@@ -882,7 +909,7 @@
 
                                 <!-- Certificate path -->
                                 <StackPanel Margin="20,14">
-                                    <TextBlock Text="TLS Certificate (PEM)" Style="{StaticResource CaptionStyle}" />
+                                    <TextBlock Text="{Binding Loc[LBLTlsCert]}" Style="{StaticResource CaptionStyle}" />
                                     <Grid Margin="0,6,0,0">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
@@ -904,7 +931,7 @@
 
                                 <!-- Private key path -->
                                 <StackPanel Margin="20,14">
-                                    <TextBlock Text="Private Key (PEM)" Style="{StaticResource CaptionStyle}" />
+                                    <TextBlock Text="{Binding Loc[LBLPrivateKey]}" Style="{StaticResource CaptionStyle}" />
                                     <Grid Margin="0,6,0,0">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
@@ -932,13 +959,13 @@
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                            <TextBlock Text="Self-signed certificate"
+                                            <TextBlock Text="{Binding Loc[LBLSelfSignedCert]}"
                                                        Foreground="{DynamicResource Foreground.Primary}" FontSize="13" />
-                                            <TextBlock Text="Generate a 10-year RSA-2048 cert for localhost — valid for local use"
+                                            <TextBlock Text="{Binding Loc[DescSelfSignedCert]}"
                                                        Style="{StaticResource CaptionStyle}" Margin="0,2,0,0" />
                                         </StackPanel>
                                         <Button Grid.Column="1"
-                                                Content="Generate"
+                                                Content="{Binding Loc[BtnGenerate]}"
                                                 Command="{Binding GenerateCertCommand}"
                                                 Style="{StaticResource SecondaryButtonStyle}"
                                                 VerticalAlignment="Center" />
@@ -957,9 +984,9 @@
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                        <TextBlock Text="Auto-start web server"
+                                        <TextBlock Text="{Binding Loc[TGLWebServerAutoStart]}"
                                                    Foreground="{DynamicResource Foreground.Primary}" FontSize="13" />
-                                        <TextBlock Text="Launch nginx + PHP-CGI automatically when Trion starts"
+                                        <TextBlock Text="{Binding Loc[DescWebServerAutoStart]}"
                                                    Style="{StaticResource CaptionStyle}" Margin="0,2,0,0" />
                                     </StackPanel>
                                     <CheckBox Grid.Column="1"
@@ -972,7 +999,7 @@
                         </Grid>
                     </Border>
 
-                    <!-- ── NGINX + PHP ENGINE ── -->
+                    <!-- NGINX + PHP ENGINE -->
                     <Border Style="{StaticResource ElevatedCardStyle}" Padding="0" Margin="0,0,0,12">
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -983,7 +1010,7 @@
                                     Background="{DynamicResource Accent.Primary}" />
                             <StackPanel Grid.Column="1">
                                 <Border Padding="20,16,20,14">
-                                    <TextBlock Text="nginx + PHP Engine" Style="{StaticResource H4Style}" />
+                                    <TextBlock Text="{Binding Loc[LBLNginxPhpEngine]}" Style="{StaticResource H4Style}" />
                                 </Border>
                                 <Separator />
 
@@ -1046,7 +1073,7 @@
                                 </Grid>
                             </Border>
 
-                            <!-- Progress bar — visible while an operation is running -->
+                            <!-- Progress bar - visible while an operation is running -->
                             <Border Padding="20,0,20,12"
                                     Visibility="{Binding IsWebServerBusy, Converter={StaticResource BoolToVisibility}}">
                                 <StackPanel>
@@ -1062,7 +1089,7 @@
 
                             <Separator Margin="20,0" />
 
-                            <!-- Download & Install — shown when not yet installed -->
+                            <!-- Download & Install - shown when not yet installed -->
                             <Border Padding="20,12"
                                     Visibility="{Binding IsWebServerInstalled, Converter={StaticResource InverseBoolToVisibility}}">
                                 <Grid>
@@ -1071,13 +1098,13 @@
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                        <TextBlock Text="nginx + PHP not installed"
+                                        <TextBlock Text="{Binding Loc[LBLNginxNotInstalled]}"
                                                    Foreground="{DynamicResource Foreground.Primary}" FontSize="13" />
-                                        <TextBlock Text="Downloads nginx and PHP-CGI from the Trion API, extracts and configures them automatically"
+                                        <TextBlock Text="{Binding Loc[DescNginxNotInstalled]}"
                                                    Style="{StaticResource CaptionStyle}" Margin="0,2,0,0" TextWrapping="Wrap" />
                                     </StackPanel>
                                     <Button Grid.Column="1"
-                                            Content="Download &amp; Install"
+                                            Content="{Binding Loc[BtnDownloadInstall]}"
                                             Command="{Binding InstallWebServerCommand}"
                                             Style="{StaticResource PrimaryButtonStyle}"
                                             VerticalAlignment="Center"
@@ -1085,25 +1112,25 @@
                                 </Grid>
                             </Border>
 
-                            <!-- Manage buttons — shown when installed -->
+                            <!-- Manage buttons - shown when installed -->
                             <Border Padding="20,12"
                                     Visibility="{Binding IsWebServerInstalled, Converter={StaticResource BoolToVisibility}}">
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                    <Button Content="Repair config"
+                                    <Button Content="{Binding Loc[BtnRepairConfig]}"
                                             Command="{Binding RepairWebServerCommand}"
                                             Style="{StaticResource SecondaryButtonStyle}"
                                             Width="120" Margin="0,0,8,0"
-                                            ToolTip="Regenerate nginx.conf and php.ini for current hardware" />
-                                    <Button Content="Reinstall"
+                                            ToolTip="{Binding Loc[TooltipRepairWebServer]}" />
+                                    <Button Content="{Binding Loc[BtnRepair]}"
                                             Command="{Binding ReinstallWebServerCommand}"
                                             Style="{StaticResource SecondaryButtonStyle}"
                                             Width="100" Margin="0,0,8,0"
-                                            ToolTip="Delete current installation and download a fresh copy from the Trion API" />
-                                    <Button Content="Uninstall"
+                                            ToolTip="{Binding Loc[TooltipReinstallWebServer]}" />
+                                    <Button Content="{Binding Loc[BtnUninstall]}"
                                             Command="{Binding UninstallWebServerCommand}"
                                             Style="{StaticResource DangerButtonStyle}"
                                             Width="100"
-                                            ToolTip="Stop web server and permanently delete all web server files" />
+                                            ToolTip="{Binding Loc[TooltipUninstallWebServer]}" />
                                 </StackPanel>
                             </Border>
                             </StackPanel>
@@ -1112,25 +1139,251 @@
 
                 </StackPanel>
 
+                <!-- GAME CLIENT TAB -->
+                <StackPanel Visibility="{Binding ActiveTab,
+                                Converter={StaticResource EnumToVisibility},
+                                ConverterParameter={x:Static vm:SettingsTab.GameClient}}">
+
+                    <StackPanel Margin="0,0,0,20">
+                        <TextBlock Text="{Binding Loc[TabGameClient]}" Style="{StaticResource H1Style}" />
+                        <TextBlock Text="{Binding Loc[SettingsGameClientCaption]}"
+                                   Style="{StaticResource CaptionStyle}" Margin="0,3,0,0" />
+                    </StackPanel>
+
+                    <!-- Classic (Vanilla) -->
+                    <Border Margin="0,0,0,8">
+                        <Border.Style>
+                            <Style TargetType="Border" BasedOn="{StaticResource ElevatedCardStyle}">
+                                <Setter Property="Padding" Value="0" />
+                            </Style>
+                        </Border.Style>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="5" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" CornerRadius="10,0,0,10">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="{DynamicResource Foreground.Muted}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsClassicClientConfigured}" Value="True">
+                                                <Setter Property="Background" Value="{DynamicResource Status.Running}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                            </Border>
+                            <Grid Grid.Column="1" Margin="16,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="160" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
+                                    <TextBlock Text="{Binding Loc[GameClientExpClassic]}" Style="{StaticResource BodyStyle}" FontWeight="SemiBold" />
+                                    <TextBlock Text="1.12.1" Style="{StaticResource CaptionStyle}" />
+                                </StackPanel>
+                                <TextBox Grid.Column="1"
+                                         Text="{Binding ClassicClientPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         Height="32" Padding="10,0" VerticalContentAlignment="Center" Margin="0,0,8,0" />
+                                <Button Grid.Column="2" Content="{Binding Loc[BtnBrowse]}"
+                                        Command="{Binding BrowseClientPathCommand}" CommandParameter="classic"
+                                        Style="{StaticResource SecondaryButtonStyle}" Width="80" Height="32" />
+                            </Grid>
+                        </Grid>
+                    </Border>
+
+                    <!-- The Burning Crusade -->
+                    <Border Margin="0,0,0,8">
+                        <Border.Style>
+                            <Style TargetType="Border" BasedOn="{StaticResource ElevatedCardStyle}">
+                                <Setter Property="Padding" Value="0" />
+                            </Style>
+                        </Border.Style>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="5" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" CornerRadius="10,0,0,10">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="{DynamicResource Foreground.Muted}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsTbcClientConfigured}" Value="True">
+                                                <Setter Property="Background" Value="{DynamicResource Status.Running}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                            </Border>
+                            <Grid Grid.Column="1" Margin="16,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="160" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
+                                    <TextBlock Text="{Binding Loc[GameClientExpTBC]}" Style="{StaticResource BodyStyle}" FontWeight="SemiBold" />
+                                    <TextBlock Text="2.4.3" Style="{StaticResource CaptionStyle}" />
+                                </StackPanel>
+                                <TextBox Grid.Column="1"
+                                         Text="{Binding TbcClientPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         Height="32" Padding="10,0" VerticalContentAlignment="Center" Margin="0,0,8,0" />
+                                <Button Grid.Column="2" Content="{Binding Loc[BtnBrowse]}"
+                                        Command="{Binding BrowseClientPathCommand}" CommandParameter="tbc"
+                                        Style="{StaticResource SecondaryButtonStyle}" Width="80" Height="32" />
+                            </Grid>
+                        </Grid>
+                    </Border>
+
+                    <!-- Wrath of the Lich King -->
+                    <Border Margin="0,0,0,8">
+                        <Border.Style>
+                            <Style TargetType="Border" BasedOn="{StaticResource ElevatedCardStyle}">
+                                <Setter Property="Padding" Value="0" />
+                            </Style>
+                        </Border.Style>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="5" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" CornerRadius="10,0,0,10">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="{DynamicResource Foreground.Muted}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsWotlkClientConfigured}" Value="True">
+                                                <Setter Property="Background" Value="{DynamicResource Status.Running}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                            </Border>
+                            <Grid Grid.Column="1" Margin="16,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="160" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
+                                    <TextBlock Text="{Binding Loc[GameClientExpWotLK]}" Style="{StaticResource BodyStyle}" FontWeight="SemiBold" />
+                                    <TextBlock Text="3.3.5a" Style="{StaticResource CaptionStyle}" />
+                                </StackPanel>
+                                <TextBox Grid.Column="1"
+                                         Text="{Binding WotlkClientPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         Height="32" Padding="10,0" VerticalContentAlignment="Center" Margin="0,0,8,0" />
+                                <Button Grid.Column="2" Content="{Binding Loc[BtnBrowse]}"
+                                        Command="{Binding BrowseClientPathCommand}" CommandParameter="wotlk"
+                                        Style="{StaticResource SecondaryButtonStyle}" Width="80" Height="32" />
+                            </Grid>
+                        </Grid>
+                    </Border>
+
+                    <!-- Cataclysm -->
+                    <Border Margin="0,0,0,8">
+                        <Border.Style>
+                            <Style TargetType="Border" BasedOn="{StaticResource ElevatedCardStyle}">
+                                <Setter Property="Padding" Value="0" />
+                            </Style>
+                        </Border.Style>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="5" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" CornerRadius="10,0,0,10">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="{DynamicResource Foreground.Muted}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsCataClientConfigured}" Value="True">
+                                                <Setter Property="Background" Value="{DynamicResource Status.Running}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                            </Border>
+                            <Grid Grid.Column="1" Margin="16,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="160" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
+                                    <TextBlock Text="{Binding Loc[GameClientExpCata]}" Style="{StaticResource BodyStyle}" FontWeight="SemiBold" />
+                                    <TextBlock Text="4.3.4" Style="{StaticResource CaptionStyle}" />
+                                </StackPanel>
+                                <TextBox Grid.Column="1"
+                                         Text="{Binding CataClientPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         Height="32" Padding="10,0" VerticalContentAlignment="Center" Margin="0,0,8,0" />
+                                <Button Grid.Column="2" Content="{Binding Loc[BtnBrowse]}"
+                                        Command="{Binding BrowseClientPathCommand}" CommandParameter="cata"
+                                        Style="{StaticResource SecondaryButtonStyle}" Width="80" Height="32" />
+                            </Grid>
+                        </Grid>
+                    </Border>
+
+                    <!-- Mists of Pandaria -->
+                    <Border Margin="0,0,0,8">
+                        <Border.Style>
+                            <Style TargetType="Border" BasedOn="{StaticResource ElevatedCardStyle}">
+                                <Setter Property="Padding" Value="0" />
+                            </Style>
+                        </Border.Style>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="5" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" CornerRadius="10,0,0,10">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="{DynamicResource Foreground.Muted}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsMopClientConfigured}" Value="True">
+                                                <Setter Property="Background" Value="{DynamicResource Status.Running}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                            </Border>
+                            <Grid Grid.Column="1" Margin="16,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="160" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
+                                    <TextBlock Text="{Binding Loc[GameClientExpMoP]}" Style="{StaticResource BodyStyle}" FontWeight="SemiBold" />
+                                    <TextBlock Text="5.4.8" Style="{StaticResource CaptionStyle}" />
+                                </StackPanel>
+                                <TextBox Grid.Column="1"
+                                         Text="{Binding MopClientPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         Height="32" Padding="10,0" VerticalContentAlignment="Center" Margin="0,0,8,0" />
+                                <Button Grid.Column="2" Content="{Binding Loc[BtnBrowse]}"
+                                        Command="{Binding BrowseClientPathCommand}" CommandParameter="mop"
+                                        Style="{StaticResource SecondaryButtonStyle}" Width="80" Height="32" />
+                            </Grid>
+                        </Grid>
+                    </Border>
+
+                </StackPanel>
+
             </StackPanel>
         </ScrollViewer>
 
-        <!-- ── Footer: status + save ── -->
+        <!-- Footer: status message only (settings auto-save on change) -->
         <Border Grid.Row="2"
                 Background="{DynamicResource Background.Secondary}"
                 BorderBrush="{DynamicResource Border.Default}"
                 BorderThickness="0,1,0,0"
                 Padding="28,12">
-            <Grid>
-                <TextBlock Text="{Binding StatusMessage}"
-                           Style="{StaticResource HintStyle}"
-                           VerticalAlignment="Center" />
-                <Button Content="{Binding Loc[BtnSave]}"
-                        Command="{Binding SaveCommand}"
-                        Style="{StaticResource PrimaryButtonStyle}"
-                        HorizontalAlignment="Right"
-                        Width="140" />
-            </Grid>
+            <TextBlock Text="{Binding StatusMessage}"
+                       Style="{StaticResource HintStyle}"
+                       VerticalAlignment="Center" />
         </Border>
     </Grid>
 </UserControl>

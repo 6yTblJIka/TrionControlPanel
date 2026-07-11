@@ -5,7 +5,18 @@ namespace Trion.Agent.Security;
 
 public sealed partial class CommandAllowlist
 {
-    // ── Permitted executable file names (case-insensitive on Windows) ─────────
+    private readonly string[] _allowedInstallRoots;
+
+    public CommandAllowlist(string[] allowedInstallRoots)
+    {
+        _allowedInstallRoots = allowedInstallRoots
+            .Select(r => Path.GetFullPath(r).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+            .ToArray();
+    }
+
+    // Parameterless constructor for DI containers and tests that don't set roots (permissive).
+    public CommandAllowlist() : this([]) { }
+    // -- Permitted executable file names (case-insensitive on Windows) ---------
     private static readonly HashSet<string> AllowedFileNames = new(
         RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
             ? StringComparer.OrdinalIgnoreCase
@@ -20,16 +31,22 @@ public sealed partial class CommandAllowlist
         "mangosd.exe",
         "realmd",
         "realmd.exe",
-        // Client data extraction tools
+        // Client data extraction tools (in execution order)
+        "mapextractor",
+        "mapextractor.exe",
         "ad",
         "ad.exe",
         "vmap4extractor",
         "vmap4extractor.exe",
+        "vmap4assembler",
+        "vmap4assembler.exe",
         "mmaps_generator",
         "mmaps_generator.exe",
+        "MoveMapGen",
+        "MoveMapGen.exe",
     };
 
-    // ── Permitted system executables with their own argument rules ────────────
+    // -- Permitted system executables with their own argument rules ------------
     private static readonly Dictionary<string, ArgumentRule> SystemExecutables = new(
         StringComparer.Ordinal)
     {
@@ -39,7 +56,7 @@ public sealed partial class CommandAllowlist
         [@"C:\Windows\System32\sc.exe"] = new ArgumentRule(
             AllowedFirstArgs: ["start", "stop", "query"],
             ServiceNamePattern: ServiceNameRegex()),
-        // Package managers — only known packages permitted
+        // Package managers -- only known packages permitted
         ["/usr/bin/apt-get"] = new ArgumentRule(
             AllowedFirstArgs: ["install"],
             ServiceNamePattern: PackageNameRegex()),
@@ -48,7 +65,7 @@ public sealed partial class CommandAllowlist
             ServiceNamePattern: PackageNameRegex()),
     };
 
-    // ── Git executables — URL allowlist enforcement ────────────────────────────
+    // -- Git executables -- URL allowlist enforcement ----------------------------
     private static readonly HashSet<string> GitExecutables = new(StringComparer.Ordinal)
     {
         "/usr/bin/git",
@@ -63,25 +80,25 @@ public sealed partial class CommandAllowlist
             "https://github.com/cmangos/mangos-wotlk.git",
         };
 
-    // ── msiexec — Windows MSI installer (silent installs only) ───────────────
+    // -- msiexec -- Windows MSI installer (silent installs only) ---------------
     private static readonly string MsiExecPath =
         @"C:\Windows\System32\msiexec.exe";
 
     private static readonly HashSet<string> AllowedMsiFlags =
         new(StringComparer.OrdinalIgnoreCase) { "/quiet", "/norestart", "/passive" };
 
-    // ── Shell metacharacters that must never appear in any argument ───────────
+    // -- Shell metacharacters that must never appear in any argument -----------
     [GeneratedRegex(@"[;&|`$<>!\\*?{}\[\]()'""]")]
     private static partial Regex ShellMetacharRegex();
 
     [GeneratedRegex(@"^[a-zA-Z0-9_\-]{1,64}$")]
     private static partial Regex ServiceNameRegex();
 
-    // Package names: letters, numbers, dots, plus, hyphens — mirrors Debian/RPM naming
+    // Package names: letters, numbers, dots, plus, hyphens -- mirrors Debian/RPM naming
     [GeneratedRegex(@"^[a-zA-Z0-9][a-zA-Z0-9\.\+\-]{0,127}$")]
     private static partial Regex PackageNameRegex();
 
-    // ── Public validation ─────────────────────────────────────────────────────
+    // -- Public validation -----------------------------------------------------
 
     public bool IsPermitted(string executablePath, string[] arguments)
     {
@@ -105,10 +122,10 @@ public sealed partial class CommandAllowlist
 
         var fileName = Path.GetFileName(executablePath);
 
-        // Emulator executables + extraction tools: check file name, not full path
-        // (install directory is user-configured)
+        // Emulator executables + extraction tools: check file name, then optionally
+        // verify the executable lives under a configured install root.
         if (AllowedFileNames.Contains(fileName))
-            return true;
+            return IsUnderAllowedRoot(executablePath);
 
         // System executables: check full path + argument rules
         if (SystemExecutables.TryGetValue(executablePath, out var rule))
@@ -162,7 +179,7 @@ public sealed partial class CommandAllowlist
                 // Require exactly: clone <allowed-url> [<target-dir>]
                 if (arguments.Length < 2) return false;
                 if (!AllowedGitRepoUrls.Contains(arguments[1])) return false;
-                // Optional third argument is the target directory — already checked for metacharacters
+                // Optional third argument is the target directory -- already checked for metacharacters
                 return true;
 
             case "fetch":
@@ -195,6 +212,31 @@ public sealed partial class CommandAllowlist
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// When <see cref="AgentOptions.AllowedInstallRoots"/> is configured, verifies the
+    /// executable path starts with one of the allowed roots.
+    /// Returns true unconditionally when no roots are configured (development / permissive mode).
+    /// </summary>
+    private bool IsUnderAllowedRoot(string executablePath)
+    {
+        if (_allowedInstallRoots.Length == 0)
+            return true;
+
+        var fullExe = Path.GetFullPath(executablePath);
+        var comparison = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+
+        foreach (var root in _allowedInstallRoots)
+        {
+            if (fullExe.StartsWith(root + Path.DirectorySeparatorChar, comparison) ||
+                fullExe.StartsWith(root + Path.AltDirectorySeparatorChar, comparison))
+                return true;
+        }
+
+        return false;
     }
 
     private sealed record ArgumentRule(

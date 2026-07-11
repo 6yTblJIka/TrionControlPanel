@@ -12,7 +12,7 @@
 
 <MudLayout>
 
-    <MudAppBar Elevation="1" Dense="true" DisableGutters="true">
+    <MudAppBar Elevation="1" Dense="true">
         <button class="trion-brand-btn" @onclick="DrawerToggle" title="Toggle sidebar">
             <div class="trion-logo" style="width:22px;height:22px;flex-shrink:0;"></div>
             <span class="trion-brand-trion">TRION</span>
@@ -42,7 +42,7 @@
 
 </MudLayout>
 
-<!-- Session countdown badge — updated every second by idle-logout.js -->
+<!-- Session countdown badge -- updated every second by idle-logout.js -->
 <div id="trion-idle-timer" class="trion-session-badge">
     <MudIcon Icon="@Icons.Material.Outlined.Timer" Style="font-size:14px;" />
     <span id="trion-idle-countdown">15:00</span>
@@ -67,7 +67,7 @@
     {
         if (!firstRender) return;
 
-        // ── Culture ────────────────────────────────────────────────────────
+        // -- Culture --------------------------------------------------------
         // Blazor Server's rendering threads don't inherit the culture set by
         // UseRequestLocalization (which only runs on the HTTP request thread).
         // Re-apply it here from the trion_lang cookie so IStringLocalizer
@@ -108,7 +108,7 @@
         _theme = TrionThemes.BuildMudTheme(ThemeState.CurrentColorId);
         await InvokeAsync(StateHasChanged);
 
-        // Start inactivity timer — logs out after 15 min of no user activity
+        // Start inactivity timer -- logs out after 15 min of no user activity
         await JS.InvokeVoidAsync("trionIdle.init");
     }
 

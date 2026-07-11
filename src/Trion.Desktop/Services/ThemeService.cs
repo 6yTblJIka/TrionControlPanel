@@ -15,7 +15,7 @@ public class ThemeService : IThemeService
     {
         if (string.IsNullOrWhiteSpace(themeName)) themeName = "TrionBlue Dark";
 
-        // "TrionBlue Dark" → color = "TrionBlue", variant = "Dark"
+        // "TrionBlue Dark" -> color = "TrionBlue", variant = "Dark"
         // Split on the LAST space so "TrionBlue" (no internal spaces) is kept whole.
         var sep = themeName.LastIndexOf(' ');
         if (sep > 0)
@@ -39,7 +39,7 @@ public class ThemeService : IThemeService
         ApplyTheme($"{CurrentColor} {(IsDark ? "Dark" : "Light")}");
     }
 
-    // ── Internal ──────────────────────────────────────────────────────────────
+    // -- Internal --------------------------------------------------------------
 
     private void ApplyTheme(string themeName)
     {

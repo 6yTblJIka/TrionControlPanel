@@ -38,7 +38,7 @@ public sealed class EmulatorAuthServiceTests : IAsyncLifetime
             Directory.Delete(_auditDir, recursive: true);
     }
 
-    // ── helpers ──────────────────────────────────────────────────────────────
+    // -- helpers --------------------------------------------------------------
 
     private EmulatorAuthService CreateSut(EmulatorAuthOptions? opts = null)
     {
@@ -50,7 +50,7 @@ public sealed class EmulatorAuthServiceTests : IAsyncLifetime
             TestLogger.Instance);
     }
 
-    // ── Owner / bootstrap account ─────────────────────────────────────────────
+    // -- Owner / bootstrap account ---------------------------------------------
 
     [Fact]
     public async Task Owner_Login_Succeeds_WithCorrectCredentials()
@@ -83,7 +83,7 @@ public sealed class EmulatorAuthServiceTests : IAsyncLifetime
         Assert.NotNull(result.FailureReason);
     }
 
-    // ── Lockout mechanics ─────────────────────────────────────────────────────
+    // -- Lockout mechanics -----------------------------------------------------
 
     [Fact]
     public async Task FailedLogins_Lock_Account_AfterMaxAttempts()
@@ -135,7 +135,7 @@ public sealed class EmulatorAuthServiceTests : IAsyncLifetime
     }
 }
 
-// ── Shared fakes ─────────────────────────────────────────────────────────────
+// -- Shared fakes -------------------------------------------------------------
 
 file sealed class FakeOptionsMonitor<T>(T value) : IOptionsMonitor<T>
 {

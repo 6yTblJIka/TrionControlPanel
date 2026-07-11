@@ -11,10 +11,10 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />      <!-- Content -->
-            <RowDefinition Height="Auto" />   <!-- Footer  -->
+            <RowDefinition Height="Auto" />   <!-- Footer -->
         </Grid.RowDefinitions>
 
-        <!-- ── Content ── -->
+        <!-- Content -->
         <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="28,24,28,16">
 
@@ -25,7 +25,7 @@
                                Style="{StaticResource CaptionStyle}" Margin="0,3,0,0" />
                 </StackPanel>
 
-                <!-- ── Public IP hero card ── -->
+                <!-- Public IP hero card -->
                 <Border Style="{StaticResource AccentCardStyle}" Padding="24" Margin="0,0,0,12">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -36,7 +36,7 @@
                         <StackPanel Grid.Column="0">
                             <TextBlock Text="{Binding Loc[LBLDdnsYourPublicIp]}" Style="{StaticResource SectionLabelStyle}" Margin="0,0,0,8" />
 
-                            <!-- Masked (shield) — visible when IsIpVisible = false -->
+                            <!-- Masked (shield) - visible when IsIpVisible = false -->
                             <StackPanel Orientation="Horizontal">
                                 <StackPanel.Style>
                                     <Style TargetType="StackPanel">
@@ -58,7 +58,7 @@
                                            Foreground="{DynamicResource Accent.Primary}" />
                             </StackPanel>
 
-                            <!-- Real IP — visible when IsIpVisible = true -->
+                            <!-- Real IP - visible when IsIpVisible = true -->
                             <TextBlock Text="{Binding PublicIp}"
                                        FontFamily="Cascadia Code, Consolas"
                                        FontSize="28" FontWeight="Light"
@@ -89,7 +89,7 @@
                     </Grid>
                 </Border>
 
-                <!-- ── Main content: credentials + timer ── -->
+                <!-- Main content: credentials + timer -->
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -97,7 +97,7 @@
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
 
-                    <!-- ── CREDENTIALS ── -->
+                    <!-- CREDENTIALS -->
                     <Border Grid.Column="0" Style="{StaticResource ElevatedCardStyle}" Padding="0">
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -173,7 +173,7 @@
                         </Grid>
                     </Border>
 
-                    <!-- ── UPDATE TIMER ── -->
+                    <!-- UPDATE TIMER -->
                     <Border Grid.Column="2" Style="{StaticResource ElevatedCardStyle}" Padding="0">
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -310,7 +310,7 @@
             </StackPanel>
         </ScrollViewer>
 
-        <!-- ── Footer: status + save ── -->
+        <!-- Footer: status + save -->
         <Border Grid.Row="1"
                 Background="{DynamicResource Background.Secondary}"
                 BorderBrush="{DynamicResource Border.Default}"

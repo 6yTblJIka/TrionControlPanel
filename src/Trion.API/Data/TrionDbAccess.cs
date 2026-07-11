@@ -5,7 +5,7 @@ namespace Trion.API.Data;
 
 /// <summary>
 /// Lightweight Dapper wrapper with automatic retry on transient MySQL errors.
-/// Registered as a singleton — uses pooled connections per operation.
+/// Registered as a singleton -- uses pooled connections per operation.
 /// </summary>
 public sealed class TrionDbAccess
 {
@@ -29,7 +29,7 @@ public sealed class TrionDbAccess
     public Task<int> ExecuteAsync(string sql, object? p = null)
         => RunAsync(cn => cn.ExecuteAsync(sql, p), 0);
 
-    // ── Core retry wrapper ────────────────────────────────────────────────────
+    // -- Core retry wrapper ----------------------------------------------------
 
     private async Task<T> RunAsync<T>(Func<MySqlConnection, Task<T>> op, T fallback)
     {

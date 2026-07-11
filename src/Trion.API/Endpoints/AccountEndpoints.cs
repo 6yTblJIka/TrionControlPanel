@@ -19,7 +19,7 @@ public static class AccountEndpoints
         return app;
     }
 
-    // ── POST /Trion/account/login ─────────────────────────────────────────────
+    // -- POST /Trion/account/login ---------------------------------------------
 
     private static async Task<IResult> Login(
         [FromBody]          LoginRequest req,
@@ -40,7 +40,7 @@ public static class AccountEndpoints
         return Results.Ok(ToResponse(user, jwt.GenerateToken(user)));
     }
 
-    // ── GET /Trion/account/profile ────────────────────────────────────────────
+    // -- GET /Trion/account/profile --------------------------------------------
 
     [Authorize]
     private static async Task<IResult> Profile(
@@ -58,7 +58,7 @@ public static class AccountEndpoints
             : Results.Ok(ToResponse(user, token: ""));   // token not re-issued on profile refresh
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // -- Helpers ---------------------------------------------------------------
 
     private static LoginResponse ToResponse(User user, string token) => new(
         Token:     token,

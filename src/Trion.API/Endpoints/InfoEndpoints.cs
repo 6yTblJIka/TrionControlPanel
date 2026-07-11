@@ -15,7 +15,7 @@ public static class InfoEndpoints
         return app;
     }
 
-    // ── GET /Trion/updates ────────────────────────────────────────────────────
+    // -- GET /Trion/updates ----------------------------------------------------
 
     private static IResult GetUpdates(IConfiguration cfg) =>
         Results.Ok(new
@@ -25,7 +25,7 @@ public static class InfoEndpoints
             changelogUrl = cfg["trion:ChangelogUrl"]     ?? "",
         });
 
-    // ── GET /Trion/downloads ──────────────────────────────────────────────────
+    // -- GET /Trion/downloads --------------------------------------------------
 
     private static async Task<IResult> GetDownloads(TrionDbAccess db)
     {
@@ -33,7 +33,7 @@ public static class InfoEndpoints
         return Results.Ok(items);
     }
 
-    // ── GET /Trion/supporters ─────────────────────────────────────────────────
+    // -- GET /Trion/supporters -------------------------------------------------
 
     private static async Task<IResult> GetSupporters(TrionDbAccess db)
     {

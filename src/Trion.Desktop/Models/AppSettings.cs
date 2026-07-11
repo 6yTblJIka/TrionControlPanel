@@ -9,7 +9,13 @@ namespace Trion.Desktop.Models;
 /// </summary>
 public class AppSettings
 {
-    // ── Web server (nginx + PHP) ──────────────────────────────────────────────
+    // -- Trion News --------------------------------------------------------------
+
+    /// <summary>Highest Trion News item ID the user has already seen (title-bar popup opened).
+    /// Items with a higher ID than this are shown as "unread" via the badge.</summary>
+    public int LastSeenNewsId { get; set; }
+
+    // -- Web server (nginx + PHP) ----------------------------------------------
 
     /// <summary>True once nginx + PHP have been successfully installed.</summary>
     public bool   WebServerInstalled { get; set; }
@@ -26,12 +32,12 @@ public class AppSettings
     /// <summary>Path to the PEM private key file. Empty = use auto-generated self-signed key.</summary>
     public string SslKeyPath         { get; set; } = "";
     /// <summary>
-    /// When true, RunStartupCheckAsync is called at launch — installs if absent, starts if installed.
+    /// When true, RunStartupCheckAsync is called at launch -- installs if absent, starts if installed.
     /// Opt-in (false by default) so users who don't need a web server aren't affected.
     /// </summary>
     public bool   WebServerAutoStart { get; set; }
 
-    // ── Database server ────────────────────────────────────────────────────────
+    // -- Database server --------------------------------------------------------
 
     public string WorldDatabase      { get; set; } = "wotlk_world";
     public string AuthDatabase       { get; set; } = "wotlk_auth";
@@ -46,6 +52,10 @@ public class AppSettings
     public string DBServerPort       { get; set; } = "3306";
     public string DBExeName          { get; set; } = "mysqld";
     public bool   DBInstalled        { get; set; }
+    /// <summary>MySQL admin username used to CREATE DATABASE during repack install. Default: root.</summary>
+    public string MySqlAdminUser     { get; set; } = "root";
+    /// <summary>MySQL admin password. Empty = no password (default for a fresh local MySQL install).</summary>
+    public string MySqlAdminPassword { get; set; } = "";
     /// <summary>
     /// Which auth DB schema to use.
     /// 0 = TrinityCore 3.3.5a (sha_pass_hash, SHA1)
@@ -55,16 +65,7 @@ public class AppSettings
     /// </summary>
     public int    SelectedDatabases  { get; set; } = 1;   // default: AzerothCore
 
-    // ── Installed versions (per expansion) ───────────────────────────────────
-
-    public string CustomInstalledVersion  { get; set; } = "";
-    public string ClassicInstalledVersion { get; set; } = "";
-    public string TBCInstalledVersion     { get; set; } = "";
-    public string WotLKInstalledVersion   { get; set; } = "";
-    public string CataInstalledVersion    { get; set; } = "";
-    public string MopInstalledVersion     { get; set; } = "";
-
-    // ── Custom Core ───────────────────────────────────────────────────────────
+    // -- Custom Core -----------------------------------------------------------
 
     public string CustomWorkingDirectory { get; set; } = "";
     public string CustomWorldExeLoc      { get; set; } = "";
@@ -77,74 +78,40 @@ public class AppSettings
     public bool   LaunchCustomCore       { get; set; }
     public bool   CustomInstalled        { get; set; }
 
-    // ── Classic ───────────────────────────────────────────────────────────────
+    // -- Dynamic repack state (catalog-driven, keyed by slug) -----------------
 
-    public string ClassicWorkingDirectory { get; set; } = "";
-    public string ClassicWorldExeLoc      { get; set; } = "";
-    public string ClassicLogonExeLoc      { get; set; } = "";
-    public string ClassicLogonExeName     { get; set; } = "";
-    public string ClassicWorldExeName     { get; set; } = "";
-    public string ClassicWorldName        { get; set; } = "";
-    public string ClassicLogonName        { get; set; } = "";
-    public bool   LaunchClassicCore       { get; set; }
-    public bool   ClassicInstalled        { get; set; }
+    /// <summary>Tracks which catalog repacks are currently installed, keyed by slug.</summary>
+    public Dictionary<string, bool>   RepackInstalled    { get; set; } = [];
+    /// <summary>Install directory for each catalog repack, keyed by slug. Empty = use default.</summary>
+    public Dictionary<string, string> RepackInstallPaths { get; set; } = [];
+    /// <summary>Which repack is selected/enabled for server control, keyed by slug.</summary>
+    public Dictionary<string, bool>   RepackEnabled      { get; set; } = [];
+    /// <summary>Installed version string per repack slug.</summary>
+    public Dictionary<string, string> RepackVersion      { get; set; } = [];
+    /// <summary>Full path to the world-server exe per repack slug.</summary>
+    public Dictionary<string, string> RepackWorldExePath { get; set; } = [];
+    /// <summary>Full path to the auth-server exe per repack slug.</summary>
+    public Dictionary<string, string> RepackAuthExePath  { get; set; } = [];
+    /// <summary>World-server exe filename per repack slug (e.g. "worldserver.exe").</summary>
+    public Dictionary<string, string> RepackWorldExeName { get; set; } = [];
+    /// <summary>Auth-server exe filename per repack slug (e.g. "authserver.exe").</summary>
+    public Dictionary<string, string> RepackAuthExeName  { get; set; } = [];
 
-    // ── TBC ───────────────────────────────────────────────────────────────────
+    // -- Game client data (shared per expansion) --------------------------------
 
-    public string TBCWorkingDirectory { get; set; } = "";
-    public string TBCWorldExeLoc      { get; set; } = "";
-    public string TBCLogonExeLoc      { get; set; } = "";
-    public string TBCLogonExeName     { get; set; } = "";
-    public string TBCWorldExeName     { get; set; } = "";
-    public string TBCWorldName        { get; set; } = "";
-    public string TBCLogonName        { get; set; } = "";
-    public bool   LaunchTBCCore       { get; set; }
-    public bool   TBCInstalled        { get; set; }
+    /// <summary>WoW client folder per expansion slug (e.g. "wotlk" -> "C:\Games\WoW 3.3.5"). Set once, shared across all repacks of that expansion.</summary>
+    public Dictionary<string, string> GameClientPaths { get; set; } = [];
+    /// <summary>Extracted data output dir per expansion slug. Empty = %APPDATA%\Trion\GameData\{expansion}.</summary>
+    public Dictionary<string, string> GameDataPaths   { get; set; } = [];
 
-    // ── WotLK ─────────────────────────────────────────────────────────────────
-
-    public string WotLKWorkingDirectory { get; set; } = "";
-    public string WotLKWorldExeLoc      { get; set; } = "";
-    public string WotLKLogonExeLoc      { get; set; } = "";
-    public string WotLKLogonExeName     { get; set; } = "";
-    public string WotLKWorldExeName     { get; set; } = "";
-    public string WotLKWorldName        { get; set; } = "";
-    public string WotLKLogonName        { get; set; } = "";
-    public bool   LaunchWotLKCore       { get; set; }
-    public bool   WotLKInstalled        { get; set; }
-
-    // ── Cataclysm ─────────────────────────────────────────────────────────────
-
-    public string CataWorkingDirectory { get; set; } = "";
-    public string CataWorldExeLoc      { get; set; } = "";
-    public string CataLogonExeLoc      { get; set; } = "";
-    public string CataLogonExeName     { get; set; } = "";
-    public string CataWorldExeName     { get; set; } = "";
-    public string CataWorldName        { get; set; } = "";
-    public string CataLogonName        { get; set; } = "";
-    public bool   LaunchCataCore       { get; set; }
-    public bool   CataInstalled        { get; set; }
-
-    // ── MoP ───────────────────────────────────────────────────────────────────
-
-    public string MopWorkingDirectory { get; set; } = "";
-    public string MopWorldExeLoc      { get; set; } = "";
-    public string MopLogonExeLoc      { get; set; } = "";
-    public string MopLogonExeName     { get; set; } = "";
-    public string MopWorldExeName     { get; set; } = "";
-    public string MoPWorldName        { get; set; } = "";
-    public string MoPLogonName        { get; set; } = "";
-    public bool   LaunchMoPCore       { get; set; }
-    public bool   MOPInstalled        { get; set; }
-
-    // ── Active selection ──────────────────────────────────────────────────────
+    // -- Active selection ------------------------------------------------------
 
     /// <summary>Which expansion tab is active in Single Player. 0=Custom 1=Classic 2=TBC 3=WotLK 4=Cata 5=MoP</summary>
     public int SelectedCore { get; set; }
     /// <summary>Which SPP emulator build is selected. Maps to the SPP enum.</summary>
     public int SelectedSPP  { get; set; } = 3;   // 3 = WotLK
 
-    // ── DDNS ──────────────────────────────────────────────────────────────────
+    // -- DDNS ------------------------------------------------------------------
 
     public string DDNSDomain       { get; set; } = "";
     public string DDNSUsername     { get; set; } = "";
@@ -157,15 +124,25 @@ public class AppSettings
     /// <summary>DDNS provider name as displayed in the WPF UI (e.g. "DuckDNS", "Cloudflare").</summary>
     public string DDNSServiceName  { get; set; } = "DuckDNS";
 
-    // ── Trion preferences ─────────────────────────────────────────────────────
+    // -- API connection --------------------------------------------------------
 
-    /// <summary>How often the system metrics sampler fires, in seconds (1–10). Default 2.</summary>
+    /// <summary>
+    /// Override for the Phoenix API base URL (e.g. "https://my-staging-server.dev").
+    /// Empty string = use the built-in default (ExternalLinks.ApiDefaultHost).
+    /// Set this in Settings to point at a staging instance or a local development server
+    /// without recompiling.
+    /// </summary>
+    public string ApiBaseUrl { get; set; } = "";
+
+    // -- Trion preferences -----------------------------------------------------
+
+    /// <summary>How often the system metrics sampler fires, in seconds (1-10). Default 2.</summary>
     public int    MetricsIntervalSeconds  { get; set; } = 2;
     /// <summary>Active theme: e.g. "TrionBlue Dark", "Green Light".</summary>
     public string Theme              { get; set; } = "TrionBlue Dark";
     /// <summary>Locale code: "en-US", "pl-PL".</summary>
     public string Language           { get; set; } = "en-US";
-    // ── Account / Session ─────────────────────────────────────────────────────
+    // -- Account / Session -----------------------------------------------------
 
     public int    AccountId        { get; set; }
     public string AccountUsername  { get; set; } = "";
@@ -183,7 +160,7 @@ public class AppSettings
     /// <summary>When false the account token is wiped on exit so the user must sign in again next launch.</summary>
     public bool   RememberMe       { get; set; } = false;
 
-    // ── Guest key system ──────────────────────────────────────────────────────
+    // -- Guest key system ------------------------------------------------------
 
     /// <summary>Stable per-installation UUID used to register a guest key. Generated once, never regenerated.</summary>
     public string InstallUuid { get; set; } = "";
@@ -200,8 +177,10 @@ public class AppSettings
     public bool   ServerCrashDetection  { get; set; }
     public bool   FirstRun           { get; set; } = true;
     public bool   CreateBnetAccount  { get; set; }
+    /// <summary>Opt-in: send OS, CPU count, RAM, and app version to Phoenix on startup.</summary>
+    public bool   HardwareInfoOptIn  { get; set; } = false;
 
-    // ── Window state (WPF only) ───────────────────────────────────────────────
+    // -- Window state (WPF only) -----------------------------------------------
 
     public double WindowLeft   { get; set; } = double.NaN;
     public double WindowTop    { get; set; } = double.NaN;

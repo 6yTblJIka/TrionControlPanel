@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:Trion.Desktop.ViewModels"
         xmlns:views="clr-namespace:Trion.Desktop.Views"
+        xmlns:local="clr-namespace:Trion.Desktop.Models"
         mc:Ignorable="d"
         Title="Trion Control Panel"
         Icon="pack://application:,,,/Resources/Images/favicon.ico"
@@ -21,7 +22,7 @@
                       CornerRadius="0" />
     </WindowChrome.WindowChrome>
 
-    <!-- VM → View data templates -->
+    <!-- VM to View data templates -->
     <Window.Resources>
         <DataTemplate DataType="{x:Type vm:DashboardViewModel}">
             <views:DashboardView />
@@ -44,6 +45,9 @@
         <DataTemplate DataType="{x:Type vm:SupportersViewModel}">
             <views:SupportersView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:NewsViewModel}">
+            <views:NewsView />
+        </DataTemplate>
     </Window.Resources>
 
     <Grid>
@@ -53,9 +57,7 @@
             <RowDefinition Height="52" />   <!-- Server bar -->
         </Grid.RowDefinitions>
 
-        <!-- ══════════════════════════════════════════════════════
-             TITLE BAR
-             ══════════════════════════════════════════════════════ -->
+        <!-- TITLE BAR -->
         <Border Grid.Row="0"
                 Background="{DynamicResource Background.Secondary}"
                 BorderBrush="{DynamicResource Border.Default}"
@@ -78,7 +80,7 @@
                         Padding="10,0"
                         Margin="0">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <!-- Logo — OpacityMask tints the silhouette with Accent.Primary -->
+                        <!-- Logo - OpacityMask tints the silhouette with Accent.Primary -->
                         <Rectangle Width="20" Height="20" Margin="0,0,8,0"
                                    Fill="{DynamicResource Accent.Primary}">
                             <Rectangle.OpacityMask>
@@ -142,7 +144,7 @@
                                            Foreground="{DynamicResource Foreground.Muted}"
                                            Margin="0,0,0,10" />
 
-                                <!-- ── Mode row ── -->
+                                <!-- Mode row -->
                                 <TextBlock Text="{Binding Loc[AppThemeMode]}"
                                            FontSize="11"
                                            Foreground="{DynamicResource Foreground.Secondary}"
@@ -215,7 +217,7 @@
                                     </Button>
                                 </Grid>
 
-                                <!-- ── Color row ── -->
+                                <!-- Color row -->
                                 <TextBlock Text="{Binding Loc[AppThemeColor]}"
                                            FontSize="11"
                                            Foreground="{DynamicResource Foreground.Secondary}"
@@ -315,7 +317,7 @@
                                   Fill="{DynamicResource Foreground.Secondary}"
                                   Width="16" Height="16" Stretch="Uniform"
                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            <!-- Badge — count of unread notifications -->
+                            <!-- Badge - count of unread notifications -->
                             <Border CornerRadius="7"
                                     Background="#C42B1C"
                                     HorizontalAlignment="Right" VerticalAlignment="Top"
@@ -443,10 +445,177 @@
                         </Border>
                     </Popup>
 
-                    <!-- ── Download progress indicator ── -->
+                    <!-- Trion News button -->
+                    <Button x:Name="NewsButton"
+                            Style="{StaticResource IconButtonStyle}"
+                            Command="{Binding ShowNewsCommand}"
+                            ToolTip="{Binding Loc[LBLTrionNews]}"
+                            Margin="0,0,2,0">
+                        <Grid Width="20" Height="20">
+                            <Path Data="{StaticResource Icon.Newspaper}"
+                                  Fill="{DynamicResource Foreground.Secondary}"
+                                  Width="16" Height="16" Stretch="Uniform"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <!-- Badge - shown while there's unread news -->
+                            <Border CornerRadius="5"
+                                    Background="{DynamicResource Accent.Primary}"
+                                    HorizontalAlignment="Right" VerticalAlignment="Top"
+                                    Width="10" Height="10"
+                                    Margin="0,0,-2,-2"
+                                    Visibility="{Binding HasUnreadNews,
+                                                 Converter={StaticResource BoolToVisibility}}" />
+                        </Grid>
+                    </Button>
+
+                    <!-- Trion News popup -->
+                    <Popup IsOpen="{Binding IsNewsPopupOpen, Mode=TwoWay}"
+                           PlacementTarget="{Binding ElementName=NewsButton}"
+                           Placement="Bottom"
+                           VerticalOffset="4"
+                           StaysOpen="False"
+                           AllowsTransparency="True"
+                           PopupAnimation="Fade">
+                        <Border Background="{DynamicResource Background.Secondary}"
+                                BorderBrush="{DynamicResource Border.Default}"
+                                BorderThickness="1"
+                                CornerRadius="10"
+                                Width="360">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="20" ShadowDepth="4"
+                                                  Opacity="0.45" Color="#000000"
+                                                  Direction="270" />
+                            </Border.Effect>
+
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <!-- Header -->
+                                <Border Grid.Row="0"
+                                        BorderBrush="{DynamicResource Border.Subtle}"
+                                        BorderThickness="0,0,0,1"
+                                        Padding="14,11">
+                                    <TextBlock Text="{Binding Loc[LBLTrionNews]}"
+                                               FontSize="10" FontWeight="Bold"
+                                               Foreground="{DynamicResource Foreground.Muted}" />
+                                </Border>
+
+                                <!-- Loading state -->
+                                <TextBlock Grid.Row="1"
+                                           Text="{Binding Loc[LBLNewsLoading]}"
+                                           Style="{StaticResource CaptionStyle}"
+                                           HorizontalAlignment="Center"
+                                           Margin="0,20"
+                                           Visibility="{Binding IsNewsLoading, Converter={StaticResource BoolToVisibility}}" />
+
+                                <!-- Empty state -->
+                                <TextBlock Grid.Row="1"
+                                           Text="{Binding Loc[LBLNewsEmpty]}"
+                                           HorizontalAlignment="Center"
+                                           Margin="0,20">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource CaptionStyle}">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding IsNewsLoading}" Value="False" />
+                                                        <Condition Binding="{Binding NewsItems.Count}" Value="0" />
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </MultiDataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+
+                                <!-- News list -->
+                                <ItemsControl Grid.Row="1"
+                                              ItemsSource="{Binding NewsItems}"
+                                              Visibility="{Binding IsNewsLoading, Converter={StaticResource InverseBoolToVisibility}}">
+                                    <ItemsControl.Template>
+                                        <ControlTemplate TargetType="ItemsControl">
+                                            <ScrollViewer MaxHeight="360" VerticalScrollBarVisibility="Auto">
+                                                <ItemsPresenter />
+                                            </ScrollViewer>
+                                        </ControlTemplate>
+                                    </ItemsControl.Template>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type local:NewsItem}">
+                                            <Border BorderBrush="{DynamicResource Border.Subtle}"
+                                                    BorderThickness="0,0,0,1"
+                                                    Padding="14,10">
+                                                <StackPanel>
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <Border Grid.Column="0"
+                                                                Background="{DynamicResource Accent.Subtle}"
+                                                                BorderBrush="{DynamicResource Accent.Primary}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="4"
+                                                                Padding="6,2"
+                                                                Margin="0,0,8,0"
+                                                                VerticalAlignment="Center"
+                                                                Visibility="{Binding Category, Converter={StaticResource NullToVisibility}}">
+                                                            <TextBlock Text="{Binding Category}"
+                                                                       Foreground="{DynamicResource Accent.Primary}"
+                                                                       FontSize="9" FontWeight="SemiBold" />
+                                                        </Border>
+
+                                                        <TextBlock Grid.Column="1"
+                                                                   Text="{Binding Title}"
+                                                                   FontSize="12" FontWeight="SemiBold"
+                                                                   Foreground="{DynamicResource Foreground.Primary}"
+                                                                   VerticalAlignment="Center"
+                                                                   TextTrimming="CharacterEllipsis" />
+
+                                                        <TextBlock Grid.Column="2"
+                                                                   Text="{Binding PublishedAt}"
+                                                                   Style="{StaticResource CaptionStyle}"
+                                                                   FontSize="9"
+                                                                   VerticalAlignment="Center"
+                                                                   Margin="8,0,0,0" />
+                                                    </Grid>
+
+                                                    <TextBlock Text="{Binding Summary}"
+                                                               Style="{StaticResource CaptionStyle}"
+                                                               TextWrapping="Wrap"
+                                                               Margin="0,4,0,0"
+                                                               Visibility="{Binding Summary, Converter={StaticResource NullToVisibility}}" />
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <!-- Footer: View all news -->
+                                <Border Grid.Row="2"
+                                        BorderBrush="{DynamicResource Border.Subtle}"
+                                        BorderThickness="0,1,0,0"
+                                        Padding="10,8">
+                                    <Button Content="{Binding Loc[NewsViewAll]}"
+                                            Style="{StaticResource GhostButtonStyle}"
+                                            Command="{Binding ViewAllNewsCommand}"
+                                            HorizontalAlignment="Left"
+                                            Height="28" Padding="6,0"
+                                            FontSize="12" />
+                                </Border>
+                            </Grid>
+                        </Border>
+                    </Popup>
+
+                    <!-- Download progress indicator -->
                     <Button x:Name="DownloadButton"
                             Command="{Binding ShowDownloadProgressCommand}"
-                            ToolTip="MySQL download in progress…"
+                            ToolTip="MySQL download in progress..."
                             Margin="0,0,2,0">
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource IconButtonStyle}">
@@ -575,6 +744,16 @@
                         </Border>
                     </Popup>
 
+                    <!-- Report a Bug -->
+                    <Button Style="{StaticResource IconButtonStyle}"
+                            Command="{Binding ShowBugReportCommand}"
+                            ToolTip="{Binding Loc[BugReportTooltip]}"
+                            Margin="0,0,4,0">
+                        <Path Data="{StaticResource Icon.Bug}"
+                              Fill="{DynamicResource Foreground.Secondary}"
+                              Width="16" Height="16" Stretch="Uniform" />
+                    </Button>
+
                     <!-- Donation / Support -->
                     <Button Style="{StaticResource IconButtonStyle}"
                             Command="{Binding OpenDonationCommand}"
@@ -595,21 +774,21 @@
                 <StackPanel Grid.Column="3"
                             Orientation="Horizontal"
                             WindowChrome.IsHitTestVisibleInChrome="True">
-                    <!-- Minimize — filled dash -->
+                    <!-- Minimize - filled dash -->
                     <Button Style="{StaticResource ChromeButtonStyle}"
                             Click="MinimizeButton_Click" ToolTip="{Binding Loc[AppWinMinimize]}">
                         <Path Data="M 3,11 H 13 V 13 H 3 Z"
                               Fill="{DynamicResource Foreground.Secondary}"
                               Width="16" Height="16" Stretch="Uniform" />
                     </Button>
-                    <!-- Maximize / Restore — filled square ring -->
+                    <!-- Maximize / Restore - filled square ring -->
                     <Button Style="{StaticResource ChromeButtonStyle}"
                             Click="MaximizeButton_Click" ToolTip="{Binding Loc[AppWinMaximize]}">
                         <Path Data="M 3,3 H 21 V 21 H 3 Z M 5,7 V 19 H 19 V 7 Z"
                               Fill="{DynamicResource Foreground.Secondary}"
                               Width="16" Height="16" Stretch="Uniform" />
                     </Button>
-                    <!-- Close — filled X -->
+                    <!-- Close - filled X -->
                     <Button Style="{StaticResource ChromeCloseButtonStyle}"
                             Click="CloseButton_Click" ToolTip="{Binding Loc[AppWinClose]}">
                         <Path Data="M 19,6.41 L 17.59,5 12,10.59 6.41,5 5,6.41 10.59,12 5,17.59 6.41,19 12,13.41 17.59,19 19,17.59 13.41,12 Z"
@@ -620,16 +799,14 @@
             </Grid>
         </Border>
 
-        <!-- ══════════════════════════════════════════════════════
-             BODY  (sidebar + content)
-             ══════════════════════════════════════════════════════ -->
+        <!-- BODY (sidebar + content) -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <!-- ── Sidebar ── -->
+            <!-- Sidebar -->
             <Border Grid.Column="0"
                     x:Name="SidebarBorder"
                     Width="56"
@@ -704,7 +881,7 @@
                                                          RelativeSource={RelativeSource AncestorType=Button}}"
                                                   Width="18" Height="18" Stretch="Uniform"
                                                   VerticalAlignment="Center" />
-                                            <!-- Label — collapses when sidebar is narrow -->
+                                            <!-- Label - collapses when sidebar is narrow -->
                                             <TextBlock Text="{Binding Label}"
                                                        Margin="12,0,0,0"
                                                        VerticalAlignment="Center"
@@ -738,7 +915,7 @@
                     <!-- Account button pinned above Settings -->
                     <Button Grid.Row="1"
                             x:Name="AccountButton"
-                            Style="{StaticResource NavItemStyle}"
+                            Style="{StaticResource NavPinnedItemStyle}"
                             Command="{Binding ToggleAccountPopupCommand}"
                             Foreground="{DynamicResource Foreground.Secondary}">
                         <StackPanel Orientation="Horizontal" Margin="16,0,8,0">
@@ -788,7 +965,7 @@
                             </Border.Effect>
                             <StackPanel>
 
-                                <!-- ── Logged-in view ──────────────────────── -->
+                                <!-- Logged-in view -->
                                 <StackPanel Visibility="{Binding IsLoggedIn, Converter={StaticResource BoolToVisibility}}">
 
                                     <!-- Header: avatar + name + badges -->
@@ -873,7 +1050,7 @@
                                     </Border>
                                 </StackPanel>
 
-                                <!-- ── Guest view ──────────────────────────── -->
+                                <!-- Guest view -->
                                 <StackPanel Visibility="{Binding IsGuest, Converter={StaticResource BoolToVisibility}}"
                                             Margin="16,16">
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
@@ -902,7 +1079,7 @@
                                             HorizontalAlignment="Stretch" />
                                 </StackPanel>
 
-                                <!-- ── Not signed in ───────────────────────── -->
+                                <!-- Not signed in -->
                                 <StackPanel Margin="16,16">
                                     <StackPanel.Style>
                                         <Style TargetType="StackPanel">
@@ -937,7 +1114,7 @@
 
                     <!-- Settings pinned at bottom -->
                     <Button Grid.Row="2"
-                            Style="{StaticResource NavItemStyle}"
+                            Style="{StaticResource NavPinnedItemStyle}"
                             Command="{Binding NavigateToSettingsCommand}"
                             Foreground="{DynamicResource Foreground.Secondary}"
                             Margin="0,0,0,12">
@@ -966,16 +1143,14 @@
                 </Grid>
             </Border>
 
-            <!-- ── Content Area ── -->
+            <!-- Content Area -->
             <Border Grid.Column="1"
                     Background="{DynamicResource Background.Primary}">
                 <ContentControl Content="{Binding CurrentViewModel}" />
             </Border>
         </Grid>
 
-        <!-- ══════════════════════════════════════════════════════
-             BOTTOM SERVER CONTROL BAR
-             ══════════════════════════════════════════════════════ -->
+        <!-- BOTTOM SERVER CONTROL BAR -->
         <Border Grid.Row="2"
                 Background="{DynamicResource Sidebar.Background}"
                 BorderBrush="{DynamicResource Border.Default}"

@@ -22,25 +22,25 @@ namespace Trion.Core.Services.Software;
 /// </summary>
 public sealed class ThirdPartySoftwareInstaller
 {
-    // ── MySQL Windows installer ─────────────────────────────────────────────
-    // MySQL Community Server 8.0.39 MSI — update when bumping version.
+    // -- MySQL Windows installer ---------------------------------------------
+    // MySQL Community Server 8.0.39 MSI -- update when bumping version.
     private const string MySqlWindowsUrl =
         "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-8.0.39-winx64.msi";
     private const string MySqlWindowsSha256 =
         "PLACEHOLDER_UPDATE_WITH_ACTUAL_SHA256_FOR_MYSQL_8.0.39_WINX64_MSI";
 
-    // ── Nginx Windows installer ─────────────────────────────────────────────
-    // Nginx 1.26.1 for Windows — update when bumping version.
+    // -- Nginx Windows installer ---------------------------------------------
+    // Nginx 1.26.1 for Windows -- update when bumping version.
     private const string NginxWindowsUrl =
         "https://nginx.org/download/nginx-1.26.1.zip";
     private const string NginxWindowsSha256 =
         "PLACEHOLDER_UPDATE_WITH_ACTUAL_SHA256_FOR_NGINX_1.26.1_ZIP";
 
-    // ── Package names for Linux ────────────────────────────────────────────
+    // -- Package names for Linux --------------------------------------------
     private const string MySqlLinuxPackage  = "mysql-server";
     private const string NginxLinuxPackage  = "nginx";
 
-    // ── msiexec / apt-get / dnf paths ──────────────────────────────────────
+    // -- msiexec / apt-get / dnf paths --------------------------------------
     private const string MsiExecPath = @"C:\Windows\System32\msiexec.exe";
     private const string AptGetPath  = "/usr/bin/apt-get";
     private const string DnfPath     = "/usr/bin/dnf";
@@ -68,7 +68,7 @@ public sealed class ThirdPartySoftwareInstaller
         InstallPackageAsync("Nginx", NginxWindowsUrl, NginxWindowsSha256,
             NginxLinuxPackage, progress, ct);
 
-    // ── Core installation routine ───────────────────────────────────────────
+    // -- Core installation routine -------------------------------------------
 
     private async Task InstallPackageAsync(
         string displayName,
@@ -89,7 +89,7 @@ public sealed class ThirdPartySoftwareInstaller
         progress.TryComplete();
     }
 
-    // ── Windows path ────────────────────────────────────────────────────────
+    // -- Windows path --------------------------------------------------------
 
     private async Task InstallWindowsMsiAsync(
         string displayName,
@@ -103,7 +103,7 @@ public sealed class ThirdPartySoftwareInstaller
         try
         {
             // Download
-            await Report(progress, "Downloading", 10, $"Downloading {displayName} installer…", ct);
+            await Report(progress, "Downloading", 10, $"Downloading {displayName} installer...", ct);
             _log.LogInformation("Downloading {Name} from {Url}", displayName, msiUrl);
 
             await using (var responseStream = await _http.GetStreamAsync(msiUrl, ct))
@@ -112,7 +112,7 @@ public sealed class ThirdPartySoftwareInstaller
                 await responseStream.CopyToAsync(fileStream, ct);
             }
 
-            await Report(progress, "Verifying", 40, "Verifying SHA-256 checksum…", ct);
+            await Report(progress, "Verifying", 40, "Verifying SHA-256 checksum...", ct);
 
             // Checksum verification
             using var sha256 = SHA256.Create();
@@ -130,7 +130,7 @@ public sealed class ThirdPartySoftwareInstaller
             }
 
             // Launch silent install via agent
-            await Report(progress, "Installing", 50, $"Running {displayName} installer silently…", ct);
+            await Report(progress, "Installing", 50, $"Running {displayName} installer silently...", ct);
 
             var result = await _agent.LaunchProcessAsync(
                 new LaunchRequest(MsiExecPath, ["/i", tempPath, "/quiet", "/norestart"], null),
@@ -149,7 +149,7 @@ public sealed class ThirdPartySoftwareInstaller
                    && await _agent.IsProcessAliveAsync(pid, st, ct))
             {
                 pct = Math.Min(pct + 5, 95);
-                await Report(progress, "Installing", pct, "Installation in progress…", ct);
+                await Report(progress, "Installing", pct, "Installation in progress...", ct);
                 await Task.Delay(TimeSpan.FromSeconds(5), ct);
             }
 
@@ -162,7 +162,7 @@ public sealed class ThirdPartySoftwareInstaller
         }
     }
 
-    // ── Linux path ──────────────────────────────────────────────────────────
+    // -- Linux path ----------------------------------------------------------
 
     private async Task InstallLinuxPackageAsync(
         string displayName,
@@ -182,7 +182,7 @@ public sealed class ThirdPartySoftwareInstaller
         }
 
         await Report(progress, "Installing", 20,
-            $"Running {pkgManager} install {packageName}…", ct);
+            $"Running {pkgManager} install {packageName}...", ct);
 
         _log.LogInformation("Installing {Name} via {Mgr}", displayName, pkgManager);
 
@@ -203,14 +203,14 @@ public sealed class ThirdPartySoftwareInstaller
                && await _agent.IsProcessAliveAsync(pid, st, ct))
         {
             pct = Math.Min(pct + 10, 90);
-            await Report(progress, "Installing", pct, "Package installation in progress…", ct);
+            await Report(progress, "Installing", pct, "Package installation in progress...", ct);
             await Task.Delay(TimeSpan.FromSeconds(5), ct);
         }
 
         await Report(progress, "Complete", 100, $"{displayName} installed successfully.", ct);
     }
 
-    // ── Distro detection ────────────────────────────────────────────────────
+    // -- Distro detection ----------------------------------------------------
 
     /// <summary>
     /// Reads /etc/os-release to determine the package manager binary.
@@ -240,7 +240,7 @@ public sealed class ThirdPartySoftwareInstaller
         };
     }
 
-    // ── Helpers ─────────────────────────────────────────────────────────────
+    // -- Helpers -------------------------------------------------------------
 
     private static ValueTask Report(
         ChannelWriter<InstallProgressEvent> w,

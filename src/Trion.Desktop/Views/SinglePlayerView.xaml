@@ -10,14 +10,15 @@
 
     <UserControl.Resources>
         <conv:BoolToStringConverter x:Key="EnabledLabel"
-                                    TrueValue="● Enabled" FalseValue="○ Disabled" />
+                                    TrueValue="Enabled" FalseValue="Disabled" />
+        <conv:ColorToDropShadowEffectConverter x:Key="AccentToGlow" BlurRadius="28" ShadowDepth="0" Opacity="1" />
     </UserControl.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="28,24,28,28">
 
-            <!-- ── Page header ── -->
+            <!-- Page header -->
             <Grid Margin="0,0,0,24">
                 <StackPanel>
                     <TextBlock Text="{Binding Loc[TabSPPTitle]}" Style="{StaticResource H1Style}" />
@@ -27,15 +28,15 @@
                 </StackPanel>
             </Grid>
 
-            <!-- ── Loading indicator ── -->
+            <!-- Loading indicator -->
             <Border Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}"
                     Padding="0,40,0,0">
-                <TextBlock Text="Loading available packages…"
+                <TextBlock Text="{Binding Loc[LBLLoadingPackages]}"
                            Style="{StaticResource CaptionStyle}"
                            HorizontalAlignment="Center" />
             </Border>
 
-            <!-- ── No packages available ── -->
+            <!-- No packages available -->
             <Border Visibility="{Binding HasAnyAvailable,
                                  Converter={StaticResource InverseBoolToVisibility}}"
                     Padding="0,40,0,0">
@@ -54,17 +55,17 @@
                     </Style>
                 </Border.Style>
                 <StackPanel HorizontalAlignment="Center">
-                    <TextBlock Text="No packages available for your account."
+                    <TextBlock Text="{Binding Loc[LBLNoPackagesAvailable]}"
                                Style="{StaticResource CaptionStyle}"
                                HorizontalAlignment="Center"
                                Margin="0,0,0,8" />
-                    <TextBlock Text="Upgrade your supporter tier to unlock more expansions."
+                    <TextBlock Text="{Binding Loc[LBLUpgradeTierUnlock]}"
                                Style="{StaticResource CaptionStyle}"
                                HorizontalAlignment="Center" />
                 </StackPanel>
             </Border>
 
-            <!-- ── Emulator cards — full-width stack ── -->
+            <!-- Emulator cards - full-width stack -->
             <ItemsControl ItemsSource="{Binding Emulators}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type vm:EmulatorCardViewModel}">
@@ -73,15 +74,12 @@
                               Visibility="{Binding IsAvailable,
                                            Converter={StaticResource BoolToVisibility}}">
 
-                            <!-- Accent glow layer — fades in when this expansion is enabled -->
+                            <!-- Accent glow layer - fades in when this expansion is enabled -->
                             <Border CornerRadius="10"
                                     IsHitTestVisible="False"
                                     BorderBrush="{Binding AccentBrush}"
-                                    BorderThickness="1">
-                                <Border.Effect>
-                                    <DropShadowEffect Color="{Binding AccentColor}"
-                                                      BlurRadius="28" ShadowDepth="0" Opacity="1" />
-                                </Border.Effect>
+                                    BorderThickness="1"
+                                    Effect="{Binding AccentColor, Converter={StaticResource AccentToGlow}}">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Setter Property="Opacity" Value="0" />
@@ -109,7 +107,7 @@
                                 </Border.Style>
                             </Border>
 
-                            <!-- Main card — border turns accent when enabled -->
+                            <!-- Main card - border turns accent when enabled -->
                             <Border Padding="0">
                                 <Border.Style>
                                     <Style TargetType="Border" BasedOn="{StaticResource ElevatedCardStyle}">
@@ -128,24 +126,24 @@
 
                                 <!-- Accent strip -->
                                 <Border Grid.Column="0" CornerRadius="10,0,0,10"
-                                        Background="{Binding AccentBrush}" />
+                                        Background="{DynamicResource Accent.Primary}" />
 
-                                <!-- ── Card body ── -->
-                                <Grid Grid.Column="1" Margin="24,22,24,22">
+                                <!-- Card body -->
+                                <Grid Grid.Column="1" Margin="16,12,16,12">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />  <!-- main content row -->
                                         <RowDefinition Height="Auto" />  <!-- progress panel -->
                                     </Grid.RowDefinitions>
 
-                                    <!-- ── Main content: info (left) + buttons (right) ── -->
+                                    <!-- Main content: info (left) + buttons (right) -->
                                     <Grid Grid.Row="0">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />       <!-- info -->
-                                            <ColumnDefinition Width="24" />      <!-- gutter -->
-                                            <ColumnDefinition Width="200" />     <!-- buttons -->
+                                            <ColumnDefinition Width="14" />      <!-- gutter -->
+                                            <ColumnDefinition Width="155" />     <!-- buttons -->
                                         </Grid.ColumnDefinitions>
 
-                                        <!-- ══ LEFT: info column ══ -->
+                                        <!-- LEFT: info column -->
                                         <StackPanel Grid.Column="0">
 
                                             <!-- Header: icon + name + status pill -->
@@ -156,14 +154,16 @@
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
 
-                                                <!-- Icon badge -->
-                                                <Grid Grid.Column="0" Width="44" Height="44" Margin="0,0,14,0">
-                                                    <Border CornerRadius="10" Opacity="0.15"
-                                                            Background="{Binding AccentBrush}" />
-                                                    <Path Data="{StaticResource Icon.Controller}"
-                                                          Fill="{Binding AccentBrush}"
-                                                          Width="22" Height="22" Stretch="Uniform" />
-                                                </Grid>
+                                                <!-- Icon badge: expansion colour matches the website per-expansion CSS gradient -->
+                                                <Border Grid.Column="0" Width="34" Height="34"
+                                                        CornerRadius="8" Margin="0,0,10,0"
+                                                        Background="{Binding AccentBrush}">
+                                                    <Image Source="/Resources/Images/world-of-warcraft-100.png"
+                                                           Width="22" Height="22"
+                                                           RenderOptions.BitmapScalingMode="HighQuality"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center" />
+                                                </Border>
 
                                                 <!-- Name + short name -->
                                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
@@ -171,12 +171,12 @@
                                                                Style="{StaticResource H3Style}" />
                                                     <TextBlock Text="{Binding ShortName}"
                                                                Style="{StaticResource CaptionStyle}"
-                                                               Margin="0,2,0,0" />
+                                                               Margin="0,1,0,0" />
                                                 </StackPanel>
 
                                                 <!-- Status pill -->
-                                                <Border Grid.Column="2" CornerRadius="10" Padding="10,4"
-                                                        VerticalAlignment="Center" Margin="12,0,0,0">
+                                                <Border Grid.Column="2" CornerRadius="10" Padding="8,3"
+                                                        VerticalAlignment="Center" Margin="8,0,0,0">
                                                     <Border.Style>
                                                         <Style TargetType="Border">
                                                             <Setter Property="Background"
@@ -189,7 +189,7 @@
                                                             </Style.Triggers>
                                                         </Style>
                                                     </Border.Style>
-                                                    <TextBlock FontSize="11" FontWeight="SemiBold">
+                                                    <TextBlock FontSize="10" FontWeight="SemiBold">
                                                         <TextBlock.Style>
                                                             <Style TargetType="TextBlock">
                                                                 <Setter Property="Text"     Value="Not Installed" />
@@ -208,24 +208,24 @@
                                             </Grid>
 
                                             <!-- Divider under header -->
-                                            <Separator Margin="0,16,0,16" />
+                                            <Separator Margin="0,10,0,10" />
 
                                             <!-- Version row -->
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="32" />
+                                                    <ColumnDefinition Width="28" />
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
 
                                                 <!-- Installed version -->
                                                 <StackPanel Grid.Column="0">
-                                                    <TextBlock Text="INSTALLED"
+                                                    <TextBlock Text="{Binding DataContext.Loc[LBLSectionInstalled], RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                Style="{StaticResource SectionLabelStyle}"
-                                                               Margin="0,0,0,5" />
+                                                               Margin="0,0,0,3" />
                                                     <TextBlock Text="{Binding InstalledVersion}"
                                                                FontFamily="Cascadia Code, Consolas, Courier New"
-                                                               FontSize="13">
+                                                               FontSize="12">
                                                         <TextBlock.Style>
                                                             <Style TargetType="TextBlock">
                                                                 <Setter Property="Foreground"
@@ -255,7 +255,7 @@
 
                                                 <!-- Update arrow (API emulators only) -->
                                                 <TextBlock Grid.Column="1"
-                                                           Text="↑" FontSize="18" FontWeight="Bold"
+                                                           Text="^" FontSize="16" FontWeight="Bold"
                                                            Foreground="{DynamicResource Status.Running}"
                                                            VerticalAlignment="Bottom"
                                                            HorizontalAlignment="Center">
@@ -279,51 +279,58 @@
                                                 <StackPanel Grid.Column="2"
                                                             Visibility="{Binding HasApiInstall,
                                                                          Converter={StaticResource BoolToVisibility}}">
-                                                    <TextBlock Text="LATEST"
+                                                    <TextBlock Text="{Binding DataContext.Loc[LBLSectionLatest], RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                Style="{StaticResource SectionLabelStyle}"
-                                                               Margin="0,0,0,5" />
+                                                               Margin="0,0,0,3" />
                                                     <TextBlock Text="{Binding LatestVersion}"
                                                                FontFamily="Cascadia Code, Consolas, Courier New"
-                                                               FontSize="13"
+                                                               FontSize="12"
                                                                Foreground="{DynamicResource Foreground.Secondary}" />
                                                 </StackPanel>
                                             </Grid>
 
+                                            <!-- Download count (API repacks only, when non-zero) -->
+                                            <TextBlock Text="{Binding DownloadCountText}"
+                                                       Style="{StaticResource CaptionStyle}"
+                                                       Margin="0,8,0,0"
+                                                       Visibility="{Binding HasDownloadCount,
+                                                                    Converter={StaticResource BoolToVisibility}}" />
+
                                             <!-- Install path (Custom Core only) -->
-                                            <TextBlock Text="INSTALL PATH"
+                                            <TextBlock Text="{Binding DataContext.Loc[LBLSectionInstallPath], RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                        Style="{StaticResource SectionLabelStyle}"
-                                                       Margin="0,16,0,6"
+                                                       Margin="0,10,0,4"
                                                        Visibility="{Binding HasApiInstall,
                                                                     Converter={StaticResource InverseBoolToVisibility}}" />
                                             <Grid Visibility="{Binding HasApiInstall,
                                                                Converter={StaticResource InverseBoolToVisibility}}">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="8" />
+                                                    <ColumnDefinition Width="6" />
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
                                                 <Border Grid.Column="0"
                                                         Background="{DynamicResource Background.Primary}"
                                                         BorderBrush="{DynamicResource Border.Default}"
                                                         BorderThickness="1" CornerRadius="6"
-                                                        Padding="10,6">
+                                                        Padding="8,5">
                                                     <TextBlock Text="{Binding InstallPath}"
                                                                Style="{StaticResource CaptionStyle}"
                                                                TextTrimming="CharacterEllipsis"
                                                                ToolTip="{Binding InstallPath}" />
                                                 </Border>
                                                 <Button Grid.Column="2"
-                                                        Content="…"
+                                                        Content="..."
                                                         Command="{Binding BrowseInstallPathCommand}"
                                                         Style="{StaticResource SecondaryButtonStyle}"
-                                                        Width="36" Height="32"
-                                                        FontSize="15"
-                                                        ToolTip="Choose folder" />
+                                                        Width="30" Height="28"
+                                                        FontSize="13"
+                                                        ToolTip="{Binding DataContext.Loc[TooltipChooseFolder], RelativeSource={RelativeSource AncestorType=UserControl}}" />
                                             </Grid>
 
                                         </StackPanel>
 
-                                        <!-- ══ RIGHT: button column ══ -->
+                                        <!-- RIGHT: button column -->
                                         <StackPanel Grid.Column="2" VerticalAlignment="Center">
 
                                             <!-- Install (hidden once installed) -->
@@ -332,17 +339,17 @@
                                                     Command="{Binding InstallCommand}"
                                                     Style="{StaticResource PrimaryButtonStyle}"
                                                     HorizontalAlignment="Stretch"
-                                                    Height="36"
-                                                    Margin="0,0,0,8"
+                                                    Height="30"
+                                                    Margin="0,0,0,5"
                                                     Visibility="{Binding IsInstalled,
                                                                  Converter={StaticResource InverseBoolToVisibility}}" />
 
                                             <!-- Update (only when HasUpdate) -->
-                                            <Button Content="⬆  Update"
+                                            <Button Content="{Binding DataContext.Loc[BtnUpdate], RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                     Command="{Binding UpdateCommand}"
                                                     HorizontalAlignment="Stretch"
-                                                    Height="36"
-                                                    Margin="0,0,0,8"
+                                                    Height="30"
+                                                    Margin="0,0,0,5"
                                                     Visibility="{Binding HasUpdate,
                                                                  Converter={StaticResource BoolToVisibility}}">
                                                 <Button.Style>
@@ -354,31 +361,39 @@
                                                 </Button.Style>
                                             </Button>
 
-                                            <!-- Repair -->
-                                            <Button Content="{Binding DataContext.Loc[BtnRepair],
-                                                             RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                    Command="{Binding RepairCommand}"
-                                                    Style="{StaticResource SecondaryButtonStyle}"
-                                                    HorizontalAlignment="Stretch"
-                                                    Height="36"
-                                                    Margin="0,0,0,8" />
+                                            <!-- Repair + Uninstall side-by-side -->
+                                            <Grid Margin="0,0,0,5">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="4" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <Button Grid.Column="0"
+                                                        Content="{Binding DataContext.Loc[BtnRepair],
+                                                                 RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        Command="{Binding RepairCommand}"
+                                                        Style="{StaticResource SecondaryButtonStyle}"
+                                                        Height="28" />
+                                                <Button Grid.Column="2"
+                                                        Content="{Binding DataContext.Loc[BtnUninstall],
+                                                                 RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        Command="{Binding UninstallCommand}"
+                                                        Style="{StaticResource DangerButtonStyle}"
+                                                        Height="28" />
+                                            </Grid>
 
-                                            <!-- Uninstall -->
-                                            <Button Content="{Binding DataContext.Loc[BtnUninstall],
-                                                             RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                    Command="{Binding UninstallCommand}"
+                                            <!-- Clear Databases: drop + recreate all DBs from manifest -->
+                                            <Button Content="Clear Databases"
+                                                    Command="{Binding ClearDatabasesCommand}"
                                                     Style="{StaticResource DangerButtonStyle}"
                                                     HorizontalAlignment="Stretch"
-                                                    Height="36"
-                                                    Margin="0,0,0,12" />
-
-                                            <!-- Separator -->
-                                            <Separator Margin="0,0,0,12" />
+                                                    Height="28"
+                                                    Margin="0,0,0,5" />
 
                                             <!-- Enable / Disable -->
                                             <Button Command="{Binding ToggleEnabledCommand}"
                                                     HorizontalAlignment="Stretch"
-                                                    Height="36">
+                                                    Height="30">
                                                 <Button.Style>
                                                     <Style TargetType="Button"
                                                            BasedOn="{StaticResource SecondaryButtonStyle}">
@@ -394,13 +409,13 @@
                                                 </Button.Style>
                                                 <TextBlock Text="{Binding IsEnabled,
                                                                    Converter={StaticResource EnabledLabel}}"
-                                                           FontSize="13" />
+                                                           FontSize="12" />
                                             </Button>
 
                                         </StackPanel>
                                     </Grid>
 
-                                    <!-- ── Progress panel (shown when IsWorking) ── -->
+                                    <!-- Progress panel (shown when IsWorking) -->
                                     <Border Grid.Row="1"
                                             Margin="0,18,0,0"
                                             Background="{DynamicResource Background.Primary}"
@@ -450,7 +465,7 @@
                                                            Margin="0,0,14,0" />
 
                                                 <Button Grid.Column="2"
-                                                        Content="Cancel"
+                                                        Content="{Binding DataContext.Loc[BtnCancel], RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                         Command="{Binding CancelCommand}"
                                                         Style="{StaticResource DangerButtonStyle}"
                                                         Padding="14,4"

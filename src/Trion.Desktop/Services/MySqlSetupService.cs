@@ -2,10 +2,12 @@
 using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Extensions.Logging;
+using MySqlConnector;
 using Trion.Core.Database;
 using Trion.Core.Logging;
 using Trion.Desktop.Infrastructure.Constants;
@@ -20,12 +22,12 @@ namespace Trion.Desktop.Services;
 /// </summary>
 public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
 {
-    // ── MySQL version + port ───────────────────────────────────────────────────
+    // -- MySQL version + port ---------------------------------------------------
 
     private static readonly string MySqlVersion = ExternalLinks.MySqlVersion;
     private const int MySqlPort = 3306;
 
-    // ── Paths (all under AppDir so the installation is portable) ──────────────
+    // -- Paths (all under AppDir so the installation is portable) --------------
 
     private static readonly string AppDir    = AppDomain.CurrentDomain.BaseDirectory;
     private static readonly string DbDir     = Path.Combine(AppDir, "database");
@@ -35,7 +37,7 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
     private static readonly string MysqlExe  = Path.Combine(DbDir, "bin", "mysql.exe");
     private static readonly string DataDir   = Path.Combine(DbDir, "data");
 
-    // ── HTTP client ────────────────────────────────────────────────────────────
+    // -- HTTP client ------------------------------------------------------------
 
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromMinutes(15) };
 
@@ -45,7 +47,7 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) TrionControlPanel/1.0");
     }
 
-    // ── Win32 P/Invoke — graceful Ctrl+C shutdown (same as old Desktop app) ───
+    // -- Win32 P/Invoke -- graceful Ctrl+C shutdown (same as old Desktop app) ---
 
     [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
     private static extern bool FreeConsole();
@@ -62,14 +64,14 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
     private delegate bool ConsoleCtrlDelegate(uint ctrlType);
     private const uint CtrlCEvent = 0;
 
-    // ── Dependencies ──────────────────────────────────────────────────────────
+    // -- Dependencies ----------------------------------------------------------
 
     private readonly ISettingsService                    _settings;
     private readonly INotificationService                _notifications;
     private readonly ILogger<MySqlSetupService>          _logger;
     private readonly IApiKeyService                      _apiKeys;
 
-    // ── Setup operation state ─────────────────────────────────────────────────
+    // -- Setup operation state -------------------------------------------------
 
     public event Action<string>?            ProgressChanged;
     public event Action<DownloadProgress?>? DownloadProgressChanged;
@@ -78,7 +80,7 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
     public string            LastMessage     { get; private set; } = string.Empty;
     public DownloadProgress? CurrentDownload { get; private set; }
 
-    // ── Process lifecycle state ────────────────────────────────────────────────
+    // -- Process lifecycle state ------------------------------------------------
 
     private volatile int               _processId;
     private          DateTime          _processStartTime;
@@ -107,7 +109,7 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
         ? DateTime.Now - _processStartTime
         : TimeSpan.Zero;
 
-    // ── Constructor ───────────────────────────────────────────────────────────
+    // -- Constructor -----------------------------------------------------------
 
     public MySqlSetupService(ISettingsService settings, INotificationService notifications,
                              ILogger<MySqlSetupService> logger, IApiKeyService apiKeys)
@@ -118,7 +120,7 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
         _apiKeys       = apiKeys;
     }
 
-    // ── Installation flags ────────────────────────────────────────────────────
+    // -- Installation flags ----------------------------------------------------
 
     /// <summary>True when the binary was extracted (mysqld.exe exists).</summary>
     private bool IsBinaryExtracted => File.Exists(MysqldExe);
@@ -129,13 +131,33 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
     /// <summary>Fully installed = binary extracted + data directory initialised.</summary>
     public bool IsInstalled => IsBinaryExtracted && IsDataInitialized;
 
-    // ── Startup check ─────────────────────────────────────────────────────────
+    private bool _isUsingSystemMySQL;
+
+    /// <inheritdoc/>
+    public bool IsUsingSystemMySQL => _isUsingSystemMySQL;
+
+    // -- Startup check ---------------------------------------------------------
 
     public async Task RunStartupCheckAsync(CancellationToken ct = default)
     {
         IsRunning = true;
         try
         {
+            // Already in system-MySQL mode from a previous run — nothing to do.
+            if (_isUsingSystemMySQL)
+            {
+                Report("Using system MySQL — skipping setup.");
+                return;
+            }
+
+            // Portable MySQL is absent but port 3306 is occupied — assume a system server.
+            if (!IsInstalled && IsPort3306InUse())
+            {
+                _isUsingSystemMySQL = true;
+                await ConfigureForSystemMySqlAsync(ct);
+                return;
+            }
+
             if (IsInstalled)
             {
                 Report("MySQL detected. Refreshing hardware-tuned configuration...");
@@ -146,16 +168,16 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
                 return;
             }
 
-            // ── Download + extract (skip if binary already extracted from a previous
-            //    attempt that crashed before initialization completed) ──────────────
+            // -- Download + extract (skip if binary already extracted from a previous
+            //    attempt that crashed before initialization completed) --------------
             if (IsBinaryExtracted)
             {
-                Report("MySQL binaries found — resuming initialization from previous attempt...");
+                Report("MySQL binaries found -- resuming initialization from previous attempt...");
             }
             else
             {
-                Notify($"MySQL not found — starting download of portable MySQL {MySqlVersion}...");
-                Report($"MySQL not found — downloading portable MySQL {MySqlVersion}...");
+                Notify($"MySQL not found -- starting download of portable MySQL {MySqlVersion}...");
+                Report($"MySQL not found -- downloading portable MySQL {MySqlVersion}...");
                 var zipPath = await DownloadMySqlAsync(ct);
                 Notify("MySQL download complete. Extracting files...");
 
@@ -225,10 +247,16 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
         }
     }
 
-    // ── Process lifecycle ─────────────────────────────────────────────────────
+    // -- Process lifecycle -----------------------------------------------------
 
     public async Task StartAsync(bool? hideConsole = null, CancellationToken ct = default)
     {
+        if (_isUsingSystemMySQL)
+        {
+            Report("Using system MySQL — Trion does not manage its lifecycle.");
+            return;
+        }
+
         if (!IsInstalled)
         {
             Report("MySQL is not installed. Run startup check first.");
@@ -251,7 +279,7 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
 
             // --no-monitor: disables MySQL 8's built-in monitor/child-process pattern.
             //   Without it, mysqld spawns a second mysqld as the real server while
-            //   the first acts as a watchdog — giving two PIDs, only one of which
+            //   the first acts as a watchdog -- giving two PIDs, only one of which
             //   does any actual work.  Since we handle crash detection ourselves via
             //   MonitorLoopAsync, the built-in monitor is redundant.
             //
@@ -289,6 +317,12 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
 
     public async Task StopAsync(CancellationToken ct = default)
     {
+        if (_isUsingSystemMySQL)
+        {
+            Report("Using system MySQL — Trion does not manage its lifecycle.");
+            return;
+        }
+
         await _startStopLock.WaitAsync(ct);
         try
         {
@@ -308,13 +342,13 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
 
                 if (!proc.WaitForExit(15_000))
                 {
-                    Report("MySQL did not respond to Ctrl+C — force killing...");
+                    Report("MySQL did not respond to Ctrl+C -- force killing...");
                     proc.Kill(entireProcessTree: true);
                     try { await proc.WaitForExitAsync(ct).WaitAsync(TimeSpan.FromSeconds(5), ct); }
                     catch { /* timeout on kill is acceptable */ }
                 }
             }
-            catch (ArgumentException) { /* process already exited — that's fine */ }
+            catch (ArgumentException) { /* process already exited -- that's fine */ }
 
             ClearProcessState();
             _crashCount = 0;
@@ -329,7 +363,7 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
         }
     }
 
-    // ── Monitor loop — detects unexpected mysqld exit ─────────────────────────
+    // -- Monitor loop -- detects unexpected mysqld exit -------------------------
 
     private void BeginMonitoring()
     {
@@ -357,7 +391,7 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
             if (!alive)
             {
                 ClearProcessState();
-                _logger.LogWarning("mysqld (PID {Pid}) exited unexpectedly — possible crash.", pid);
+                _logger.LogWarning("mysqld (PID {Pid}) exited unexpectedly -- possible crash.", pid);
                 StatusChanged?.Invoke(false);
 
                 if (_settings.Current.ServerCrashDetection)
@@ -365,7 +399,7 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
                     if (_crashCount >= MaxCrashRestarts)
                     {
                         _crashCount = 0;
-                        string giveUp = $"MySQL crashed {MaxCrashRestarts} times — auto-restart disabled.";
+                        string giveUp = $"MySQL crashed {MaxCrashRestarts} times -- auto-restart disabled.";
                         _logger.LogWarning("{Message}", giveUp);
                         Report("MySQL stopped unexpectedly.");
                         Notify(giveUp);
@@ -373,12 +407,12 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
                     }
 
                     _crashCount++;
-                    string msg = $"MySQL crashed — restart attempt {_crashCount}/{MaxCrashRestarts}...";
+                    string msg = $"MySQL crashed -- restart attempt {_crashCount}/{MaxCrashRestarts}...";
                     _logger.LogInformation("{Message}", msg);
                     Report(msg);
                     Notify($"MySQL stopped unexpectedly. Restarting ({_crashCount}/{MaxCrashRestarts})...");
 
-                    // Brief pause before restart — gives the OS time to release ports
+                    // Brief pause before restart -- gives the OS time to release ports
                     await Task.Delay(2_000, CancellationToken.None);
 
                     try   { await StartAsync(); }
@@ -404,7 +438,7 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
         _monitorCts = null;
     }
 
-    // ── Graceful Ctrl+C (identical logic to old Desktop AppExecuteManager) ────
+    // -- Graceful Ctrl+C (identical logic to old Desktop AppExecuteManager) ----
 
     private static async Task SendCtrlC(Process process)
     {
@@ -425,13 +459,13 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
         SetConsoleCtrlHandler(null, add: false);
     }
 
-    // ── Repair / Uninstall / Reinstall ────────────────────────────────────────
+    // -- Repair / Uninstall / Reinstall ----------------------------------------
 
     public async Task RepairAsync(CancellationToken ct = default)
     {
         if (!IsInstalled)
         {
-            Report("MySQL is not installed — nothing to repair.");
+            Report("MySQL is not installed -- nothing to repair.");
             return;
         }
 
@@ -473,14 +507,14 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
 
     public async Task ReinstallAsync(CancellationToken ct = default)
     {
-        Report("Preparing for reinstall — uninstalling current installation...");
+        Report("Preparing for reinstall -- uninstalling current installation...");
         await UninstallAsync(ct);
 
         Report("Starting fresh MySQL installation...");
         await RunStartupCheckAsync(ct);
     }
 
-    // ── Dispose ───────────────────────────────────────────────────────────────
+    // -- Dispose ---------------------------------------------------------------
 
     public void Dispose()
     {
@@ -489,7 +523,7 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
         _startStopLock.Dispose();
     }
 
-    // ── Progress helpers ──────────────────────────────────────────────────────
+    // -- Progress helpers ------------------------------------------------------
 
     private void Report(string message)
     {
@@ -500,15 +534,15 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
 
     private void Notify(string message) => _notifications.Add($"[MySQL] {message}");
 
-    // ── my.ini generation ─────────────────────────────────────────────────────
+    // -- my.ini generation -----------------------------------------------------
 
     public void GenerateMyIni()
     {
-        // ── Hardware probing ──────────────────────────────────────────────────
+        // -- Hardware probing --------------------------------------------------
         long totalRamMb = GetTotalPhysicalRamMb();
         int  cpuCores   = Environment.ProcessorCount;
 
-        // ── InnoDB buffer pool: 40 % of RAM, 256 MB – 32 GB ─────────────────
+        // -- InnoDB buffer pool: 40 % of RAM, 256 MB - 32 GB -----------------
         long bufferPoolMb = Math.Clamp(totalRamMb * 40 / 100, 256, 32_768);
 
         int poolInstances = Math.Clamp((int)(bufferPoolMb / 1024), 1,
@@ -535,7 +569,7 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
         string logDirFwd = LogDir.Replace('\\', '/');
 
         var ini = new StringBuilder();
-        ini.AppendLine($"# MySQL {MySqlVersion} — generated by Trion Control Panel");
+        ini.AppendLine($"# MySQL {MySqlVersion} -- generated by Trion Control Panel");
         ini.AppendLine($"# System: {totalRamMb:N0} MB RAM  |  {cpuCores} CPU threads");
         ini.AppendLine($"# InnoDB buffer pool: {bufferPoolMb:N0} MB (40 % of RAM)");
         ini.AppendLine();
@@ -545,35 +579,35 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
         ini.AppendLine();
         ini.AppendLine("[mysqld]");
         ini.AppendLine();
-        ini.AppendLine("# ── Paths ────────────────────────────────────────────────────────");
+        ini.AppendLine("# -- Paths --------------------------------------------------------");
         ini.AppendLine($"""basedir="{dbDirFwd}" """.TrimEnd());
         ini.AppendLine($"""datadir="{dbDirFwd}/data" """.TrimEnd());
         ini.AppendLine();
-        ini.AppendLine("# ── Network ──────────────────────────────────────────────────────");
+        ini.AppendLine("# -- Network ------------------------------------------------------");
         ini.AppendLine($"port={MySqlPort}");
         ini.AppendLine("bind-address=0.0.0.0");
         ini.AppendLine("max_allowed_packet=512M");
         ini.AppendLine("back_log=1024");
         ini.AppendLine("net_buffer_length=512K");
         ini.AppendLine();
-        ini.AppendLine("# ── Character set ────────────────────────────────────────────────");
+        ini.AppendLine("# -- Character set ------------------------------------------------");
         ini.AppendLine("character-set-server=utf8mb4");
         ini.AppendLine("collation-server=utf8mb4_0900_ai_ci");
         ini.AppendLine();
-        ini.AppendLine("# ── Security ────────────────────────────────────────────────────");
+        ini.AppendLine("# -- Security ----------------------------------------------------");
         ini.AppendLine("secure-file-priv=\"\"");
         ini.AppendLine();
-        ini.AppendLine("# ── Connections ─────────────────────────────────────────────────");
+        ini.AppendLine("# -- Connections -------------------------------------------------");
         ini.AppendLine($"max_connections={maxConnections}");
         ini.AppendLine($"thread_cache_size={threadCacheSize}");
         ini.AppendLine();
-        ini.AppendLine($"# ── InnoDB memory ({bufferPoolMb:N0} MB = 40% of {totalRamMb:N0} MB) ──────────────────");
+        ini.AppendLine($"# -- InnoDB memory ({bufferPoolMb:N0} MB = 40% of {totalRamMb:N0} MB) ------------------");
         ini.AppendLine($"innodb_buffer_pool_size={FormatMb(bufferPoolMb)}");
         ini.AppendLine($"innodb_buffer_pool_instances={poolInstances}");
         ini.AppendLine($"innodb_log_buffer_size={FormatMb(logBufferMb)}");
         ini.AppendLine($"innodb_redo_log_capacity={FormatMb(redoLogMb)}");
         ini.AppendLine();
-        ini.AppendLine("# ── InnoDB IO ────────────────────────────────────────────────────");
+        ini.AppendLine("# -- InnoDB IO ----------------------------------------------------");
         ini.AppendLine($"innodb_read_io_threads={readIoThreads}");
         ini.AppendLine($"innodb_write_io_threads={writeIoThreads}");
         ini.AppendLine($"innodb_page_cleaners={pageCleaners}");
@@ -584,28 +618,28 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
         ini.AppendLine($"innodb_lru_scan_depth={lruScanDepth}");
         ini.AppendLine("innodb_adaptive_hash_index=ON");
         ini.AppendLine();
-        ini.AppendLine("# ── Table caches ─────────────────────────────────────────────────");
+        ini.AppendLine("# -- Table caches -------------------------------------------------");
         ini.AppendLine($"table_open_cache={tableOpenCache}");
         ini.AppendLine($"table_definition_cache={tableDefCache}");
         ini.AppendLine($"table_open_cache_instances={cacheInstances}");
         ini.AppendLine();
-        ini.AppendLine("# ── Temporary tables ─────────────────────────────────────────────");
+        ini.AppendLine("# -- Temporary tables ---------------------------------------------");
         ini.AppendLine($"tmp_table_size={FormatMb(tmpTableMb)}");
         ini.AppendLine($"max_heap_table_size={FormatMb(tmpTableMb)}");
         ini.AppendLine();
-        ini.AppendLine("# ── Per-session buffers (small — multiplied by max_connections) ──");
+        ini.AppendLine("# -- Per-session buffers (small -- multiplied by max_connections) --");
         ini.AppendLine("join_buffer_size=512K");
         ini.AppendLine("sort_buffer_size=512K");
         ini.AppendLine("read_buffer_size=256K");
         ini.AppendLine("read_rnd_buffer_size=512K");
         ini.AppendLine();
-        ini.AppendLine("# ── Storage engine ───────────────────────────────────────────────");
+        ini.AppendLine("# -- Storage engine -----------------------------------------------");
         ini.AppendLine("default-storage-engine=INNODB");
         ini.AppendLine();
-        ini.AppendLine("# ── SQL behaviour ────────────────────────────────────────────────");
+        ini.AppendLine("# -- SQL behaviour ------------------------------------------------");
         ini.AppendLine("sql_mode=STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION");
         ini.AppendLine();
-        ini.AppendLine("# ── Logging ──────────────────────────────────────────────────────");
+        ini.AppendLine("# -- Logging ------------------------------------------------------");
         ini.AppendLine($"log_error=\"{logDirFwd}/mysql_error.log\"");
         ini.AppendLine("slow_query_log=1");
         ini.AppendLine($"slow_query_log_file=\"{logDirFwd}/mysql_slow.log\"");
@@ -614,18 +648,142 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
         ini.AppendLine("general_log=0");
         ini.AppendLine($"general_log_file=\"{logDirFwd}/mysql_general.log\"");
         ini.AppendLine();
-        ini.AppendLine("# ── Monitoring ───────────────────────────────────────────────────");
+        ini.AppendLine("# -- Monitoring ---------------------------------------------------");
         ini.AppendLine("performance_schema=ON");
         ini.AppendLine();
         ini.AppendLine("[mysqld_safe]");
         ini.AppendLine("open-files-limit=65535");
 
-        // Must use UTF-8 WITHOUT BOM — MySQL's config parser aborts on the 3-byte
+        // Must use UTF-8 WITHOUT BOM -- MySQL's config parser aborts on the 3-byte
         // BOM that Encoding.UTF8 emits, reporting "option without preceding group".
         File.WriteAllText(MyIniPath, ini.ToString(), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
     }
 
-    // ── Download ──────────────────────────────────────────────────────────────
+    // -- System MySQL detection + configuration --------------------------------
+
+    private static bool IsPort3306InUse()
+    {
+        try
+        {
+            return IPGlobalProperties.GetIPGlobalProperties()
+                .GetActiveTcpListeners()
+                .Any(ep => ep.Port == MySqlPort);
+        }
+        catch { return false; }
+    }
+
+    private static async Task<bool> IsPhoenixUserReadyAsync(CancellationToken ct)
+    {
+        try
+        {
+            var csb = new MySqlConnectionStringBuilder
+            {
+                Server            = "127.0.0.1",
+                Port              = MySqlPort,
+                UserID            = "phoenix",
+                Password          = "phoenix",
+                ConnectionTimeout = 5,
+                SslMode           = MySqlSslMode.None,
+            };
+            await using var conn = new MySqlConnection(csb.ConnectionString);
+            await conn.OpenAsync(ct);
+            return true;
+        }
+        catch { return false; }
+    }
+
+    private static IEnumerable<string> SplitSqlStatements(string sql) =>
+        sql.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+           .Where(s => !string.IsNullOrWhiteSpace(s) && !s.StartsWith("--"));
+
+    private async Task ConfigureForSystemMySqlAsync(CancellationToken ct)
+    {
+        Report("System MySQL detected on port 3306 — configuring Trion to use it...");
+
+        // If the 'phoenix' user already works, a previous setup run completed OK.
+        if (await IsPhoenixUserReadyAsync(ct))
+        {
+            Report("System MySQL already has the 'phoenix' user — ready.");
+            _settings.Current.DBInstalled      = true;
+            // Ensure CreateDatabasesAsync can connect as root with the right password.
+            if (string.IsNullOrWhiteSpace(_settings.Current.MySqlAdminPassword))
+                _settings.Current.MySqlAdminPassword = MySqlInitSql.SystemRootPassword;
+            _settings.Save();
+            StatusChanged?.Invoke(true);
+            Notify("System MySQL is ready.");
+            return;
+        }
+
+        // Attempt to run setup SQL as root.
+        // Try empty password first (fresh installs), then our known system root password
+        // (in case Trion already ran setup once before the phoenix user was ready).
+        bool setupOk = false;
+        try
+        {
+            Report("Configuring system MySQL root password and 'phoenix' user...");
+            MySqlConnection? conn = null;
+            foreach (var pwd in new[] { "", MySqlInitSql.SystemRootPassword })
+            {
+                try
+                {
+                    var csb = new MySqlConnectionStringBuilder
+                    {
+                        Server            = "127.0.0.1",
+                        Port              = MySqlPort,
+                        UserID            = "root",
+                        Password          = pwd,
+                        ConnectionTimeout = 5,
+                        SslMode           = MySqlSslMode.None,
+                    };
+                    conn = new MySqlConnection(csb.ConnectionString);
+                    await conn.OpenAsync(ct);
+                    break;
+                }
+                catch { conn?.Dispose(); conn = null; }
+            }
+
+            if (conn is null)
+                throw new InvalidOperationException("Could not connect to MySQL as root (tried empty password and known system password).");
+
+            await using (conn)
+            {
+                foreach (var stmt in SplitSqlStatements(MySqlInitSql.SystemMySqlSetup))
+                {
+                    await using var cmd = new MySqlCommand(stmt, conn);
+                    try { await cmd.ExecuteNonQueryAsync(ct); }
+                    catch (MySqlException ex) when (ex.Number is 1396 or 1007 or 1050 or 1060 or 1061)
+                    { /* user already exists — idempotent */ }
+                }
+            }
+
+            setupOk = true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not run system MySQL setup.");
+        }
+
+        if (setupOk)
+        {
+            Report("System MySQL configured with Trion databases and 'phoenix' user.");
+            Notify("System MySQL configured successfully.");
+        }
+        else
+        {
+            Report("Could not auto-configure system MySQL (root password unknown). " +
+                   "Please ensure a 'phoenix'@'localhost' user with password 'phoenix' exists.");
+            Notify("System MySQL found — please configure the 'phoenix' user manually if not done already.");
+        }
+
+        _settings.Current.DBInstalled      = true;
+        // Save the system root password so CreateDatabasesAsync can connect as root later.
+        if (setupOk && string.IsNullOrWhiteSpace(_settings.Current.MySqlAdminPassword))
+            _settings.Current.MySqlAdminPassword = MySqlInitSql.SystemRootPassword;
+        _settings.Save();
+        StatusChanged?.Invoke(true);
+    }
+
+    // -- Download --------------------------------------------------------------
 
     private async Task<string> DownloadMySqlAsync(CancellationToken ct)
     {
@@ -639,7 +797,7 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
                 return zipPath;
             }
 
-            Report("Cached download is corrupt — deleting and re-downloading...");
+            Report("Cached download is corrupt -- deleting and re-downloading...");
             File.Delete(zipPath);
         }
 
@@ -651,14 +809,14 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
 
         if (!apiOk)
         {
-            // Fallback: direct MySQL CDN — up to 3 attempts in case of mid-transfer stall
+            // Fallback: direct MySQL CDN -- up to 3 attempts in case of mid-transfer stall
             const int maxAttempts = 3;
             for (int attempt = 1; attempt <= maxAttempts; attempt++)
             {
                 if (attempt == 1)
-                    Report("Trion API unavailable — falling back to MySQL CDN...");
+                    Report("Trion API unavailable -- falling back to MySQL CDN...");
                 else
-                    Report($"MySQL CDN download stalled — retry {attempt}/{maxAttempts}...");
+                    Report($"MySQL CDN download stalled -- retry {attempt}/{maxAttempts}...");
 
                 bool cdnOk = await TryDownloadFromUrlAsync(ExternalLinks.MySqlCdnDownload, zipPath, addApiKey: false, ct);
                 if (cdnOk) break;
@@ -760,8 +918,8 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
             ? $"{FormatBytes(downloaded)} / {FormatBytes(total)} ({pct}%)"
             : FormatBytes(downloaded);
         string speed = $"{FormatBytes((long)speedBps)}/s";
-        string time  = eta.HasValue ? $"ETA {eta.Value:mm\\:ss}" : "ETA —";
-        return $"Downloading MySQL {MySqlVersion}...  {size}  •  {speed}  •  {time}";
+        string time  = eta.HasValue ? $"ETA {eta.Value:mm\\:ss}" : "ETA --";
+        return $"Downloading MySQL {MySqlVersion}...  {size}  *  {speed}  *  {time}";
     }
 
     private static string FormatBytes(long bytes) => bytes switch
@@ -772,7 +930,7 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
         _                => $"{bytes} B",
     };
 
-    // ── Extract ───────────────────────────────────────────────────────────────
+    // -- Extract ---------------------------------------------------------------
 
     private void ExtractMySql(string zipPath)
     {
@@ -787,7 +945,7 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
             }
             catch (InvalidDataException)
             {
-                // ZIP is corrupt — delete it so the next run re-downloads a fresh copy
+                // ZIP is corrupt -- delete it so the next run re-downloads a fresh copy
                 try { File.Delete(zipPath); } catch { /* best effort */ }
                 throw new InvalidDataException(
                     "The downloaded MySQL archive is corrupt and has been deleted. " +
@@ -796,7 +954,7 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
 
             var extractedRoot = Directory.GetDirectories(tempDir).FirstOrDefault()
                 ?? throw new DirectoryNotFoundException(
-                    "Unexpected MySQL ZIP layout — cannot find root folder.");
+                    "Unexpected MySQL ZIP layout -- cannot find root folder.");
 
             Report("Copying files to database/ folder...");
             Directory.CreateDirectory(DbDir);
@@ -816,7 +974,7 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
         }
     }
 
-    // ── Initialize data directory ─────────────────────────────────────────────
+    // -- Initialize data directory ---------------------------------------------
 
     private static async Task InitializeDataDirectoryAsync(CancellationToken ct)
     {
@@ -832,7 +990,7 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
         using var proc = Process.Start(psi)
             ?? throw new InvalidOperationException("Failed to launch mysqld for initialization.");
 
-        // Read stderr concurrently — prevents pipe-buffer deadlock
+        // Read stderr concurrently -- prevents pipe-buffer deadlock
         var stderrTask = proc.StandardError.ReadToEndAsync(ct);
         await proc.WaitForExitAsync(ct);
         var stderr = await stderrTask;
@@ -842,7 +1000,7 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
         if (proc.ExitCode != 0 || !Directory.Exists(DataDir))
         {
             string detail = string.IsNullOrWhiteSpace(stderr)
-                ? "(no stderr output — possible config file or DLL issue)"
+                ? "(no stderr output -- possible config file or DLL issue)"
                 : stderr.Trim();
             throw new InvalidOperationException(
                 $"mysqld --initialize-insecure failed (exit {proc.ExitCode}, " +
@@ -850,7 +1008,7 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
         }
     }
 
-    // ── Start mysqld process (internal — for first-run user setup only) ────────
+    // -- Start mysqld process (internal -- for first-run user setup only) --------
 
     /// <summary>
     /// Starts mysqld and wires up stderr capture via <c>BeginErrorReadLine</c>.
@@ -869,7 +1027,7 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
             Arguments             = $"--defaults-file=\"{MyIniPath}\" --no-monitor",
             UseShellExecute       = false,
             CreateNoWindow        = true,
-            RedirectStandardError = true,  // drained via BeginErrorReadLine — no deadlock
+            RedirectStandardError = true,  // drained via BeginErrorReadLine -- no deadlock
         };
 
         var proc = Process.Start(psi)
@@ -885,7 +1043,7 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
         return proc;
     }
 
-    // ── Wait for MySQL to accept TCP connections ───────────────────────────────
+    // -- Wait for MySQL to accept TCP connections -------------------------------
 
     private static async Task WaitForMysqlAsync(Process proc, StringBuilder stderrCapture,
                                                 CancellationToken ct)
@@ -896,7 +1054,7 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
         {
             ct.ThrowIfCancellationRequested();
 
-            // Fail fast — no point waiting 90 s if mysqld already crashed
+            // Fail fast -- no point waiting 90 s if mysqld already crashed
             if (proc.HasExited)
             {
                 // Give BeginErrorReadLine's async callback a moment to flush
@@ -952,17 +1110,16 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
         }
     }
 
-    // ── First-run MySQL initialization ────────────────────────────────────────
+    // -- First-run MySQL initialization ----------------------------------------
 
     /// <summary>
     /// Runs <see cref="MySqlInitSql.FirstRunSetup"/> against the freshly-initialized
     /// MySQL instance (root has no password after <c>--initialize-insecure</c>).
     ///
     /// This single call:
-    ///   • Secures the root account
-    ///   • Creates the 'phoenix' application user
-    ///   • Creates all expansion databases (Classic → MoP)
-    ///   • Grants phoenix full ownership of every database
+    ///   * Secures the root account
+    ///   * Creates the 'phoenix' application user
+    ///   * Grants phoenix full privileges (databases are created on demand per repack)
     /// </summary>
     private static async Task CreatePhoenixUserAsync(CancellationToken ct)
     {
@@ -983,7 +1140,7 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
         await proc.StandardInput.WriteLineAsync(MySqlInitSql.FirstRunSetup);
         proc.StandardInput.Close();
 
-        // Drain both streams concurrently — reading after WaitForExitAsync can deadlock
+        // Drain both streams concurrently -- reading after WaitForExitAsync can deadlock
         // if the process fills the pipe buffer before it exits.
         var stdoutTask = proc.StandardOutput.ReadToEndAsync(ct);
         var stderrTask = proc.StandardError.ReadToEndAsync(ct);
@@ -996,7 +1153,7 @@ public sealed class MySqlSetupService : IMySqlSetupService, IDisposable
                 $"MySQL initialization failed (exit {proc.ExitCode}): {stderr}");
     }
 
-    // ── Hardware helpers ──────────────────────────────────────────────────────
+    // -- Hardware helpers ------------------------------------------------------
 
     private static long GetTotalPhysicalRamMb()
     {

@@ -9,8 +9,4 @@ public interface ITrayService : IDisposable
 
     /// <summary>Shows a balloon notification in the system tray.</summary>
     void ShowBalloon(string title, string message);
-
-    /// <summary>Re-generates the tray and window icon using the given accent colour.</summary>
-    void SetAccentColor(System.Drawing.Color accent);
-
 }

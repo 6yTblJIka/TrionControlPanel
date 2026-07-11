@@ -5,18 +5,20 @@
 /// Queries that differ between emulator schemas are exposed as static methods;
 /// queries that are identical across all cores are plain string constants.
 ///
-/// Schema variants (<c>CoreSchema</c>) map to <see cref="AppSettings.SelectedDatabases"/>:
-///   AzerothCore  — 0 (Custom) and 2 (AzerothCore): binary salt/verifier columns
-///   TrinityCore335 — 1 (TrinityCore 3.3.5a): sha_pass_hash column
-///   CMaNGOS      — 3 (CMaNGOS/VMaNGOS): hex v/s columns, realmbuilds column
+/// Schema variants map to <see cref="AppSettings.SelectedDatabases"/>:
+///   0 = TrinityCore 3.3.5a : sha_pass_hash column
+///   1 = AzerothCore         : binary salt + verifier (LegacySHA1 SRP6)
+///   2 = CMaNGOS / VMaNGOS   : hex v + s columns, realmbuilds column
+///   3 = ArgusCore / TC-master (Legion+): battlenet_accounts + account (BNet SRP6v2)
+///   4 = TrinityCore Cata / SkyFire MoP : binary salt + verifier (GruntSRP6, no BNet layer)
 /// </summary>
 internal static class DbQueries
 {
-    // ── Connectivity ──────────────────────────────────────────────────────────
+    // -- Connectivity ----------------------------------------------------------
 
     public const string Ping = "SELECT 1";
 
-    // ── RealmList ─────────────────────────────────────────────────────────────
+    // -- RealmList -------------------------------------------------------------
 
     /// <summary>
     /// Fetches up to 10 realms.
@@ -38,7 +40,7 @@ internal static class DbQueries
     public const string DeleteRealm =
         "DELETE FROM realmlist WHERE id = @Id";
 
-    /// <summary>UPDATE for AzerothCore / TrinityCore — includes localAddress and localSubnetMask.</summary>
+    /// <summary>UPDATE for AzerothCore / TrinityCore -- includes localAddress and localSubnetMask.</summary>
     public const string SaveRealm =
         "UPDATE realmlist " +
         "SET name = @Name, address = @Address, localAddress = @LocalAddress, " +
@@ -59,7 +61,7 @@ internal static class DbQueries
         "INSERT INTO realmlist (name, address, port, realmbuilds) " +
         "VALUES (@Name, @Address, @Port, @GameBuild)";
 
-    // ── Account — shared lookups ───────────────────────────────────────────────
+    // -- Account -- shared lookups -----------------------------------------------
 
     public const string UsernameExists =
         "SELECT COUNT(*) FROM account WHERE username = @Username";
@@ -70,7 +72,7 @@ internal static class DbQueries
     public const string GetAccountId =
         "SELECT id FROM account WHERE username = @Username";
 
-    // ── Account — CREATE ──────────────────────────────────────────────────────
+    // -- Account -- CREATE ------------------------------------------------------
 
     /// <summary>
     /// AzerothCore: binary salt + verifier columns, plus reg_mail and expansion.
@@ -96,10 +98,28 @@ internal static class DbQueries
         "(username, v, s, email, joindate) " +
         "VALUES (@Username, @Verifier, @Salt, @Email, @JoinDate)";
 
-    // ── Account — SET GM LEVEL ────────────────────────────────────────────────
+    // -- Account -- CREATE (TrinityCore Cata / SkyFire MoP) --------------------
 
     /// <summary>
-    /// AzerothCore / TrinityCore: UPSERT into the account_access table.
+    /// TrinityCore Cataclysm and SkyFire MoP: binary salt + verifier columns,
+    /// with reg_mail and expansion - same column layout as AzerothCore.
+    /// Verifier must be computed with GruntSRP6 (big-endian x), not LegacySHA1.
+    /// TC-Cata also has legacy v/s VARCHAR columns but those have defaults and are
+    /// not populated here (the binary columns are the primary auth path).
+    /// </summary>
+    public const string CreateAccountGruntSrp6 =
+        "INSERT INTO account " +
+        "(username, salt, verifier, email, reg_mail, joindate, expansion) " +
+        "VALUES (@Username, @Salt, @Verifier, @Email, @RegMail, @JoinDate, @Expansion)";
+
+    /// <summary>TrinityCore Cata / SkyFire: update binary salt and verifier (GruntSRP6).</summary>
+    public const string ChangePasswordGruntSrp6 =
+        "UPDATE account SET salt = @Salt, verifier = @Verifier WHERE username = @Username";
+
+    // -- Account -- SET GM LEVEL ------------------------------------------------
+
+    /// <summary>
+    /// AzerothCore / SkyFire MoP: account_access uses <c>id</c> + <c>gmlevel</c>.
     /// </summary>
     public const string SetGmLevelAcTc =
         "INSERT INTO account_access (id, gmlevel, RealmID) " +
@@ -107,12 +127,21 @@ internal static class DbQueries
         "ON DUPLICATE KEY UPDATE gmlevel = @GmLevel";
 
     /// <summary>
+    /// TrinityCore Cataclysm / ArgusCore / TC-master: account_access uses
+    /// <c>AccountID</c> + <c>SecurityLevel</c>.
+    /// </summary>
+    public const string SetGmLevelModernTc =
+        "INSERT INTO account_access (AccountID, SecurityLevel, RealmID) " +
+        "VALUES (@Id, @GmLevel, -1) " +
+        "ON DUPLICATE KEY UPDATE SecurityLevel = @GmLevel";
+
+    /// <summary>
     /// CMaNGOS: gmlevel lives directly on the account row.
     /// </summary>
     public const string SetGmLevelCmangos =
         "UPDATE account SET gmlevel = @GmLevel WHERE id = @Id";
 
-    // ── Account — CHANGE PASSWORD ─────────────────────────────────────────────
+    // -- Account -- CHANGE PASSWORD ---------------------------------------------
 
     /// <summary>AzerothCore: replace binary salt and verifier.</summary>
     public const string ChangePasswordAzerothCore =
@@ -126,17 +155,17 @@ internal static class DbQueries
     public const string ChangePasswordCmangos =
         "UPDATE account SET v = @Verifier, s = @Salt WHERE username = @Username";
 
-    // ══════════════════════════════════════════════════════════════════════════
-    // CypherCore / TrinityCore 4.x — Battle.net auth schema
+    // ==========================================================================
+    // CypherCore / TrinityCore 4.x -- Battle.net auth schema
     //
     // Auth is split into two tables:
     //
-    //   battlenet_accounts — top-level login identity (email + SRP6 v2 credentials)
+    //   battlenet_accounts -- top-level login identity (email + SRP6 v2 credentials)
     //     srp_version = 2
     //     salt        = 32 random bytes  (BINARY(32))
     //     verifier    = g^x mod N        (BLOB, up to 257 bytes for 2048-bit prime)
     //
-    //   account — in-game session identity (GruntSRP6 credentials + BNet FK)
+    //   account -- in-game session identity (GruntSRP6 credentials + BNet FK)
     //     salt      = 32 random bytes  (BINARY(32))
     //     verifier  = 7^x mod N_32     (BINARY(32), 32-byte WoW prime)
     //     username  = "{bnetId}#1"
@@ -144,15 +173,15 @@ internal static class DbQueries
     //
     // References: CypherCore BNetAccountManager.cs + AccountManager.cs
     //             LoginDatabase.cs INS_BNET_ACCOUNT / INS_ACCOUNT statements
-    // ══════════════════════════════════════════════════════════════════════════
+    // ==========================================================================
 
-    // ── TC4 — duplicate-check lookups ─────────────────────────────────────────
+    // -- TC4 -- duplicate-check lookups -----------------------------------------
 
     /// <summary>Check for an existing email in the Battle.net accounts table.</summary>
     public const string BnetEmailExists =
         "SELECT COUNT(*) FROM battlenet_accounts WHERE email = @Email";
 
-    // ── TC4 — CREATE ──────────────────────────────────────────────────────────
+    // -- TC4 -- CREATE ----------------------------------------------------------
 
     /// <summary>
     /// Insert a Battle.net top-level account.
@@ -172,7 +201,7 @@ internal static class DbQueries
         "(username, salt, verifier, reg_mail, email, joindate, battlenet_account, battlenet_index) " +
         "VALUES (@Username, @Salt, @Verifier, @RegMail, @Email, NOW(), @BnetId, 1)";
 
-    // ── TC4 — helpers ─────────────────────────────────────────────────────────
+    // -- TC4 -- helpers ---------------------------------------------------------
 
     /// <summary>Fetch the auto-generated ID of a newly created BNet account.</summary>
     public const string GetBnetAccountId =
@@ -188,7 +217,7 @@ internal static class DbQueries
         "INNER JOIN account a ON a.battlenet_account = ba.id " +
         "WHERE a.username = @Username";
 
-    // ── TC4 — CHANGE PASSWORD ─────────────────────────────────────────────────
+    // -- TC4 -- CHANGE PASSWORD -------------------------------------------------
 
     /// <summary>
     /// Replace the SRP6 credentials on the BNet account row.

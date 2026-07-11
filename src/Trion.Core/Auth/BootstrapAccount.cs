@@ -28,11 +28,11 @@ public static class BootstrapAccount
         await settings.SetAsync(UsernameKey, DefaultUsername, ct);
         await settings.SetAsync(PasswordHashKey, hash, ct);
 
-        // Print temporary password to console only — never write to disk in plaintext
+        // Print temporary password to console only -- never write to disk in plaintext
         Console.WriteLine("=== TRION FIRST RUN ===");
         Console.WriteLine($"Bootstrap account created. Username: {DefaultUsername}");
         Console.WriteLine($"Temporary password: {password}");
-        Console.WriteLine("Save this now — it will not be shown again.");
+        Console.WriteLine("Save this now -- it will not be shown again.");
         Console.WriteLine("=======================");
         await Task.CompletedTask;
     }

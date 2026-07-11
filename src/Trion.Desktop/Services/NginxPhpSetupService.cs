@@ -22,13 +22,13 @@ namespace Trion.Desktop.Services;
 /// </summary>
 public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
 {
-    // ── Versions ──────────────────────────────────────────────────────────────
+    // -- Versions --------------------------------------------------------------
 
     private static readonly string NginxVersion = ExternalLinks.NginxVersion;
     private static readonly string PhpVersion   = ExternalLinks.PhpVersion;
     private const int PhpCgiFastCgiPort = 9000;
 
-    // ── Paths (all under AppDir so the installation is portable) ──────────────
+    // -- Paths (all under AppDir so the installation is portable) --------------
 
     private static readonly string AppDir    = AppDomain.CurrentDomain.BaseDirectory;
     private static readonly string WebDir    = Path.Combine(AppDir, "webserver");
@@ -45,7 +45,7 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
     private static readonly string DefaultCertPath = Path.Combine(SslDir, "trion_cert.pem");
     private static readonly string DefaultKeyPath  = Path.Combine(SslDir, "trion_key.pem");
 
-    // ── HTTP client ────────────────────────────────────────────────────────────
+    // -- HTTP client ------------------------------------------------------------
 
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromMinutes(15) };
 
@@ -55,14 +55,14 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) TrionControlPanel/1.0");
     }
 
-    // ── Dependencies ──────────────────────────────────────────────────────────
+    // -- Dependencies ----------------------------------------------------------
 
     private readonly ISettingsService              _settings;
     private readonly INotificationService          _notifications;
     private readonly ILogger<NginxPhpSetupService> _logger;
     private readonly IApiKeyService                _apiKeys;
 
-    // ── Setup operation state ─────────────────────────────────────────────────
+    // -- Setup operation state -------------------------------------------------
 
     public event Action<string>?            ProgressChanged;
     public event Action<DownloadProgress?>? DownloadProgressChanged;
@@ -71,7 +71,7 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
     public string            LastMessage     { get; private set; } = string.Empty;
     public DownloadProgress? CurrentDownload { get; private set; }
 
-    // ── Process lifecycle state ────────────────────────────────────────────────
+    // -- Process lifecycle state ------------------------------------------------
 
     private volatile int               _nginxProcessId;
     private volatile int               _phpCgiProcessId;
@@ -101,7 +101,7 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
         ? DateTime.Now - _processStartTime
         : TimeSpan.Zero;
 
-    // ── Constructor ───────────────────────────────────────────────────────────
+    // -- Constructor -----------------------------------------------------------
 
     public NginxPhpSetupService(ISettingsService settings, INotificationService notifications,
                                 ILogger<NginxPhpSetupService> logger, IApiKeyService apiKeys)
@@ -112,7 +112,7 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
         _apiKeys       = apiKeys;
     }
 
-    // ── Installation flags ────────────────────────────────────────────────────
+    // -- Installation flags ----------------------------------------------------
 
     private bool IsNginxExtracted => File.Exists(NginxExe);
     private bool IsPhpExtracted   => File.Exists(PhpCgiExe);
@@ -130,20 +130,20 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
     /// </summary>
     public bool IsInstalled => AreFilesPresent && _settings.Current.WebServerInstalled;
 
-    // ── Startup check ─────────────────────────────────────────────────────────
+    // -- Startup check ---------------------------------------------------------
 
     public async Task RunStartupCheckAsync(CancellationToken ct = default)
     {
         IsRunning = true;
         try
         {
-            // ── Download combined web server package (nginx + PHP) ────────────
+            // -- Download combined web server package (nginx + PHP) ------------
             // The ZIP contains nginx/ and php/ subdirectories that land directly
             // under WebDir after extraction, giving us WebDir/nginx/nginx.exe
             // and WebDir/php/php-cgi.exe.
             if (!IsNginxExtracted || !IsPhpExtracted)
             {
-                Notify($"Web server files not found — downloading combined package (nginx {NginxVersion} + PHP {PhpVersion})...");
+                Notify($"Web server files not found -- downloading combined package (nginx {NginxVersion} + PHP {PhpVersion})...");
                 Report($"Downloading web server package (nginx {NginxVersion} + PHP {PhpVersion})...");
                 var webZip = await DownloadPackageAsync(
                     "webserver", "combined",
@@ -155,7 +155,7 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
             }
             else
             {
-                Report("Web server binaries found — resuming from previous attempt...");
+                Report("Web server binaries found -- resuming from previous attempt...");
             }
 
             Directory.CreateDirectory(LogDir);
@@ -205,7 +205,7 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
         }
     }
 
-    // ── Process lifecycle ─────────────────────────────────────────────────────
+    // -- Process lifecycle -----------------------------------------------------
 
     public async Task StartAsync(bool? hideConsole = null, CancellationToken ct = default)
     {
@@ -251,7 +251,7 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
             // Brief pause so PHP-CGI is bound before nginx begins forwarding requests
             await Task.Delay(400, ct);
 
-            // Start nginx — WorkingDirectory must be the nginx folder so it can
+            // Start nginx -- WorkingDirectory must be the nginx folder so it can
             // resolve relative paths in nginx.conf (e.g. logs/, conf/mime.types)
             var nginxPsi = new ProcessStartInfo
             {
@@ -304,7 +304,7 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
                         var nginxProc = Process.GetProcessById(_nginxProcessId);
                         if (!nginxProc.WaitForExit(10_000))
                         {
-                            Report("nginx did not respond to quit — force killing...");
+                            Report("nginx did not respond to quit -- force killing...");
                             nginxProc.Kill(entireProcessTree: true);
                             try { await nginxProc.WaitForExitAsync(ct).WaitAsync(TimeSpan.FromSeconds(5), ct); } catch { }
                         }
@@ -314,7 +314,7 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
                 catch (Exception ex) { _logger.LogWarning(ex, "Error stopping nginx."); }
             }
 
-            // php-cgi has no graceful shutdown protocol — kill it directly
+            // php-cgi has no graceful shutdown protocol -- kill it directly
             if (_phpCgiProcessId > 0)
             {
                 try
@@ -340,12 +340,12 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
         }
     }
 
-    // ── nginx -s <signal> ──────────────────────────────────────────────────────
+    // -- nginx -s <signal> ------------------------------------------------------
 
     private async Task SendNginxSignalAsync(string signal, CancellationToken ct)
     {
         // nginx -s <signal> sends the signal to the running master process via its PID file.
-        // This is the canonical way to control nginx on Windows — no Ctrl+C tricks needed.
+        // This is the canonical way to control nginx on Windows -- no Ctrl+C tricks needed.
         var psi = new ProcessStartInfo
         {
             FileName         = NginxExe,
@@ -359,11 +359,11 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
         if (proc != null)
         {
             try { await proc.WaitForExitAsync(ct).WaitAsync(TimeSpan.FromSeconds(10), ct); }
-            catch { /* timeout is acceptable — the signal was already sent */ }
+            catch { /* timeout is acceptable -- the signal was already sent */ }
         }
     }
 
-    // ── Monitor loop — detects unexpected nginx exit ───────────────────────────
+    // -- Monitor loop -- detects unexpected nginx exit ---------------------------
 
     private void BeginMonitoring()
     {
@@ -391,7 +391,7 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
             if (!alive)
             {
                 ClearProcessState();
-                _logger.LogWarning("nginx (PID {Pid}) exited unexpectedly — possible crash.", pid);
+                _logger.LogWarning("nginx (PID {Pid}) exited unexpectedly -- possible crash.", pid);
                 StatusChanged?.Invoke(false);
 
                 if (_settings.Current.ServerCrashDetection)
@@ -399,7 +399,7 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
                     if (_crashCount >= MaxCrashRestarts)
                     {
                         _crashCount = 0;
-                        string giveUp = $"Web server crashed {MaxCrashRestarts} times — auto-restart disabled.";
+                        string giveUp = $"Web server crashed {MaxCrashRestarts} times -- auto-restart disabled.";
                         _logger.LogWarning("{Message}", giveUp);
                         Report("Web server stopped unexpectedly.");
                         Notify(giveUp);
@@ -407,7 +407,7 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
                     }
 
                     _crashCount++;
-                    string msg = $"Web server crashed — restart attempt {_crashCount}/{MaxCrashRestarts}...";
+                    string msg = $"Web server crashed -- restart attempt {_crashCount}/{MaxCrashRestarts}...";
                     _logger.LogInformation("{Message}", msg);
                     Report(msg);
                     Notify($"Web server stopped unexpectedly. Restarting ({_crashCount}/{MaxCrashRestarts})...");
@@ -438,13 +438,13 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
         _monitorCts = null;
     }
 
-    // ── Repair / Uninstall / Reinstall ────────────────────────────────────────
+    // -- Repair / Uninstall / Reinstall ----------------------------------------
 
     public async Task RepairAsync(CancellationToken ct = default)
     {
         if (!AreFilesPresent)
         {
-            Report("Web server is not installed — nothing to repair.");
+            Report("Web server is not installed -- nothing to repair.");
             return;
         }
 
@@ -482,14 +482,14 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
 
     public async Task ReinstallAsync(CancellationToken ct = default)
     {
-        Report("Preparing for reinstall — uninstalling current installation...");
+        Report("Preparing for reinstall -- uninstalling current installation...");
         await UninstallAsync(ct);
 
         Report("Starting fresh web server installation...");
         await RunStartupCheckAsync(ct);
     }
 
-    // ── Dispose ───────────────────────────────────────────────────────────────
+    // -- Dispose ---------------------------------------------------------------
 
     public void Dispose()
     {
@@ -498,7 +498,7 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
         _startStopLock.Dispose();
     }
 
-    // ── nginx.conf generation ─────────────────────────────────────────────────
+    // -- nginx.conf generation -------------------------------------------------
 
     public void GenerateNginxConf()
     {
@@ -521,7 +521,7 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
         string keyPathFwd  = keyPath.Replace('\\', '/');
 
         var conf = new StringBuilder();
-        conf.AppendLine($"# nginx {NginxVersion} — generated by Trion Control Panel");
+        conf.AppendLine($"# nginx {NginxVersion} -- generated by Trion Control Panel");
         conf.AppendLine($"# System: {cpuCores} CPU threads");
         conf.AppendLine();
         conf.AppendLine($"worker_processes {cpuCores};");
@@ -546,8 +546,8 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
 
         if (https)
         {
-            // HTTP → HTTPS redirect block
-            conf.AppendLine("    # HTTP — redirect all traffic to HTTPS");
+            // HTTP -> HTTPS redirect block
+            conf.AppendLine("    # HTTP -- redirect all traffic to HTTPS");
             conf.AppendLine("    server {");
             conf.AppendLine($"        listen       {httpPort};");
             conf.AppendLine("        server_name  localhost;");
@@ -601,7 +601,7 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
             new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
     }
 
-    // ── TLS certificate generation ────────────────────────────────────────────
+    // -- TLS certificate generation --------------------------------------------
 
     public void GenerateSelfSignedCert()
     {
@@ -626,7 +626,7 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
             "CN=localhost, O=Trion Control Panel",
             rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
 
-        // Subject Alternative Names — required by modern browsers
+        // Subject Alternative Names -- required by modern browsers
         var san = new SubjectAlternativeNameBuilder();
         san.AddDnsName("localhost");
         san.AddIpAddress(IPAddress.Loopback);         // 127.0.0.1
@@ -647,7 +647,7 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
                 [new Oid("1.3.6.1.5.5.7.3.1")], critical: false));
 
         var cert = req.CreateSelfSigned(
-            DateTimeOffset.UtcNow.AddDays(-1),   // −1 day to absorb clock skew
+            DateTimeOffset.UtcNow.AddDays(-1),   // -1 day to absorb clock skew
             DateTimeOffset.UtcNow.AddYears(10));
 
         File.WriteAllText(certPath, cert.ExportCertificatePem(),
@@ -659,10 +659,10 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
         _settings.Current.SslKeyPath  = keyPath;
         _settings.Save();
 
-        _logger.LogInformation("Self-signed TLS cert generated → {Cert}", certPath);
+        _logger.LogInformation("Self-signed TLS cert generated -> {Cert}", certPath);
     }
 
-    // ── php.ini generation ────────────────────────────────────────────────────
+    // -- php.ini generation ----------------------------------------------------
 
     private void GeneratePhpIni()
     {
@@ -670,7 +670,7 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
         string phpDirFwd = PhpDir.Replace('\\', '/');
 
         var ini = new StringBuilder();
-        ini.AppendLine($"; PHP {PhpVersion} — generated by Trion Control Panel");
+        ini.AppendLine($"; PHP {PhpVersion} -- generated by Trion Control Panel");
         ini.AppendLine();
         ini.AppendLine($"extension_dir = \"{phpDirFwd}/ext\"");
         ini.AppendLine();
@@ -697,7 +697,7 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
             new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
     }
 
-    // ── Sample web page ───────────────────────────────────────────────────────
+    // -- Sample web page -------------------------------------------------------
 
     private static void CreateSampleIndexPhp()
     {
@@ -707,14 +707,14 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
 
         File.WriteAllText(indexPath,
             "<?php\n" +
-            "// Trion Control Panel — web server is working!\n" +
+            "// Trion Control Panel -- web server is working!\n" +
             "echo '<h1>Trion Web Server</h1>';\n" +
             "echo '<p>nginx ' . nginx_version() . ' + PHP ' . phpversion() . ' is running.</p>';\n" +
             "echo '<p>Web root: ' . __DIR__ . '</p>';\n",
             Encoding.UTF8);
     }
 
-    // ── Download ──────────────────────────────────────────────────────────────
+    // -- Download --------------------------------------------------------------
 
     private async Task<string> DownloadPackageAsync(
         string packageName, string version,
@@ -731,11 +731,11 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
                 return zipPath;
             }
 
-            Report($"Cached {packageName} download is corrupt — deleting and re-downloading...");
+            Report($"Cached {packageName} download is corrupt -- deleting and re-downloading...");
             File.Delete(zipPath);
         }
 
-        // Primary: Trion API — POST JSON {"emulator":"<packageName>"} so the package name
+        // Primary: Trion API -- POST JSON {"emulator":"<packageName>"} so the package name
         // travels in the request body, not the query string.
         Report($"Downloading {packageName} {version} via Trion API...");
         var jsonBody = $"{{\"emulator\":\"{packageName}\"}}";
@@ -751,9 +751,9 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
             for (int attempt = 1; attempt <= maxAttempts; attempt++)
             {
                 if (attempt == 1)
-                    Report($"Trion API unavailable — falling back to {packageName} CDN...");
+                    Report($"Trion API unavailable -- falling back to {packageName} CDN...");
                 else
-                    Report($"{packageName} CDN download stalled — retry {attempt}/{maxAttempts}...");
+                    Report($"{packageName} CDN download stalled -- retry {attempt}/{maxAttempts}...");
 
                 // CDN fallback uses plain GET (no JSON body)
                 bool cdnOk = await TryDownloadFromUrlAsync(cdnFallback, zipPath, addApiKey: false, ct);
@@ -858,8 +858,8 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
             ? $"{FormatBytes(downloaded)} / {FormatBytes(total)} ({pct}%)"
             : FormatBytes(downloaded);
         string speed = $"{FormatBytes((long)speedBps)}/s";
-        string time  = eta.HasValue ? $"ETA {eta.Value:mm\\:ss}" : "ETA —";
-        return $"Downloading web server...  {size}  •  {speed}  •  {time}";
+        string time  = eta.HasValue ? $"ETA {eta.Value:mm\\:ss}" : "ETA --";
+        return $"Downloading web server...  {size}  *  {speed}  *  {time}";
     }
 
     private static string FormatBytes(long bytes) => bytes switch
@@ -870,7 +870,7 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
         _                => $"{bytes} B",
     };
 
-    // ── Extract ───────────────────────────────────────────────────────────────
+    // -- Extract ---------------------------------------------------------------
 
     private void ExtractPackage(string zipPath, string destDir)
     {
@@ -914,7 +914,7 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
         }
     }
 
-    // ── Progress helpers ──────────────────────────────────────────────────────
+    // -- Progress helpers ------------------------------------------------------
 
     private void Report(string message)
     {
@@ -925,7 +925,7 @@ public sealed class NginxPhpSetupService : INginxPhpSetupService, IDisposable
 
     private void Notify(string message) => _notifications.Add($"[WebServer] {message}");
 
-    // ── ZIP validation ────────────────────────────────────────────────────────
+    // -- ZIP validation --------------------------------------------------------
 
     private static bool IsValidZip(string path)
     {

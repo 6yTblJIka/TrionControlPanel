@@ -54,7 +54,7 @@ public sealed class TokenServiceTests : IAsyncLifetime
     private static AuthenticatedUser MakeUser(int gmLevel = 2) =>
         new("testuser", gmLevel, "127.0.0.1");
 
-    // ── JWT claims ───────────────────────────────────────────────────────────
+    // -- JWT claims -----------------------------------------------------------
 
     [Fact]
     public async Task IssueTokens_Returns_JwtWithCorrectClaims()
@@ -109,7 +109,7 @@ public sealed class TokenServiceTests : IAsyncLifetime
         Assert.NotNull(principal);
     }
 
-    // ── Refresh token rotation ───────────────────────────────────────────────
+    // -- Refresh token rotation -----------------------------------------------
 
     [Fact]
     public async Task Refresh_Issues_NewTokenPair_And_Revokes_Old()
@@ -145,7 +145,7 @@ public sealed class TokenServiceTests : IAsyncLifetime
         Assert.Contains(jwt.Claims, c => c.Type == "gm_level" && c.Value == "3");
     }
 
-    // ── Revoke ───────────────────────────────────────────────────────────────
+    // -- Revoke ---------------------------------------------------------------
 
     [Fact]
     public async Task Revoke_PreventsSubsequentRefresh()
@@ -159,7 +159,7 @@ public sealed class TokenServiceTests : IAsyncLifetime
         Assert.Null(result);
     }
 
-    // ── Unknown / non-existent token ─────────────────────────────────────────
+    // -- Unknown / non-existent token -----------------------------------------
 
     [Fact]
     public async Task Refresh_UnknownToken_ReturnsNull()
@@ -169,7 +169,7 @@ public sealed class TokenServiceTests : IAsyncLifetime
         Assert.Null(result);
     }
 
-    // ── Key persistence ──────────────────────────────────────────────────────
+    // -- Key persistence ------------------------------------------------------
 
     [Fact]
     public async Task SecondInstance_ReusesExistingKey()
@@ -208,7 +208,7 @@ public sealed class TokenServiceTests : IAsyncLifetime
         Assert.NotNull(principal);
     }
 
-    // ── In-memory secret store ────────────────────────────────────────────────
+    // -- In-memory secret store ------------------------------------------------
 
     private sealed class InMemorySecretStore : ISecretStore
     {

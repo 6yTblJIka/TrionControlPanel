@@ -10,12 +10,12 @@
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />   <!-- Tab bar  -->
-            <RowDefinition Height="*" />      <!-- Content  -->
-            <RowDefinition Height="Auto" />   <!-- Footer   -->
+            <RowDefinition Height="Auto" />   <!-- Tab bar -->
+            <RowDefinition Height="*" />      <!-- Content -->
+            <RowDefinition Height="Auto" />   <!-- Footer -->
         </Grid.RowDefinitions>
 
-        <!-- ── Sub-tab bar ── -->
+        <!-- Sub-tab bar -->
         <Border Grid.Row="0"
                 Background="{DynamicResource Background.Secondary}"
                 BorderBrush="{DynamicResource Border.Default}"
@@ -54,13 +54,11 @@
             </StackPanel>
         </Border>
 
-        <!-- ── Tab content ── -->
+        <!-- Tab content -->
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="28,24,28,16">
 
-                <!-- ══════════════════════════════════════════════════════════════
-                     REALM LIST TAB
-                     ══════════════════════════════════════════════════════════════ -->
+                <!-- REALM LIST TAB -->
                 <StackPanel Visibility="{Binding ActiveTab,
                                 Converter={StaticResource EnumToVisibility},
                                 ConverterParameter={x:Static vm:DatabaseEditorTab.RealmList}}">
@@ -79,7 +77,7 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
-                        <!-- ── REALM DATA ── -->
+                        <!-- REALM DATA -->
                         <Border Grid.Column="0" Style="{StaticResource ElevatedCardStyle}" Padding="0">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -164,7 +162,7 @@
                         <!-- Right column: Network Options + Actions -->
                         <StackPanel Grid.Column="2">
 
-                            <!-- ── NETWORK OPTIONS ── -->
+                            <!-- NETWORK OPTIONS -->
                             <Border Style="{StaticResource ElevatedCardStyle}" Padding="0" Margin="0,0,0,12">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -208,7 +206,7 @@
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
 
-                                            <!-- Masked (shield) — visible when IsIpVisible = false -->
+                                            <!-- Masked (shield) - visible when IsIpVisible = false -->
                                             <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                                                 <StackPanel.Style>
                                                     <Style TargetType="StackPanel">
@@ -229,7 +227,7 @@
                                                            VerticalAlignment="Center" />
                                             </StackPanel>
 
-                                            <!-- Real IP — visible when IsIpVisible = true -->
+                                            <!-- Real IP - visible when IsIpVisible = true -->
                                             <TextBox Grid.Column="0"
                                                      Text="{Binding PublicIp}"
                                                      Style="{StaticResource InputStyle}"
@@ -262,7 +260,7 @@
                                 </Grid>
                             </Border>
 
-                            <!-- ── ACTIONS ── -->
+                            <!-- ACTIONS -->
                             <Border Style="{StaticResource ElevatedCardStyle}" Padding="0">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -349,9 +347,7 @@
                     </Grid>
                 </StackPanel>
 
-                <!-- ══════════════════════════════════════════════════════════════
-                     ACCOUNTS TAB
-                     ══════════════════════════════════════════════════════════════ -->
+                <!-- ACCOUNTS TAB -->
                 <StackPanel Visibility="{Binding ActiveTab,
                                 Converter={StaticResource EnumToVisibility},
                                 ConverterParameter={x:Static vm:DatabaseEditorTab.Accounts}}">
@@ -365,7 +361,7 @@
 
                     <UniformGrid Rows="1" Columns="3">
 
-                        <!-- ── CREATE ACCOUNT ── -->
+                        <!-- CREATE ACCOUNT -->
                         <Border Style="{StaticResource ElevatedCardStyle}" Padding="0" Margin="0,0,8,0">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -423,7 +419,7 @@
                             </Grid>
                         </Border>
 
-                        <!-- ── GM ACCESS ── -->
+                        <!-- GM ACCESS -->
                         <Border Style="{StaticResource ElevatedCardStyle}" Padding="0" Margin="4,0">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -465,7 +461,7 @@
                             </Grid>
                         </Border>
 
-                        <!-- ── CHANGE PASSWORD ── -->
+                        <!-- CHANGE PASSWORD -->
                         <Border Style="{StaticResource ElevatedCardStyle}" Padding="0" Margin="8,0,0,0">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -520,7 +516,7 @@
             </StackPanel>
         </ScrollViewer>
 
-        <!-- ── Footer: status + actions ── -->
+        <!-- Footer: status + actions -->
         <Border Grid.Row="2"
                 Background="{DynamicResource Background.Secondary}"
                 BorderBrush="{DynamicResource Border.Default}"

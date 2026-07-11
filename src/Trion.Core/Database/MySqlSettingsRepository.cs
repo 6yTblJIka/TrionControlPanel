@@ -7,7 +7,7 @@ namespace Trion.Core.Database;
 
 /// <summary>
 /// MySQL-backed implementation of <see cref="ISettingsRepository"/>.
-/// Schema matches the SQLite variant — drop-in replacement.
+/// Schema matches the SQLite variant -- drop-in replacement.
 /// </summary>
 public sealed class MySqlSettingsRepository : ISettingsRepository
 {

@@ -24,20 +24,21 @@ public sealed class ApiKeyService : IApiKeyService
     {
         var cfg = _settings.Current;
 
-        // Return early if we already have a cached guest key
-        if (!string.IsNullOrEmpty(cfg.GuestKey))
-        {
-            GuestKey = cfg.GuestKey;
-            return;
-        }
-
-        // First run — generate a stable install UUID and register with the API
+        // Ensure a stable install UUID exists
         if (string.IsNullOrEmpty(cfg.InstallUuid))
         {
             cfg.InstallUuid = Guid.NewGuid().ToString();
             _settings.Save();
         }
 
+        // Clear any previously-persisted guest key -- it is now memory-only.
+        if (!string.IsNullOrEmpty(cfg.GuestKey))
+        {
+            cfg.GuestKey = "";
+            _settings.Save();
+        }
+
+        // Always fetch a fresh guest key on every startup (never written to disk).
         try
         {
             var url     = $"{AppLinks.ApiBaseUrl}{ApiEndpoints.GuestKey}";
@@ -48,22 +49,39 @@ public sealed class ApiKeyService : IApiKeyService
             {
                 var body = await resp.Content.ReadFromJsonAsync<GuestKeyResponse>(cancellationToken: ct);
                 if (body is not null && !string.IsNullOrEmpty(body.Key))
-                {
-                    GuestKey     = body.Key;
-                    cfg.GuestKey = body.Key;
-                    _settings.Save();
-                }
+                    GuestKey = body.Key; // in-memory only -- never saved to settings
             }
         }
         catch
         {
-            // Guest key is optional — app still works without one
+            // Guest key is optional -- app still works without one
+        }
+
+        // Device ping -- only when user opted in (Settings → Share hardware info)
+        if (cfg.HardwareInfoOptIn)
+        {
+            try
+            {
+                var specs = HardwareInfoService.Collect(GetAppVersion());
+                var url   = $"{AppLinks.ApiBaseUrl}{ApiEndpoints.DevicePing}";
+
+                // DeviceController.php reads $_POST['UUID'] and $_POST['Specs'] (uppercase, form-encoded)
+                var form = new FormUrlEncodedContent([
+                    new KeyValuePair<string, string>("UUID",  cfg.InstallUuid),
+                    new KeyValuePair<string, string>("Specs", specs),
+                ]);
+                await _http.PostAsync(url, form, ct);
+            }
+            catch
+            {
+                // Telemetry is fire-and-forget -- never block startup
+            }
         }
     }
 
     private static string GetAppVersion()
         => System.Reflection.Assembly.GetExecutingAssembly()
-               .GetName().Version?.ToString(3) ?? "unknown";
+               .GetName().Version?.ToString(4) ?? "unknown";
 
     private sealed record GuestKeyResponse(
         [property: JsonPropertyName("guest_key")] string Key);

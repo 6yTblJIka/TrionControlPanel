@@ -13,7 +13,7 @@
     <SolidColorBrush x:Key="Foreground.Muted"     Color="#505070" />
     <SolidColorBrush x:Key="Foreground.Disabled"  Color="#353558" />
 
-    <!-- Accent — Sky Blue -->
+    <!-- Accent - Sky Blue -->
     <SolidColorBrush x:Key="Accent.Primary"    Color="#4FC3F7" />
     <SolidColorBrush x:Key="Accent.Hover"      Color="#81D4FA" />
     <SolidColorBrush x:Key="Accent.Pressed"    Color="#0288D1" />
@@ -26,14 +26,14 @@
     <SolidColorBrush x:Key="Border.Focus"      Color="#4FC3F7" />
 
     <!-- Status -->
-    <SolidColorBrush x:Key="Status.Running"    Color="#66BB6A" />
+    <SolidColorBrush x:Key="Status.Running"    Color="#5FD38A" />
     <SolidColorBrush x:Key="Status.Stopped"    Color="#303050" />
     <SolidColorBrush x:Key="Status.Warning"    Color="#FFB347" />
-    <SolidColorBrush x:Key="Status.Error"      Color="#FF4757" />
+    <SolidColorBrush x:Key="Status.Error"      Color="#F1555F" />
 
     <!-- Danger -->
-    <SolidColorBrush x:Key="Danger.Primary"    Color="#FF4757" />
-    <SolidColorBrush x:Key="Danger.Hover"      Color="#FF6B78" />
+    <SolidColorBrush x:Key="Danger.Primary"    Color="#F1555F" />
+    <SolidColorBrush x:Key="Danger.Hover"      Color="#FF7883" />
 
     <!-- Cards -->
     <SolidColorBrush x:Key="Card.Background"   Color="#1A1A28" />

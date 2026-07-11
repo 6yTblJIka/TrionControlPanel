@@ -16,7 +16,7 @@ public sealed class LinuxNginxPhpService : INginxPhpSetupService
     private readonly ILogger<LinuxNginxPhpService> _log;
     private readonly DistroProfile                 _profile;
 
-    // ── State ─────────────────────────────────────────────────────────────────
+    // -- State -----------------------------------------------------------------
 
     public bool              IsInstalled      => CheckInstalled();
     public bool              IsRunning        { get; private set; }
@@ -29,7 +29,7 @@ public sealed class LinuxNginxPhpService : INginxPhpSetupService
         ? DateTime.UtcNow - StartTime.Value
         : TimeSpan.Zero;
 
-    // ── Events ────────────────────────────────────────────────────────────────
+    // -- Events ----------------------------------------------------------------
 
     public event Action<string>? ProgressChanged;
 #pragma warning disable CS0067  // interface requires the event; package manager never raises download progress
@@ -37,7 +37,7 @@ public sealed class LinuxNginxPhpService : INginxPhpSetupService
 #pragma warning restore CS0067
     public event Action<bool>? StatusChanged;
 
-    // ── Construction ──────────────────────────────────────────────────────────
+    // -- Construction ----------------------------------------------------------
 
     public LinuxNginxPhpService(ILogger<LinuxNginxPhpService> logger)
     {
@@ -45,7 +45,7 @@ public sealed class LinuxNginxPhpService : INginxPhpSetupService
         _profile = DistroProfile.Detect();
     }
 
-    // ── RunStartupCheckAsync ──────────────────────────────────────────────────
+    // -- RunStartupCheckAsync --------------------------------------------------
 
     public async Task RunStartupCheckAsync(CancellationToken ct = default)
     {
@@ -56,7 +56,7 @@ public sealed class LinuxNginxPhpService : INginxPhpSetupService
         {
             if (!IsInstalled)
             {
-                Report($"Nginx and PHP-FPM not found — installing via {_profile.Manager}...");
+                Report($"Nginx and PHP-FPM not found -- installing via {_profile.Manager}...");
                 await InstallPackagesAsync(ct);
 
                 Report($"Enabling {_profile.NginxServiceName} on boot...");
@@ -86,7 +86,7 @@ public sealed class LinuxNginxPhpService : INginxPhpSetupService
         }
     }
 
-    // ── Config / cert generation — no-op on Linux ────────────────────────────
+    // -- Config / cert generation -- no-op on Linux ----------------------------
 
     /// <inheritdoc/>
     /// <remarks>No-op on Linux. nginx uses /etc/nginx/ configuration.</remarks>
@@ -96,7 +96,7 @@ public sealed class LinuxNginxPhpService : INginxPhpSetupService
     /// <remarks>No-op on Linux. Use certbot or the system CA for TLS certificates.</remarks>
     public void GenerateSelfSignedCert() { }
 
-    // ── Lifecycle ─────────────────────────────────────────────────────────────
+    // -- Lifecycle -------------------------------------------------------------
 
     public async Task StartAsync(bool? hideConsole = null, CancellationToken ct = default)
     {
@@ -162,7 +162,7 @@ public sealed class LinuxNginxPhpService : INginxPhpSetupService
         await RunStartupCheckAsync(ct);
     }
 
-    // ── Package installation ──────────────────────────────────────────────────
+    // -- Package installation --------------------------------------------------
 
     private async Task InstallPackagesAsync(CancellationToken ct)
     {
@@ -189,7 +189,7 @@ public sealed class LinuxNginxPhpService : INginxPhpSetupService
         Report($"Nginx and PHP-FPM installed.");
     }
 
-    // ── Status helpers ────────────────────────────────────────────────────────
+    // -- Status helpers --------------------------------------------------------
 
     private bool CheckInstalled() =>
         File.Exists("/usr/sbin/nginx")
@@ -244,7 +244,7 @@ public sealed class LinuxNginxPhpService : INginxPhpSetupService
             $"Service '{serviceName}' did not become active within {timeoutSec} s.");
     }
 
-    // ── Shell execution ───────────────────────────────────────────────────────
+    // -- Shell execution -------------------------------------------------------
 
     private async Task RunShellAsync(string command, CancellationToken ct)
     {
@@ -289,7 +289,7 @@ public sealed class LinuxNginxPhpService : INginxPhpSetupService
         ProgressChanged?.Invoke(message);
     }
 
-    // ── Distro detection ──────────────────────────────────────────────────────
+    // -- Distro detection ------------------------------------------------------
 
     private enum PackageManager { Apt, Dnf, Yum }
 
@@ -302,11 +302,11 @@ public sealed class LinuxNginxPhpService : INginxPhpSetupService
     {
         /// <summary>
         /// Auto-detects the package manager and returns the appropriate profile.
-        /// Detection order: apt-get → dnf → yum.
+        /// Detection order: apt-get -> dnf -> yum.
         /// </summary>
         internal static DistroProfile Detect()
         {
-            // Debian / Ubuntu — nginx from official repos, php-fpm meta-package
+            // Debian / Ubuntu -- nginx from official repos, php-fpm meta-package
             if (File.Exists("/usr/bin/apt-get") || File.Exists("/bin/apt-get"))
                 return new(
                     Manager:          PackageManager.Apt,
@@ -315,7 +315,7 @@ public sealed class LinuxNginxPhpService : INginxPhpSetupService
                     NginxServiceName: "nginx",
                     PhpFpmServiceName: "php-fpm");
 
-            // RHEL 8/9 / CentOS Stream / AlmaLinux / Rocky — nginx from EPEL
+            // RHEL 8/9 / CentOS Stream / AlmaLinux / Rocky -- nginx from EPEL
             if (File.Exists("/usr/bin/dnf"))
                 return new(
                     Manager:          PackageManager.Dnf,
@@ -324,7 +324,7 @@ public sealed class LinuxNginxPhpService : INginxPhpSetupService
                     NginxServiceName: "nginx",
                     PhpFpmServiceName: "php-fpm");
 
-            // Older RHEL / CentOS 7 — nginx from EPEL
+            // Older RHEL / CentOS 7 -- nginx from EPEL
             if (File.Exists("/usr/bin/yum"))
                 return new(
                     Manager:          PackageManager.Yum,

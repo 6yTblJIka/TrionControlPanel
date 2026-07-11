@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+using System.Net;
+using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using Trion.Desktop.Infrastructure.Constants;
@@ -35,7 +36,7 @@ public sealed class AccountService : IAccountService
             Email    = cfg.AccountEmail;
             Profile  = BuildProfileFromSettings(cfg);
 
-            // Ensure the user key is active immediately — before ApiKeyService.InitialiseAsync fires
+            // Ensure the user key is active immediately -- before ApiKeyService.InitialiseAsync fires
             if (!string.IsNullOrEmpty(cfg.AccountApiKey))
                 _apiKeys.UserApiKey = cfg.AccountApiKey;
         }
@@ -46,13 +47,34 @@ public sealed class AccountService : IAccountService
         }
     }
 
-    public async Task<LoginResult> LoginAsync(string username, string password, bool rememberMe = false, CancellationToken ct = default)
+    // -- Login ------------------------------------------------------------------
+
+    public async Task<LoginResult> LoginAsync(
+        string username, string password,
+        bool rememberMe = false, CancellationToken ct = default)
     {
+        if (!IsHttps(AppLinks.ApiBaseUrl))
+            return new LoginResult(false,
+                "Secure connection required. The Trion API must be accessed over HTTPS.\n" +
+                "Please ensure your server uses TLS before logging in.");
+
         try
         {
-            var url     = ApiEndpoints.AccountLoginUrl(AppLinks.ApiBaseUrl);
             var content = JsonContent.Create(new { username, password });
-            var resp    = await _http.PostAsync(url, content, ct);
+            var resp    = await _http.PostAsync(AppLinks.AccountLoginUrl, content, ct);
+
+            // 202 Accepted -> server wants 2FA code (email OTP or TOTP)
+            if (resp.StatusCode == HttpStatusCode.Accepted)
+            {
+                var body = await resp.Content.ReadFromJsonAsync<TwoFactorChallengeResponse>(ct);
+                if (body?.RequiresTwoFactor == true && !string.IsNullOrEmpty(body.ChallengeToken))
+                    return new LoginResult(false, null,
+                        RequiresTwoFactor: true,
+                        ChallengeToken:    body.ChallengeToken,
+                        TwoFactorType:     body.AuthType ?? "email");
+
+                return new LoginResult(false, "Unexpected 2FA response from server.");
+            }
 
             if (!resp.IsSuccessStatusCode)
             {
@@ -64,32 +86,7 @@ public sealed class AccountService : IAccountService
             if (loginResp is null || string.IsNullOrEmpty(loginResp.Token))
                 return new LoginResult(false, "Invalid response from server.");
 
-            // Persist all fields
-            var cfg = _settings.Current;
-            cfg.AccountToken     = loginResp.Token;
-            cfg.AccountId        = loginResp.Id;
-            cfg.AccountUsername  = loginResp.Username ?? username;
-            cfg.AccountEmail     = loginResp.Email    ?? "";
-            cfg.AccountRole      = loginResp.Role      ?? "user";
-            cfg.AccountApiKey    = loginResp.ApiKey    ?? "";
-            cfg.AccountApiTier   = loginResp.ApiTier   ?? "free";
-            cfg.AccountIsActive  = loginResp.IsActive;
-            cfg.AccountIsBanned  = loginResp.IsBanned;
-            cfg.AccountLastLogin = loginResp.LastLogin ?? "";
-            cfg.AccountCreatedAt = loginResp.CreatedAt ?? "";
-            cfg.LoginSkipped     = false;
-            cfg.RememberMe       = rememberMe;
-            _settings.Save();
-
-            Username = cfg.AccountUsername;
-            Email    = cfg.AccountEmail;
-            IsGuest  = false;
-            Profile  = BuildProfileFromSettings(cfg);
-
-            // Promote to supporter-tier API key for all future requests
-            _apiKeys.UserApiKey = cfg.AccountApiKey;
-
-            SessionChanged?.Invoke();
+            ApplyLoginResponse(loginResp, username, rememberMe);
             return new LoginResult(true);
         }
         catch (HttpRequestException)
@@ -101,6 +98,42 @@ public sealed class AccountService : IAccountService
             return new LoginResult(false, "Request timed out.");
         }
     }
+
+    // -- Two-Factor Verification -----------------------------------------------
+
+    public async Task<LoginResult> VerifyTwoFactorAsync(
+        string challengeToken, string code,
+        bool rememberMe = false, CancellationToken ct = default)
+    {
+        if (!IsHttps(AppLinks.ApiBaseUrl))
+            return new LoginResult(false, "Secure connection required.");
+
+        try
+        {
+            var content = JsonContent.Create(new { challenge_token = challengeToken, code });
+            var resp    = await _http.PostAsync(AppLinks.AccountVerify2faUrl, content, ct);
+
+            if (!resp.IsSuccessStatusCode)
+                return new LoginResult(false, $"Verification failed ({(int)resp.StatusCode}). Check the code and try again.");
+
+            var loginResp = await resp.Content.ReadFromJsonAsync<LoginResponse>(ct);
+            if (loginResp is null || string.IsNullOrEmpty(loginResp.Token))
+                return new LoginResult(false, "Invalid response from server.");
+
+            ApplyLoginResponse(loginResp, loginResp.Username ?? "", rememberMe);
+            return new LoginResult(true);
+        }
+        catch (HttpRequestException)
+        {
+            return new LoginResult(false, "Cannot reach the Trion server. Check your internet connection.");
+        }
+        catch (TaskCanceledException)
+        {
+            return new LoginResult(false, "Request timed out.");
+        }
+    }
+
+    // -- Logout / Guest --------------------------------------------------------
 
     public void Logout()
     {
@@ -116,7 +149,7 @@ public sealed class AccountService : IAccountService
         cfg.AccountIsBanned  = false;
         cfg.AccountLastLogin = "";
         cfg.AccountCreatedAt = "";
-        cfg.LoginSkipped     = true;   // return to guest mode rather than fully signed out
+        cfg.LoginSkipped     = true;
         _settings.Save();
 
         Username = null;
@@ -140,7 +173,41 @@ public sealed class AccountService : IAccountService
         SessionChanged?.Invoke();
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // -- Helpers ---------------------------------------------------------------
+
+    /// <summary>Returns true only when the API base URL uses HTTPS.</summary>
+    private static bool IsHttps(string url) =>
+        url.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Persist a successful login response and notify listeners.</summary>
+    private void ApplyLoginResponse(LoginResponse loginResp, string fallbackUsername, bool rememberMe)
+    {
+        var cfg = _settings.Current;
+        cfg.AccountToken     = loginResp.Token;
+        cfg.AccountId        = loginResp.Id;
+        cfg.AccountUsername  = loginResp.Username ?? fallbackUsername;
+        cfg.AccountEmail     = loginResp.Email    ?? "";
+        cfg.AccountRole      = loginResp.Role      ?? "user";
+        cfg.AccountApiKey    = loginResp.ApiKey    ?? "";
+        cfg.AccountApiTier   = loginResp.ApiTier   ?? "free";
+        cfg.AccountIsActive  = loginResp.IsActive;
+        cfg.AccountIsBanned  = loginResp.IsBanned;
+        cfg.AccountLastLogin = loginResp.LastLogin ?? "";
+        cfg.AccountCreatedAt = loginResp.CreatedAt ?? "";
+        cfg.LoginSkipped     = false;
+        cfg.RememberMe       = rememberMe;
+        _settings.Save();
+
+        Username = cfg.AccountUsername;
+        Email    = cfg.AccountEmail;
+        IsGuest  = false;
+        Profile  = BuildProfileFromSettings(cfg);
+
+        // Promote to user-tier API key for all future requests
+        _apiKeys.UserApiKey = cfg.AccountApiKey;
+
+        SessionChanged?.Invoke();
+    }
 
     private static AccountProfile BuildProfileFromSettings(AppSettings cfg) => new()
     {
@@ -156,7 +223,7 @@ public sealed class AccountService : IAccountService
         ApiTier   = cfg.AccountApiTier,
     };
 
-    // ── Server response DTO ───────────────────────────────────────────────────
+    // -- Server response DTOs --------------------------------------------------
 
     private sealed record LoginResponse(
         [property: JsonPropertyName("token")]       string  Token,
@@ -170,5 +237,11 @@ public sealed class AccountService : IAccountService
         [property: JsonPropertyName("created_at")]  string? CreatedAt,
         [property: JsonPropertyName("api_key")]     string? ApiKey,
         [property: JsonPropertyName("api_tier")]    string? ApiTier
+    );
+
+    private sealed record TwoFactorChallengeResponse(
+        [property: JsonPropertyName("requires_2fa")]    bool    RequiresTwoFactor,
+        [property: JsonPropertyName("challenge_token")] string  ChallengeToken,
+        [property: JsonPropertyName("auth_type")]       string? AuthType
     );
 }

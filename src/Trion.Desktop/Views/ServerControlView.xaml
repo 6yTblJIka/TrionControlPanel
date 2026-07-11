@@ -15,7 +15,7 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="28,24,28,28">
 
-            <!-- ── Page header + quick actions ── -->
+            <!-- Page header + quick actions -->
             <Grid Margin="0,0,0,24">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -52,18 +52,18 @@
                 </StackPanel>
             </Grid>
 
-            <!-- ── Status message ── -->
+            <!-- Status message -->
             <TextBlock Text="{Binding StatusMessage}"
                        Style="{StaticResource HintStyle}"
                        Margin="0,0,0,20"
                        Visibility="{Binding StatusMessage,
                                     Converter={StaticResource NullToVisibility}}" />
 
-            <!-- ── Server cards (4-column) ── -->
+            <!-- Server cards (4-column) -->
             <TextBlock Text="{Binding Loc[LBLServers]}" Style="{StaticResource SectionLabelStyle}" Margin="0,0,0,10" />
             <UniformGrid Rows="1" Columns="4">
 
-                <!-- ── Database ───────────────────────────────────────────── -->
+                <!-- Database -->
                 <Border Style="{StaticResource ElevatedCardStyle}" Padding="0" Margin="0,0,10,0">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -137,7 +137,7 @@
                     </Grid>
                 </Border>
 
-                <!-- ── World ───────────────────────────────────────────────── -->
+                <!-- World -->
                 <Border Style="{StaticResource ElevatedCardStyle}" Padding="0" Margin="5,0">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -210,7 +210,7 @@
                     </Grid>
                 </Border>
 
-                <!-- ── Logon ───────────────────────────────────────────────── -->
+                <!-- Logon -->
                 <Border Style="{StaticResource ElevatedCardStyle}" Padding="0" Margin="10,0,0,0">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -283,7 +283,7 @@
                     </Grid>
                 </Border>
 
-                <!-- ── Web Server ──────────────────────────────────────────── -->
+                <!-- Web Server -->
                 <Border Style="{StaticResource ElevatedCardStyle}" Padding="0" Margin="10,0,0,0">
                     <Grid>
                         <Grid.ColumnDefinitions>

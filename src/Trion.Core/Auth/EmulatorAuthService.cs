@@ -44,7 +44,7 @@ public sealed class EmulatorAuthService : IEmulatorAuthService
     {
         var lower = username.ToLowerInvariant();
 
-        // ── Lockout check ─────────────────────────────────────────────────────
+        // -- Lockout check -----------------------------------------------------
         var lockoutKey    = LockoutKeyPrefix + lower;
         var lockoutExpiry = await _settings.GetAsync<DateTimeOffset?>(lockoutKey, ct);
         if (lockoutExpiry.HasValue && lockoutExpiry.Value > DateTimeOffset.UtcNow)
@@ -54,7 +54,7 @@ public sealed class EmulatorAuthService : IEmulatorAuthService
             return AuthResult.Fail($"Account locked. Try again in {(int)remaining.TotalMinutes + 1} minute(s).");
         }
 
-        // ── Owner account check ───────────────────────────────────────────────
+        // -- Owner account check -----------------------------------------------
         var ownerUsername = await _settings.GetAsync<string>("bootstrap_username", ct);
         if (ownerUsername is null ||
             !ownerUsername.Equals(username, StringComparison.OrdinalIgnoreCase))
@@ -67,9 +67,16 @@ public sealed class EmulatorAuthService : IEmulatorAuthService
         if (accountType == "phoenix_api")
         {
             // Live verification against the Flying-Phoenix API
-            var (apiOk, apiErr) = await VerifyPhoenixApiAsync(username, password, ct);
+            var (apiOk, apiErr, apiKey, apiTier) = await VerifyPhoenixApiAsync(username, password, ct);
             if (apiOk)
             {
+                // Persist API key + tier so the Plugin Store can use them
+                if (!string.IsNullOrEmpty(apiKey))
+                {
+                    await _settings.SetAsync(SetupKeys.PhoenixApiKey,  apiKey!,  ct);
+                    await _settings.SetAsync(SetupKeys.PhoenixApiTier, apiTier!, ct);
+                }
+
                 await ClearFailCount(lower, ct);
                 _audit.Record(new AuditEvent(
                     Timestamp: DateTimeOffset.UtcNow,
@@ -81,10 +88,11 @@ public sealed class EmulatorAuthService : IEmulatorAuthService
                 return AuthResult.Ok(username, gmLevel: 3);
             }
             return await Fail(lower, username, ip, apiErr ?? "Phoenix API verification failed.", ct);
+
         }
         else
         {
-            // Local account — BCrypt hash comparison
+            // Local account -- BCrypt hash comparison
             if (await BootstrapAccount.ValidateAsync(_settings, username, password, ct))
             {
                 await ClearFailCount(lower, ct);
@@ -101,7 +109,7 @@ public sealed class EmulatorAuthService : IEmulatorAuthService
         }
     }
 
-    // ── Failure tracking ──────────────────────────────────────────────────────
+    // -- Failure tracking ------------------------------------------------------
 
     private async Task<AuthResult> Fail(
         string lower, string username, string ip, string reason, CancellationToken ct)
@@ -142,9 +150,9 @@ public sealed class EmulatorAuthService : IEmulatorAuthService
             Detail:    reason));
     }
 
-    // ── Phoenix API verification ──────────────────────────────────────────────
+    // -- Phoenix API verification ----------------------------------------------
 
-    private async Task<(bool Ok, string? Error)> VerifyPhoenixApiAsync(
+    private async Task<(bool Ok, string? Error, string? ApiKey, string? ApiTier)> VerifyPhoenixApiAsync(
         string username, string password, CancellationToken ct)
     {
         try
@@ -154,34 +162,36 @@ public sealed class EmulatorAuthService : IEmulatorAuthService
                 url, new { username, password }, ct);
 
             if (!resp.IsSuccessStatusCode)
-                return (false, $"Phoenix API returned {(int)resp.StatusCode}.");
+                return (false, $"Phoenix API returned {(int)resp.StatusCode}.", null, null);
 
             var body = await resp.Content.ReadFromJsonAsync<PhoenixLoginResponse>(ct);
             if (body is null || string.IsNullOrEmpty(body.Token))
-                return (false, "Invalid response from the Phoenix API.");
+                return (false, "Invalid response from the Phoenix API.", null, null);
 
             if (body.IsBanned)
-                return (false, "This account is banned.");
+                return (false, "This account is banned.", null, null);
 
-            return (true, null);
+            return (true, null, body.ApiKey, body.ApiTier);
         }
         catch (HttpRequestException)
         {
-            return (false, "Cannot reach the Trion/Phoenix server. Check your internet connection.");
+            return (false, "Cannot reach the Trion/Phoenix server. Check your internet connection.", null, null);
         }
         catch (TaskCanceledException)
         {
-            return (false, "Request timed out.");
+            return (false, "Request timed out.", null, null);
         }
         catch (Exception ex)
         {
             _log.LogError(ex, "Unexpected error during Phoenix API verification for {Username}.", username);
-            return (false, "Authentication service unavailable.");
+            return (false, "Authentication service unavailable.", null, null);
         }
     }
 
     private sealed record PhoenixLoginResponse(
-        [property: JsonPropertyName("token")]     string Token,
-        [property: JsonPropertyName("is_banned")] bool   IsBanned
+        [property: JsonPropertyName("token")]     string  Token,
+        [property: JsonPropertyName("is_banned")] bool    IsBanned,
+        [property: JsonPropertyName("api_key")]   string? ApiKey,
+        [property: JsonPropertyName("api_tier")]  string? ApiTier
     );
 }

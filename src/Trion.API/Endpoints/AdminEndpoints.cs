@@ -19,7 +19,7 @@ public static class AdminEndpoints
         return app;
     }
 
-    // ── POST /Trion/admin/supporter-key ──────────────────────────────────────
+    // -- POST /Trion/admin/supporter-key --------------------------------------
 
     private static async Task<IResult> CreateSupporterKey(
         [FromBody]                       SupporterKeyRequest req,
@@ -44,7 +44,7 @@ public static class AdminEndpoints
             new { message = "Supporter key created." });
     }
 
-    // ── POST /Trion/admin/upload-emulator ─────────────────────────────────────
+    // -- POST /Trion/admin/upload-emulator -------------------------------------
 
     private static async Task<IResult> UploadEmulator(
         HttpContext                      ctx,
@@ -66,7 +66,7 @@ public static class AdminEndpoints
         var tier     = form["tier"].ToString();
         var file     = form.Files.GetFile("file");
 
-        // ── Validate ──────────────────────────────────────────────────────────
+        // -- Validate ----------------------------------------------------------
         if (file is null || file.Length == 0)
             return Results.BadRequest(new { message = "No file uploaded." });
 
@@ -90,15 +90,15 @@ public static class AdminEndpoints
         if (string.IsNullOrEmpty(filesDir))
             return Results.BadRequest(new { message = $"FilesPath for '{emulator}' ({tier}) is not configured." });
 
-        // ── Save ZIP ──────────────────────────────────────────────────────────
+        // -- Save ZIP ----------------------------------------------------------
         Directory.CreateDirectory(Path.GetDirectoryName(zipPath)!);
         await using (var dest = File.Create(zipPath))
             await file.CopyToAsync(dest, ct);
 
-        log.LogInformation("Saved ZIP for '{Emulator}' ({Tier}) — {Bytes:N0} bytes → '{Path}'",
+        log.LogInformation("Saved ZIP for '{Emulator}' ({Tier}) -- {Bytes:N0} bytes -> '{Path}'",
             emulator, tier, file.Length, zipPath);
 
-        // ── Extract ───────────────────────────────────────────────────────────
+        // -- Extract -----------------------------------------------------------
         if (Directory.Exists(filesDir))
             Directory.Delete(filesDir, recursive: true);
         Directory.CreateDirectory(filesDir);
@@ -130,25 +130,25 @@ public static class AdminEndpoints
             }
         }, ct);
 
-        log.LogInformation("Extracted '{Emulator}' ({Tier}) → '{Dir}'", emulator, tier, filesDir);
+        log.LogInformation("Extracted '{Emulator}' ({Tier}) -> '{Dir}'", emulator, tier, filesDir);
 
-        // ── Write version.txt ─────────────────────────────────────────────────
+        // -- Write version.txt -------------------------------------------------
         if (!string.IsNullOrWhiteSpace(version))
             await File.WriteAllTextAsync(Path.Combine(filesDir, "version.txt"), version.Trim(), ct);
 
-        // ── Build manifest ────────────────────────────────────────────────────
+        // -- Build manifest ----------------------------------------------------
         var manifest  = await BuildManifestAsync(filesDir, emulator.Trim().ToLowerInvariant(), ct);
         var fileCount = CountFiles(manifest);
 
         await File.WriteAllTextAsync(Path.Combine(filesDir, "manifest.json"), manifest, ct);
 
-        log.LogInformation("Generated manifest for '{Emulator}' ({Tier}) — {Count} files",
+        log.LogInformation("Generated manifest for '{Emulator}' ({Tier}) -- {Count} files",
             emulator, tier, fileCount);
 
         return Results.Ok(new { message = $"'{emulator}' ({tier}) processed successfully.", version = version?.Trim(), files = fileCount });
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // -- Helpers ---------------------------------------------------------------
 
     private static bool IsAdminKey(string? key, IConfiguration cfg)
     {

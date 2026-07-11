@@ -9,21 +9,108 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="28,24,28,28">
 
-            <!-- ── Page header ── -->
-            <TextBlock Text="{Binding Loc[NavInstaller]}"
-                       Style="{StaticResource H1Style}" Margin="0,0,0,4" />
+            <!-- Page header -->
+            <Grid Margin="0,0,0,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"    />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="12"   />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0"
+                           Text="{Binding Loc[NavInstaller]}"
+                           Style="{StaticResource H1Style}" />
+
+                <!-- API point balance -->
+                <StackPanel Grid.Column="1"
+                            Orientation="Vertical"
+                            VerticalAlignment="Center"
+                            Visibility="{Binding PointsText, Converter={StaticResource NullToVisibility}}">
+                    <TextBlock Text="{Binding PointsText}"
+                               Style="{StaticResource CaptionStyle}"
+                               Foreground="{DynamicResource Accent.Primary}"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Right" />
+                    <TextBlock Text="{Binding PointsTier}"
+                               Style="{StaticResource CaptionStyle}"
+                               Foreground="{DynamicResource Foreground.Muted}"
+                               HorizontalAlignment="Right" />
+                </StackPanel>
+
+                <Button Grid.Column="3"
+                        Content="↻  Refresh"
+                        Command="{Binding RefreshCatalogCommand}"
+                        Style="{StaticResource SecondaryButtonStyle}"
+                        VerticalAlignment="Center"
+                        Width="90" />
+            </Grid>
+
             <TextBlock Text="{Binding Loc[InstallerCaption]}"
                        Style="{StaticResource CaptionStyle}" Margin="0,0,0,28" />
 
-            <!-- ── Progress / Status card ── -->
+            <!-- Progress / Status card -->
             <Border Style="{StaticResource ElevatedCardStyle}" Padding="20" Margin="0,0,0,24">
                 <Grid>
 
-                <!-- IDLE: simple hint text -->
+                <!-- IDLE: hint text (no result yet) -->
                 <TextBlock Text="{Binding Loc[InstallerActionDesc]}"
                            Style="{StaticResource HintStyle}"
                            TextWrapping="Wrap"
                            Visibility="{Binding IsInstalling, Converter={StaticResource InverseBoolToVisibility}}" />
+
+                <!-- IDLE: result banner — shown after install completes -->
+                <Border CornerRadius="6" Padding="12,8"
+                        Visibility="{Binding InstallResultIsError, Converter={StaticResource InverseBoolToVisibility}}">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Background"      Value="#1A34D399" />
+                            <Setter Property="BorderBrush"     Value="#4434D399" />
+                            <Setter Property="BorderThickness" Value="1" />
+                            <Setter Property="Visibility"      Value="Collapsed" />
+                            <Style.Triggers>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding IsInstalling}"       Value="False" />
+                                        <Condition Binding="{Binding InstallResultIsError}" Value="False" />
+                                        <Condition Binding="{Binding HasInstallResult}"   Value="True"  />
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </MultiDataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <TextBlock Text="{Binding InstallResult}"
+                               Style="{StaticResource CaptionStyle}"
+                               Foreground="#4ADE80"
+                               TextWrapping="Wrap" />
+                </Border>
+
+                <!-- IDLE: error banner -->
+                <Border CornerRadius="6" Padding="12,8">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Background"      Value="#1AEF4444" />
+                            <Setter Property="BorderBrush"     Value="#44EF4444" />
+                            <Setter Property="BorderThickness" Value="1" />
+                            <Setter Property="Visibility"      Value="Collapsed" />
+                            <Style.Triggers>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding IsInstalling}"        Value="False" />
+                                        <Condition Binding="{Binding InstallResultIsError}" Value="True"  />
+                                        <Condition Binding="{Binding HasInstallResult}"    Value="True"  />
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </MultiDataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <TextBlock Text="{Binding InstallResult}"
+                               Style="{StaticResource CaptionStyle}"
+                               Foreground="#EF4444"
+                               TextWrapping="Wrap" />
+                </Border>
 
                 <!-- ACTIVE: phase label, progress bar, status line, speed, cancel -->
                 <Grid Visibility="{Binding IsInstalling, Converter={StaticResource BoolToVisibility}}">
@@ -35,7 +122,6 @@
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
-                    <!-- Row 0: phase label + percent + cancel -->
                     <Grid Grid.Row="0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"    />
@@ -60,14 +146,12 @@
                                 Width="80" />
                     </Grid>
 
-                    <!-- Row 2: progress bar -->
                     <ProgressBar Grid.Row="2"
                                  Value="{Binding ProgressValue}"
                                  Minimum="0" Maximum="100"
                                  Style="{StaticResource ModernProgressBarStyle}"
                                  Foreground="{DynamicResource Accent.Primary}" />
 
-                    <!-- Row 4: status text + speed -->
                     <Grid Grid.Row="4">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"    />
@@ -90,101 +174,217 @@
                 </Grid>
             </Border>
 
-            <!-- ── Expansion rows ── -->
+            <!-- Catalog loading indicator -->
+            <Border Style="{StaticResource ElevatedCardStyle}" Padding="20"
+                    Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}"
+                    Margin="0,0,0,8">
+                <TextBlock Text="{Binding Loc[LBLLoadingRepacks]}"
+                           Style="{StaticResource CaptionStyle}"
+                           HorizontalAlignment="Center" />
+            </Border>
+
+            <!-- Catalog error -->
+            <Border Style="{StaticResource ElevatedCardStyle}" Padding="16"
+                    Visibility="{Binding HasCatalogError, Converter={StaticResource BoolToVisibility}}"
+                    Margin="0,0,0,8">
+                <TextBlock Text="{Binding CatalogError}"
+                           Style="{StaticResource CaptionStyle}"
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource Foreground.Muted}" />
+            </Border>
+
+            <!-- Guest notice -->
+            <Border Margin="0,0,0,12" CornerRadius="8" Padding="14,10"
+                    Background="#1FF59E0B" BorderBrush="#F59E0B" BorderThickness="1"
+                    Visibility="{Binding IsGuest, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock TextWrapping="Wrap">
+                    <Run FontWeight="SemiBold" Foreground="#F59E0B" Text="{Binding Loc[LBLGuestNotSignedIn]}" />
+                    <Run Text=" " />
+                    <Run Foreground="{DynamicResource Foreground.Muted}"
+                         Text="{Binding Loc[LBLGuestSignInPrompt]}" />
+                </TextBlock>
+            </Border>
+
+            <!-- Catalog rows (dynamic) -->
             <TextBlock Text="{Binding Loc[LBLEnableExpansions]}"
                        Style="{StaticResource SectionLabelStyle}"
-                       Margin="0,0,0,12" />
+                       Margin="0,0,0,12"
+                       Visibility="{Binding IsLoading, Converter={StaticResource InverseBoolToVisibility}}" />
 
-            <ItemsControl ItemsSource="{Binding Expansions}">
+            <ItemsControl ItemsSource="{Binding Expansions}"
+                          Visibility="{Binding IsLoading, Converter={StaticResource InverseBoolToVisibility}}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Border Style="{StaticResource ElevatedCardStyle}"
-                                Padding="16,14" Margin="0,0,0,8">
+                        <!-- Card: Padding="0" so the left stripe reaches the edge -->
+                        <Border Margin="0,0,0,8">
+                            <Border.Style>
+                                <Style TargetType="Border" BasedOn="{StaticResource ElevatedCardStyle}">
+                                    <Setter Property="Padding" Value="0" />
+                                </Style>
+                            </Border.Style>
+
                             <Grid>
                                 <Grid.ColumnDefinitions>
-                                    <!-- Status dot -->
-                                    <ColumnDefinition Width="Auto" />
-                                    <!-- Name + version info -->
-                                    <ColumnDefinition Width="*"    />
-                                    <!-- Action buttons -->
-                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="5" />
+                                    <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
 
-                                <!-- Status dot -->
-                                <Ellipse Grid.Column="0"
-                                         Width="10" Height="10"
-                                         VerticalAlignment="Center"
-                                         Margin="0,0,14,0"
-                                         Fill="{Binding IsInstalled, Converter={StaticResource StatusToColor}}" />
+                                <!-- Accent stripe: amber=locked, blue=unlocked/available -->
+                                <Border Grid.Column="0" CornerRadius="10,0,0,10">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="{DynamicResource Accent.Primary}" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsLocked}" Value="True">
+                                                    <Setter Property="Background" Value="#F59E0B" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsInstalled}" Value="True">
+                                                    <Setter Property="Background" Value="{DynamicResource Status.Running}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                </Border>
 
-                                <!-- Name + version info -->
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <!-- Card content -->
+                                <Border Grid.Column="1" Padding="16,14">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"    />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
 
-                                    <TextBlock Text="{Binding DisplayName}"
-                                               Style="{StaticResource BodyStyle}"
-                                               FontWeight="SemiBold" />
+                                        <!-- Name + badges + version info -->
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
 
-                                    <!-- Installed state: local + latest versions -->
-                                    <StackPanel Orientation="Horizontal"
-                                                Margin="0,3,0,0"
-                                                Visibility="{Binding IsInstalled, Converter={StaticResource BoolToVisibility}}">
-                                        <TextBlock Style="{StaticResource CaptionStyle}">
-                                            <Run Text="Local: " />
-                                            <Run Text="{Binding LocalVersion}" />
-                                        </TextBlock>
-                                        <TextBlock Style="{StaticResource CaptionStyle}" Margin="16,0,0,0">
-                                            <Run Text="Latest: " />
-                                            <Run Text="{Binding LatestVersion}" />
-                                        </TextBlock>
-                                    </StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding DisplayName}"
+                                                           Style="{StaticResource BodyStyle}"
+                                                           FontWeight="SemiBold" />
 
-                                    <!-- Not-installed state: just show latest available -->
-                                    <StackPanel Orientation="Horizontal"
-                                                Margin="0,3,0,0"
-                                                Visibility="{Binding NotIsInstalled, Converter={StaticResource BoolToVisibility}}">
-                                        <TextBlock Style="{StaticResource CaptionStyle}"
-                                                   Foreground="{DynamicResource Foreground.Muted}">
-                                            <Run Text="Not installed  ·  Latest: " />
-                                            <Run Text="{Binding LatestVersion}" />
-                                        </TextBlock>
-                                    </StackPanel>
+                                                <!-- Tier badge (locked repacks only) -->
+                                                <Border Margin="8,0,0,0" CornerRadius="4" Padding="7,2"
+                                                        Background="#F59E0B" VerticalAlignment="Center"
+                                                        Visibility="{Binding IsLocked, Converter={StaticResource BoolToVisibility}}">
+                                                    <TextBlock Text="{Binding RequiredTierLabel}"
+                                                               FontSize="11" Foreground="White" FontWeight="SemiBold" />
+                                                </Border>
+                                            </StackPanel>
 
-                                </StackPanel>
+                                            <!-- Installed: local + latest version -->
+                                            <StackPanel Orientation="Horizontal" Margin="0,3,0,0"
+                                                        Visibility="{Binding IsInstalled, Converter={StaticResource BoolToVisibility}}">
+                                                <TextBlock Style="{StaticResource CaptionStyle}">
+                                                    <Run Text="Local: " /><Run Text="{Binding LocalVersion}" />
+                                                </TextBlock>
+                                                <TextBlock Style="{StaticResource CaptionStyle}" Margin="16,0,0,0">
+                                                    <Run Text="Latest: " /><Run Text="{Binding LatestVersion}" />
+                                                </TextBlock>
+                                            </StackPanel>
 
-                                <!-- Action buttons — Install (when not installed) -->
-                                <Button Grid.Column="2"
-                                        Content="{Binding DataContext.Loc[BtnInstall],
-                                                          RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                        Command="{Binding DataContext.InstallCommand,
-                                                          RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                        CommandParameter="{Binding}"
-                                        Style="{StaticResource PrimaryButtonStyle}"
-                                        Width="90"
-                                        Visibility="{Binding NotIsInstalled, Converter={StaticResource BoolToVisibility}}" />
+                                            <!-- Not installed + unlocked: caption -->
+                                            <TextBlock Margin="0,3,0,0"
+                                                       Foreground="{DynamicResource Foreground.Muted}">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource CaptionStyle}">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                        <Style.Triggers>
+                                                            <MultiDataTrigger>
+                                                                <MultiDataTrigger.Conditions>
+                                                                    <Condition Binding="{Binding NotIsInstalled}" Value="True" />
+                                                                    <Condition Binding="{Binding IsLocked}"       Value="False" />
+                                                                </MultiDataTrigger.Conditions>
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </MultiDataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                                Not installed
+                                            </TextBlock>
 
-                                <!-- Repair + Uninstall (when installed) -->
-                                <StackPanel Grid.Column="2"
-                                            Orientation="Horizontal"
-                                            Visibility="{Binding IsInstalled, Converter={StaticResource BoolToVisibility}}">
+                                            <!-- Locked: access requirement text -->
+                                            <TextBlock Margin="0,3,0,0"
+                                                       Style="{StaticResource CaptionStyle}"
+                                                       Foreground="{DynamicResource Foreground.Muted}"
+                                                       Visibility="{Binding IsLocked, Converter={StaticResource BoolToVisibility}}">
+                                                Requires <Run Text="{Binding RequiredTierLabel}" /> account
+                                            </TextBlock>
 
-                                    <Button Content="{Binding DataContext.Loc[BtnRepair],
-                                                              RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                            Command="{Binding DataContext.RepairCommand,
-                                                              RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                            CommandParameter="{Binding}"
-                                            Style="{StaticResource SecondaryButtonStyle}"
-                                            Width="90" Margin="0,0,8,0" />
+                                        </StackPanel>
 
-                                    <Button Content="{Binding DataContext.Loc[BtnUninstall],
-                                                              RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                            Command="{Binding DataContext.UninstallCommand,
-                                                              RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                            CommandParameter="{Binding}"
-                                            Style="{StaticResource DangerButtonStyle}"
-                                            Width="90" />
+                                        <!-- Actions -->
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
 
-                                </StackPanel>
+                                            <!-- Locked: upgrade CTA badge -->
+                                            <Border CornerRadius="6" Padding="12,6"
+                                                    Background="#1FF59E0B"
+                                                    BorderBrush="#F59E0B" BorderThickness="1"
+                                                    Visibility="{Binding IsLocked, Converter={StaticResource BoolToVisibility}}">
+                                                <TextBlock Text="Upgrade to unlock"
+                                                           FontSize="12" FontWeight="SemiBold"
+                                                           Foreground="#F59E0B" />
+                                            </Border>
 
+                                            <!-- Not installed + unlocked: Install -->
+                                            <Button Content="{Binding DataContext.Loc[BtnInstall],
+                                                                      RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    Command="{Binding DataContext.InstallCommand,
+                                                                      RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    Width="90">
+                                                <Button.Style>
+                                                    <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                        <Style.Triggers>
+                                                            <MultiDataTrigger>
+                                                                <MultiDataTrigger.Conditions>
+                                                                    <Condition Binding="{Binding IsInstalled}" Value="False" />
+                                                                    <Condition Binding="{Binding IsLocked}"    Value="False" />
+                                                                </MultiDataTrigger.Conditions>
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </MultiDataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Button.Style>
+                                            </Button>
+
+                                            <!-- Installed + unlocked: Repair + Uninstall -->
+                                            <StackPanel Orientation="Horizontal">
+                                                <StackPanel.Style>
+                                                    <Style TargetType="StackPanel">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                        <Style.Triggers>
+                                                            <MultiDataTrigger>
+                                                                <MultiDataTrigger.Conditions>
+                                                                    <Condition Binding="{Binding IsInstalled}" Value="True" />
+                                                                    <Condition Binding="{Binding IsLocked}"    Value="False" />
+                                                                </MultiDataTrigger.Conditions>
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </MultiDataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </StackPanel.Style>
+
+                                                <Button Content="{Binding DataContext.Loc[BtnRepair],
+                                                                          RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        Command="{Binding DataContext.RepairCommand,
+                                                                          RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}"
+                                                        Style="{StaticResource SecondaryButtonStyle}"
+                                                        Width="90" Margin="0,0,8,0" />
+
+                                                <Button Content="{Binding DataContext.Loc[BtnUninstall],
+                                                                          RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        Command="{Binding DataContext.UninstallCommand,
+                                                                          RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}"
+                                                        Style="{StaticResource DangerButtonStyle}"
+                                                        Width="90" />
+                                            </StackPanel>
+
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
                             </Grid>
                         </Border>
                     </DataTemplate>

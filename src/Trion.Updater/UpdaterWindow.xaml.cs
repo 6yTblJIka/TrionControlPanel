@@ -8,7 +8,7 @@ public partial class UpdaterWindow : Window
 {
     private readonly Dictionary<string, string> _args;
 
-    // Progress bar track width — read after layout pass
+    // Progress bar track width -- read after layout pass
     private double TrackWidth => ProgressFill.Parent is FrameworkElement parent
         ? parent.ActualWidth
         : 384;  // fallback before layout pass
@@ -22,13 +22,13 @@ public partial class UpdaterWindow : Window
         if (args.TryGetValue("from", out string? fromVer) &&
             args.TryGetValue("to",   out string? toVer))
         {
-            VersionLabel.Text = $"v{fromVer}  →  v{toVer}";
+            VersionLabel.Text = $"v{fromVer}  ->  v{toVer}";
         }
 
         Loaded += async (_, _) => await RunUpdateAsync();
     }
 
-    // ── Update flow ───────────────────────────────────────────────────────────
+    // -- Update flow -----------------------------------------------------------
 
     private async Task RunUpdateAsync()
     {
@@ -36,7 +36,7 @@ public partial class UpdaterWindow : Window
             !_args.TryGetValue("source", out string? source)  ||
             !_args.TryGetValue("target", out string? target))
         {
-            SetStatus("Missing arguments — cannot update.", "#F44336");
+            SetStatus("Missing arguments -- cannot update.", "#F44336");
             PhaseLabel.Text = "Error";
             return;
         }
@@ -50,16 +50,16 @@ public partial class UpdaterWindow : Window
 
         try
         {
-            // ── Step 1: Wait for the main app to exit ─────────────────────────
-            PhaseLabel.Text = "Waiting…";
-            SetStatus("Waiting for Trion Control Panel to close…");
+            // -- Step 1: Wait for the main app to exit -------------------------
+            PhaseLabel.Text = "Waiting...";
+            SetStatus("Waiting for Trion Control Panel to close...");
             AnimateProgress(0, 20, durationMs: 400);
 
             await WaitForProcessAsync(pid);
 
-            // ── Step 2: Validate the downloaded file ──────────────────────────
+            // -- Step 2: Validate the downloaded file --------------------------
             AnimateProgress(20, 35, durationMs: 300);
-            SetStatus("Verifying downloaded file…");
+            SetStatus("Verifying downloaded file...");
             await Task.Delay(300);
 
             if (!System.IO.File.Exists(source))
@@ -69,16 +69,16 @@ public partial class UpdaterWindow : Window
                 return;
             }
 
-            // ── Step 3: Backup + replace ──────────────────────────────────────
-            PhaseLabel.Text = "Updating…";
-            SetStatus("Replacing application files…");
+            // -- Step 3: Backup + replace --------------------------------------
+            PhaseLabel.Text = "Updating...";
+            SetStatus("Replacing application files...");
             AnimateProgress(35, 75, durationMs: 600);
 
             await Task.Run(() => ReplaceExe(source, target));
 
-            // ── Step 4: Restart ───────────────────────────────────────────────
-            PhaseLabel.Text = "Restarting…";
-            SetStatus("Update complete. Restarting Trion Control Panel…");
+            // -- Step 4: Restart -----------------------------------------------
+            PhaseLabel.Text = "Restarting...";
+            SetStatus("Update complete. Restarting Trion Control Panel...");
             AnimateProgress(75, 100, durationMs: 400);
 
             await Task.Delay(800);
@@ -93,7 +93,7 @@ public partial class UpdaterWindow : Window
         }
     }
 
-    // ── Wait for the main process to exit ────────────────────────────────────
+    // -- Wait for the main process to exit ------------------------------------
 
     private static async Task WaitForProcessAsync(int pid)
     {
@@ -104,11 +104,11 @@ public partial class UpdaterWindow : Window
         }
         catch (ArgumentException) { /* Already exited */ }
 
-        // Small buffer — OS can hold the file lock briefly after process exit
+        // Small buffer -- OS can hold the file lock briefly after process exit
         await Task.Delay(500);
     }
 
-    // ── Atomic file replacement with backup ───────────────────────────────────
+    // -- Atomic file replacement with backup -----------------------------------
 
     private static void ReplaceExe(string source, string target)
     {
@@ -133,7 +133,7 @@ public partial class UpdaterWindow : Window
         }
     }
 
-    // ── UI helpers ────────────────────────────────────────────────────────────
+    // -- UI helpers ------------------------------------------------------------
 
     private void SetStatus(string text, string? color = null)
     {

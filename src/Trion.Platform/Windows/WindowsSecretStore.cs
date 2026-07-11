@@ -56,7 +56,7 @@ public sealed class WindowsSecretStore : ISecretStore
             File.Delete(fallbackPath);
     }
 
-    // ── Windows Credential Manager (P/Invoke) ─────────────────────────────
+    // -- Windows Credential Manager (P/Invoke) -----------------------------
 
     [DllImport("advapi32.dll", EntryPoint = "CredReadW", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern bool CredRead(string target, uint type, int flags, out IntPtr credential);
@@ -129,7 +129,7 @@ public sealed class WindowsSecretStore : ISecretStore
         CredDelete(target, 1 /*GENERIC*/, 0);
     }
 
-    // ── DPAPI file fallback ───────────────────────────────────────────────
+    // -- DPAPI file fallback -----------------------------------------------
 
     private static string GetFallbackPath(string key)
     {

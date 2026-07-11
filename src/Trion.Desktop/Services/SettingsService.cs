@@ -35,7 +35,7 @@ public class SettingsService : ISettingsService
 
     public AppSettings Current { get; private set; } = new();
 
-    // ── Public API ────────────────────────────────────────────────────────────
+    // -- Public API ------------------------------------------------------------
 
     public void Load()
     {
@@ -48,7 +48,7 @@ public class SettingsService : ISettingsService
 
         if (blob is null)
         {
-            // First run — write defaults so the row exists for future saves
+            // First run -- write defaults so the row exists for future saves
             Current = new AppSettings();
             WriteBlob(conn, JsonSerializer.Serialize(Current, JsonOptions));
         }
@@ -61,11 +61,16 @@ public class SettingsService : ISettingsService
             }
             catch
             {
-                // Corrupt blob — reset to defaults
+                // Corrupt blob -- reset to defaults
                 Current = new AppSettings();
                 WriteBlob(conn, JsonSerializer.Serialize(Current, JsonOptions));
             }
         }
+
+        // Apply the user-configured API base URL override so all AppLinks URLs
+        // resolve against the correct host without recompiling.
+        if (!string.IsNullOrWhiteSpace(Current.ApiBaseUrl))
+            AppLinks.ApiBaseUrl = Current.ApiBaseUrl.TrimEnd('/');
     }
 
     public void Save()
@@ -75,7 +80,7 @@ public class SettingsService : ISettingsService
         WriteBlob(conn, JsonSerializer.Serialize(Current, JsonOptions));
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // -- Helpers ---------------------------------------------------------------
 
     private static SqliteConnection Open()
     {
